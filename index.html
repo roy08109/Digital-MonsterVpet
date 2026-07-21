@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Digimon V-Pet 顯示控制器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+body{
+  background:#111;
+  padding:16px;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+.title{color:#fff;text-align:center;margin-bottom:16px;font-size:20px}
+
+/* 主LCD螢幕 */
+.main-screen{
+  background:#000;
+  border:3px solid #666;
+  width:192px;
+  height:96px;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  cursor:pointer;
+  display:block;
+  margin:0 auto 16px;
+}
+
+/* 左右切換箭頭 */
+.nav-bar{
+  display:flex;
+  justify-content:center;
+  gap:24px;
+  margin-bottom:30px;
+}
+.arrow-btn{
+  width:80px;height:50px;
+  font-size:26px;
+  background:#333;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+}
+
+/* 中間8個功能按鈕 */
+.btn-panel{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin-bottom:auto;
+}
+.func-btn{
+  height:60px;
+  background:#333;
+  border:none;
+  border-radius:8px;
+  color:#fff;
+  font-size:14px;
+}
+.func-btn.active{
+  background:#c42222;
+  color:#fff;
+  font-weight:700;
+}
+
+/* 頁面最底部導航欄 */
+.bottom-tab-bar{
+  display:grid;
+  grid-template-columns: repeat(4,1fr);
+  gap:8px;
+  margin-top:30px;
+}
+.scene-tab{
+  height:46px;
+  background:#333;
+  color:#ddd;
+  border:none;
+  border-radius:6px;
+  font-size:15px;
+}
+.scene-tab.active{
+  background:#c42222;
+  color:#fff;
+}
+
+/* 狀態面板（按鈕下方） */
+.stats-display{
+  display:none;
+  background:#222;
+  border:1px solid #c42222;
+  border-radius:8px;
+  padding:12px 16px;
+  color:#fff;
+  font-size:13px;
+  width:100%;
+  max-width:400px;
+  margin:8px auto 0;
+  box-sizing:border-box;
+}
+.stats-display .sd-title{
+  text-align:center;
+  font-size:16px;
+  font-weight:700;
+  color:#ffcc00;
+  margin-bottom:8px;
+  padding-bottom:6px;
+  border-bottom:1px solid #444;
+}
+.stats-display .sd-row{
+  display:flex;
+  justify-content:space-between;
+  padding:3px 0;
+  border-bottom:1px solid #333;
+}
+.stats-display .sd-row span:first-child{ color:#aaa; }
+.stats-display .sd-row span:last-child{ color:#fff; font-weight:600; }
+
+/* 食物面板選項 */
+.food-item{
+  padding:8px 12px;
+  margin:4px 0;
+  background:#333;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:15px;
+  color:#fff;
+  transition:background .15s;
+}
+.food-item:hover{ background:#555; }
+.food-item:active{ background:#c42222; }
+
+/* 圖鑑面板 */
+.digidex-stage{
+  margin-bottom:12px;
+}
+.digidex-stage-title{
+  color:#ffcc00;
+  font-size:14px;
+  font-weight:700;
+  margin-bottom:6px;
+  padding-bottom:4px;
+  border-bottom:1px solid #444;
+}
+.digidex-grid{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.digidex-entry{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  background:#333;
+  border-radius:6px;
+  padding:8px;
+  width:72px;
+  cursor:pointer;
+  transition:background .15s;
+}
+.digidex-entry:hover{ background:#555; }
+.digidex-entry canvas{
+  display:block;
+  width:48px;
+  height:48px;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  margin-bottom:4px;
+}
+.digidex-entry .d-name{
+  font-size:11px;
+  color:#fff;
+  text-align:center;
+  word-break:break-all;
+}
+
+</style>
+</head>
+<body>
+<h2 class="title">Digimon V-Pet</h2>
+
+<!-- 單個主顯示屏 -->
+<canvas id="screen" class="main-screen" width="32" height="16"></canvas>
+
+<!-- 左右箭頭切換 -->
+<div class="nav-bar">
+  <button class="arrow-btn" id="btnLeft">◀</button>
+  <button class="arrow-btn" id="btnRight">▶</button>
+</div>
+
+<!-- 中層：8個功能按鈕 -->
+<div class="btn-panel" id="btnPanel">
+</div>
+
+<!-- 狀態面板（按鈕下方） -->
+<div class="stats-display" id="statsDisplay">
+  <div class="sd-title" id="sdName">Agumon</div>
+  <div class="sd-row"><span>年齡</span><span id="sdAge">0歲</span></div>
+  <div class="sd-row"><span>飢餓</span><span id="sdHunger" style="font-size:12px;letter-spacing:1px;">❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️</span></div>
+  <div class="sd-row"><span>血量</span><span id="sdHp">120 / 120</span></div>
+  <div class="sd-row"><span>攻擊力</span><span id="sdAtk">12</span></div>
+  <div class="sd-row"><span>雙攻擊</span><span id="sdDouble">8%</span></div>
+  <div class="sd-row"><span>攻速</span><span id="sdSpeed">3</span></div>
+  <div class="sd-row"><span>閃避</span><span id="sdEvade">5%</span></div>
+</div>
+
+<!-- 食物面板（按鈕下方） -->
+<div class="stats-display" id="foodDisplay" style="display:none;">
+  <div class="sd-title">食物選擇</div>
+  <div id="foodList" style="padding:4px 0;">
+    <div class="food-item" data-food="meat" onclick="feedDigimon('meat')">🥩 1.肉</div>
+  </div>
+</div>
+
+<!-- 圖鑑面板 -->
+<div class="stats-display" id="digidexDisplay" style="display:none;">
+  <div class="sd-title">圖鑑</div>
+  <div id="digidexContent"></div>
+</div>
+
+<!-- 【頁面絕對最底部】4個導航：育成｜地圖｜戰鬥｜設定 -->
+<div class="bottom-tab-bar">
+  <button class="scene-tab active" data-scene="raise">育成</button>
+  <button class="scene-tab" data-scene="map">地圖</button>
+  <button class="scene-tab" data-scene="battle">戰鬥</button>
+  <button class="scene-tab" data-scene="setting">設定</button>
+</div>
+
+<script>
+const canvas = document.getElementById('screen');
+const ctx = canvas.getContext('2d');
+
+// ========== 參數設定 ==========
+const CELL_SIZE = 16;
+const GAP = 1;
+const PITCH = CELL_SIZE + GAP; // 17
+const ROWS = 18;
+const COLS = 12;
+const FRAME_LABELS = ["idle","idle","eat","eat","sleep","sleep","refuse","happy","angry","hurt","sad","attack"];
+const DIGIMON_NAMES = ["Botamon","Koromon","Agumon","Greymon","MetalGreymon","WarGreymon","Omegamon"];
+
+// ========== 圖鑑資料 ==========
+const DIGIDEX_STAGES = [
+  { name: "幼年期",   rows: [0] },
+  { name: "幼年期Ⅱ", rows: [1] },
+  { name: "成長期",   rows: [2, 3] },
+  { name: "成熟期",   rows: [4, 5, 6, 7, 8, 9, 10] },
+  { name: "完全體",   rows: [11, 12, 13] },
+];
+// 所有 sprite row 的名稱（0～13）
+const ALL_NAMES = [
+  "黑球獸","滾球獸","亞古獸","貝塔獸",
+  "暴龍獸","巨龍獸","惡魔獸","火焰獸","飛龍獸","海龍獸","鼻涕獸",
+  "機械暴龍獸(藍)","豆豆獸","門左衛獸",
+];
+
+// 精靈圖路徑
+const SPRITE_SRC = "sprites/all_grid_transparent.png";
+const BG_NAMES = ["Normal", "Noon", "dusk", "Night"];
+
+let sheetImage = new Image();
+let meatImage = new Image();
+let bgImages = {};
+let currentBgName = "Normal";
+
+function getBgNameByHour(h) {
+  if (h >= 19 || h < 5) return "Night";
+  if (h >= 5 && h < 7) return "dusk";
+  if (h >= 7 && h < 10) return "Normal";
+  if (h >= 10 && h < 14) return "Noon";
+  if (h >= 14 && h < 17) return "Normal";
+  return "dusk"; // 17:00-18:59
+}
+
+function updateBgByTime() {
+  const name = getBgNameByHour(new Date().getHours());
+  if (name !== currentBgName) {
+    currentBgName = name;
+    renderFrame();
+  }
+}
+let currentRow = 2;    // 目前選擇的數碼獸 row
+let currentScene = "raise";
+
+// ========== 自動動畫變數 ==========
+let autoX = 9;            // 1~17 連續座標（16px 精靈在 32px 畫布內）
+let autoTargetX = null;
+let autoAnimStep = 0;
+const ANIM_IV = 800;
+const EDGE_IV = 500;
+const MOVE_IV = 2000;
+const EDGE_SEQ = [0, 11, 11, 0];
+const MID_SEQ  = [0, 0, 0, 1];
+let autoAnimIv = ANIM_IV;
+let autoTimer = null;
+let autoMoveTimer = null;
+
+// ========== 進食/拒絕 模式變數 ==========
+let gameMode = "auto";       // "auto" | "eating" | "refusing"
+let gameModeStep = 0;
+const EAT_IV = 400;
+const REFUSE_IV = 300;
+
+// ========== 繪製 ==========
+function getColForAuto(){
+  const isEdge = autoX <= 1 || autoX >= 17;
+  const isMoving = autoTargetX !== null;
+  if(isEdge && !isMoving) return EDGE_SEQ[autoAnimStep % 4];
+  return MID_SEQ[autoAnimStep % 4];
+}
+
+function renderFrame(){
+  ctx.fillStyle="#000";
+  ctx.fillRect(0,0,32,16);
+  // 背景（根據目前時間）
+  ctx.drawImage(bgImages[currentBgName] || bgImages["Normal"], 0, 0, 32, 16);
+
+  if(gameMode === "eating"){
+    // 進食模式：龍在右邊向左，食物固定，動畫依序切換 4 幀
+    const col = (gameModeStep % 2 === 0) ? 2 : 3; // eat1 / eat2
+    const foodX = 0;                                // 食物固定在左側
+    const foodFrame = Math.floor((gameModeStep + 1) / 2); // 只在 EAT2 時進幀
+    // 畫肉
+    if(meatImage.complete && meatImage.naturalWidth > 0){
+      ctx.drawImage(
+        meatImage,
+        foodFrame * CELL_SIZE, 0, CELL_SIZE, CELL_SIZE,
+        foodX, 0, CELL_SIZE, CELL_SIZE
+      );
+    }
+    // 龍在右邊 (autoX=14)，面向左（預設方向）
+    ctx.drawImage(
+      sheetImage,
+      col * PITCH, currentRow * PITCH,
+      CELL_SIZE, CELL_SIZE,
+      16, 0,  // 龍靠右邊站位
+      CELL_SIZE, CELL_SIZE
+    );
+    return;
+  }
+
+  if(gameMode === "refusing"){
+    // 拒絕模式：龍在中間左右面向交替（左→右→左→右）
+    const faceFlip = gameModeStep % 2 === 0;
+    ctx.save();
+    let drawX = 8;
+    if(faceFlip){
+      ctx.translate(32, 0);
+      ctx.scale(-1, 1);
+      drawX = 16 - 8; // 翻轉後座標校正
+    }
+    ctx.drawImage(
+      sheetImage,
+      6 * PITCH, currentRow * PITCH,  // col 6 = refuse frame
+      CELL_SIZE, CELL_SIZE,
+      drawX, 0,
+      CELL_SIZE, CELL_SIZE
+    );
+    ctx.restore();
+    return;
+  }
+
+  // 普通模式
+  const colIndex = getColForAuto();
+  const faceRight = (autoTargetX !== null && autoX < autoTargetX) || (autoTargetX === null && autoX >= 9);
+  const spriteX = autoX - 1;
+
+  ctx.save();
+  let drawX = spriteX;
+  if(faceRight){
+    ctx.translate(32, 0);
+    ctx.scale(-1, 1);
+    drawX = 16 - spriteX; // 翻转後座標校正
+  }
+  ctx.drawImage(
+    sheetImage,
+    colIndex * PITCH, currentRow * PITCH,
+    CELL_SIZE, CELL_SIZE,
+    drawX, 0,
+    CELL_SIZE, CELL_SIZE
+  );
+  ctx.restore();
+}
+
+// ========== 動畫 / 移動 ==========
+function stepAutoAnim(){
+  // 進食模式
+  if(gameMode === "eating"){
+    gameModeStep++;
+    if(gameModeStep >= 6){
+      gameMode = "auto";
+      gameModeStep = 0;
+      // 動畫結束後走回中間
+      autoTargetX = 9;
+      autoAnimStep = 0;
+      restartAnimTimer(ANIM_IV);
+      if(!autoMoveTimer) autoMoveTimer = setInterval(stepAutoMove, MOVE_IV);
+      renderFrame();
+      return;
+    }
+    renderFrame();
+    return;
+  }
+  // 拒絕模式（搖晃）
+  if(gameMode === "refusing"){
+    gameModeStep++;
+    if(gameModeStep >= 8){
+      gameMode = "auto";
+      gameModeStep = 0;
+      autoAnimStep = 0;
+      autoTargetX = 9;
+      restartAnimTimer(ANIM_IV);
+      if(!autoMoveTimer) autoMoveTimer = setInterval(stepAutoMove, MOVE_IV);
+      renderFrame();
+      return;
+    }
+    renderFrame();
+    return;
+  }
+  // 普通模式
+  let justLanded = false;
+  if(autoTargetX !== null){
+    const step = autoX < autoTargetX ? 1 : -1;
+    autoX += step;
+    if(Math.abs(autoX - autoTargetX) < 0.5 ||
+       (step > 0 && autoX >= autoTargetX) ||
+       (step < 0 && autoX <= autoTargetX)){
+      autoX = autoTargetX;
+      autoTargetX = null;
+      justLanded = true;
+    }
+  }
+  if(justLanded && (autoX <= 1 || autoX >= 17)) {
+    autoAnimStep = -1;
+  }
+  autoAnimStep++;
+  renderFrame();
+  const isEdge = autoX <= 1 || autoX >= 17;
+  if(isEdge && autoTargetX === null && autoAnimIv !== EDGE_IV){
+    restartAnimTimer(EDGE_IV);
+  } else if(!isEdge && autoAnimIv !== ANIM_IV){
+    restartAnimTimer(ANIM_IV);
+  }
+}
+
+function stepAutoMove(){
+  if(autoTargetX !== null) return;
+  const isEdge = autoX <= 1 || autoX >= 17;
+  if(isEdge){
+    if(autoAnimStep < 5) return;
+    autoTargetX = 9;
+  } else {
+    if(Math.random() < 0.1) return;
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    const t = autoX + dir * 5;
+    autoTargetX = Math.max(1, Math.min(17, t));
+    if(autoTargetX === autoX) return;
+  }
+  autoAnimStep = 0;
+}
+
+function restartAnimTimer(iv){
+  if(autoAnimIv === iv) return;
+  if(autoTimer) clearInterval(autoTimer);
+  autoAnimIv = iv;
+  autoTimer = setInterval(stepAutoAnim, iv);
+}
+
+function startAutoPlay(){
+  updateBgByTime(); // 首次根據時間設定背景
+  autoX = 9;
+  autoTargetX = null;
+  autoAnimStep = 0;
+  autoAnimIv = ANIM_IV;
+  autoTimer = setInterval(stepAutoAnim, ANIM_IV);
+  autoMoveTimer = setInterval(stepAutoMove, MOVE_IV);
+  renderFrame();
+}
+
+// ========== 功能按鈕 ==========
+const FUNCTION_BTNS = ["狀態","食物","訓練","對戰","清理","睡眠","治療","圖鑑"];
+
+// ========== 數值系統 ==========
+// ========== 自動存檔 ==========
+const SAVE_KEY = "digimon_vpet_save";
+function saveGameState(){
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      gameAge,
+      gameHunger,
+      currentRow,
+      timestamp: Date.now()
+    }));
+  } catch(e){ /* 忽略存檔錯誤 */ }
+}
+function loadGameState(){
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    const elapsed = Math.floor((Date.now() - data.timestamp) / 60000); // 經過分鐘
+    gameAge = (data.gameAge || 0) + elapsed;
+    gameHunger = Math.max(0, (data.gameHunger ?? 5) - Math.floor(elapsed / 30));
+    currentRow = data.currentRow ?? 2;
+  } catch(e){ /* 忽略讀檔錯誤 */ }
+}
+
+let gameAge = 0;      // 年齡（分鐘）
+let gameHunger = 5; // 飢餓度 0~10（心）
+
+const DIGIMON_STATS = {
+  // [hp, atk, doubleAtk%, speed, evade%]
+  0: {name:"黑球獸",        hp: 50, atk: 2,  doubleAtk:0,  speed:1, evade:1},
+  1: {name:"滾球獸",        hp: 80, atk: 5,  doubleAtk:5,  speed:2, evade:3},
+  2: {name:"亞古獸",        hp:120, atk:12, doubleAtk:8,  speed:3, evade:5},
+  3: {name:"貝塔獸",        hp:160, atk:18, doubleAtk:10, speed:3, evade:6},
+  4: {name:"暴龍獸",        hp:200, atk:25, doubleAtk:12, speed:4, evade:8},
+  5: {name:"巨龍獸",        hp:240, atk:30, doubleAtk:13, speed:4, evade:10},
+  6: {name:"惡魔獸",        hp:260, atk:35, doubleAtk:14, speed:5, evade:11},
+  7: {name:"火焰獸",        hp:280, atk:38, doubleAtk:14, speed:5, evade:11},
+  8: {name:"飛龍獸",        hp:300, atk:40, doubleAtk:15, speed:5, evade:12},
+  9: {name:"海龍獸",        hp:320, atk:42, doubleAtk:16, speed:5, evade:12},
+  10:{name:"鼻涕獸",        hp:350, atk:45, doubleAtk:17, speed:6, evade:14},
+  11:{name:"機械暴龍獸(藍)", hp:400, atk:55, doubleAtk:20, speed:6, evade:16},
+  12:{name:"豆豆獸",        hp:450, atk:60, doubleAtk:22, speed:7, evade:18},
+  13:{name:"門左衛獸",      hp:500, atk:70, doubleAtk:25, speed:7, evade:20},
+};
+
+function buildFunctionButtons(){
+  const panel = document.getElementById('btnPanel');
+  panel.innerHTML = '';
+  for(let i=0; i<FUNCTION_BTNS.length; i++){
+    const btn = document.createElement('button');
+    btn.className = 'func-btn';
+    btn.textContent = FUNCTION_BTNS[i];
+    btn.dataset.idx = i;
+    btn.onclick = () => clickFunction(i);
+    panel.appendChild(btn);
+  }
+}
+
+function clickFunction(idx){
+  const btn = document.querySelector(`.func-btn[data-idx="${idx}"]`);
+  if(!btn) return;
+  btn.classList.add('active');
+  setTimeout(() => btn.classList.remove('active'), 200);
+  console.log(`功能: ${FUNCTION_BTNS[idx]}`);
+  if(idx === 0) showStats();   // 狀態
+  else if(idx === 1) showFood(); // 食物
+  else if(idx === 7) showDigidex(); // 圖鑑
+}
+
+function showStats(){
+  const panel = document.getElementById("statsDisplay");
+  const foodPanel = document.getElementById("foodDisplay");
+  const s = DIGIMON_STATS[currentRow];
+  if(!s) return;
+  // 若已顯示則關閉
+  if(panel.style.display === "block"){
+    panel.style.display = "none";
+    return;
+  }
+  // 關閉食物面板與圖鑑面板
+  foodPanel.style.display = "none";
+  document.getElementById("digidexDisplay").style.display = "none";
+  const years = Math.floor(gameAge / 1440);
+  const hours = Math.floor((gameAge % 1440) / 60);
+  const mins = gameAge % 60;
+  const hpLost = Math.max(0, Math.floor((10 - gameHunger) * s.hp / 20));
+  const hearts = "❤️".repeat(gameHunger) + "🖤".repeat(10 - gameHunger);
+  document.getElementById("sdName").textContent = s.name;
+  document.getElementById("sdAge").textContent = `${years}歲:${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+  document.getElementById("sdHunger").innerHTML = hearts;
+  document.getElementById("sdHp").textContent = `${s.hp - hpLost} / ${s.hp}`;
+  document.getElementById("sdAtk").textContent = s.atk;
+  document.getElementById("sdDouble").textContent = `${s.doubleAtk}%`;
+  document.getElementById("sdSpeed").textContent = s.speed;
+  document.getElementById("sdEvade").textContent = `${s.evade}%`;
+  panel.style.display = "block";
+}
+
+function showFood(){
+  const panel = document.getElementById("foodDisplay");
+  const statsPanel = document.getElementById("statsDisplay");
+  // 若食物面板已顯示則關閉
+  if(panel.style.display === "block"){
+    panel.style.display = "none";
+    return;
+  }
+  // 關閉狀態面板與圖鑑面板
+  statsPanel.style.display = "none";
+  document.getElementById("digidexDisplay").style.display = "none";
+  panel.style.display = "block";
+}
+
+// ========== 圖鑑 ==========
+function createMiniSprite(row, size){
+  const c = document.createElement('canvas');
+  c.width = 16; c.height = 16;
+  const cx = c.getContext('2d');
+  cx.imageSmoothingEnabled = false;
+  cx.drawImage(sheetImage, 0, row * PITCH, 16, 16, 0, 0, 16, 16);
+  // 設 CSS 尺寸，保持畫素感
+  c.style.width = size + 'px';
+  c.style.height = size + 'px';
+  return c;
+}
+
+function showDigidex(){
+  const panel = document.getElementById("digidexDisplay");
+  const statsPanel = document.getElementById("statsDisplay");
+  const foodPanel = document.getElementById("foodDisplay");
+  if(panel.style.display === "block"){ panel.style.display = "none"; return; }
+  statsPanel.style.display = "none";
+  foodPanel.style.display = "none";
+
+  const container = document.getElementById("digidexContent");
+  container.innerHTML = "";
+  for(const stage of DIGIDEX_STAGES){
+    const stageDiv = document.createElement('div');
+    stageDiv.className = 'digidex-stage';
+
+    const title = document.createElement('div');
+    title.className = 'digidex-stage-title';
+    title.textContent = stage.name;
+    stageDiv.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'digidex-grid';
+
+    for(const row of stage.rows){
+      const entry = document.createElement('div');
+      entry.className = 'digidex-entry';
+      const sprite = createMiniSprite(row, 48);
+      entry.appendChild(sprite);
+      const nameSpan = document.createElement('div');
+      nameSpan.className = 'd-name';
+      nameSpan.textContent = ALL_NAMES[row] || `row_${String(row).padStart(2,'0')}`;
+      entry.appendChild(nameSpan);
+      // 僅供瀏覽，不切換數碼獸
+      grid.appendChild(entry);
+    }
+
+    stageDiv.appendChild(grid);
+    container.appendChild(stageDiv);
+  }
+
+  panel.style.display = "block";
+}
+
+function feedDigimon(food){
+  // 關閉食物面板與圖鑑面板
+  document.getElementById("foodDisplay").style.display = "none";
+  document.getElementById("digidexDisplay").style.display = "none";
+  if(gameMode !== "auto") return; // 動畫進行中不可操作
+
+  if(food === "meat"){
+    if(gameHunger >= 10){
+      // 拒絕：搖晃動畫
+      gameMode = "refusing";
+      gameModeStep = 0;
+      if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+      restartAnimTimer(REFUSE_IV);
+      return;
+    }
+    gameHunger = Math.min(10, gameHunger + 1);
+    // 進食：eat1/eat2 動畫，龍在右邊，食物從左到右
+    gameMode = "eating";
+    gameModeStep = 0;
+    autoX = 14;
+    autoTargetX = null;
+    if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+    restartAnimTimer(EAT_IV);
+    saveGameState();
+    renderFrame();
+    console.log(`餵食: ${food}, 飽食度: ${gameHunger}`);
+  }
+}
+
+// ========== 選擇數碼獸（由箭頭控制） ==========
+function selectDigimon(idx){
+  currentRow = idx;
+  gameMode = "auto";
+  gameModeStep = 0;
+  if(autoTimer) clearInterval(autoTimer);
+  if(autoMoveTimer) clearInterval(autoMoveTimer);
+  autoTimer = null;
+  autoMoveTimer = null;
+  autoX = 16;
+  autoTargetX = null;
+  autoAnimStep = 0;
+  renderFrame();
+  startAutoPlay();
+}
+
+// ========== 左右切換 ==========
+const TOTAL_DIGIMON = 14; // 黑球獸~門左衛獸
+document.getElementById("btnLeft").onclick = () => {
+  const idx = (currentRow - 1 + TOTAL_DIGIMON) % TOTAL_DIGIMON;
+  selectDigimon(idx);
+};
+document.getElementById("btnRight").onclick = () => {
+  const idx = (currentRow + 1) % TOTAL_DIGIMON;
+  selectDigimon(idx);
+};
+
+// ========== 底部導航切換 ==========
+const tabs = document.querySelectorAll(".scene-tab");
+tabs.forEach(tab=>{
+  tab.onclick = ()=>{
+    tabs.forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    currentScene = tab.dataset.scene;
+  }
+});
+
+// ========== 啟動 ==========
+buildFunctionButtons();
+loadGameState(); // 讀取存檔
+
+let loadedCount = 0;
+const TOTAL_IMAGES = 1 + BG_NAMES.length + 1; // 1 sprite + 4 backgrounds + 1 food
+function onImageLoaded(){
+  loadedCount++;
+  if(loadedCount >= TOTAL_IMAGES) {
+    selectDigimon(currentRow); // 還原上次選擇的數碼獸
+  }
+}
+function onImageError(){
+  onImageLoaded();
+}
+
+sheetImage.src = SPRITE_SRC;
+sheetImage.onload = onImageLoaded;
+sheetImage.onerror = onImageError;
+
+meatImage.src = "Food/meat.png";
+meatImage.onload = onImageLoaded;
+meatImage.onerror = onImageError;
+
+BG_NAMES.forEach(name => {
+  const img = new Image();
+  img.src = `BG/${name}.png`;
+  img.onload = onImageLoaded;
+  img.onerror = onImageError;
+  bgImages[name] = img;
+});
+
+// 每分鐘自動切換背景
+setInterval(updateBgByTime, 60000);
+
+// 數值計時器：年齡每分鐘 +1
+setInterval(() => { gameAge++; }, 60000);
+// 飢餓：每 30 分鐘 -1 個心（10個心共 5 小時耗盡）
+setInterval(() => { gameHunger = Math.max(0, gameHunger - 1); }, 1800000);
+
+// 定時自動存檔（每 30 秒）
+setInterval(saveGameState, 30000);
+// 頁面關閉/重新整理時存檔
+window.addEventListener("beforeunload", saveGameState);
+</script>
+</body>
+</html>
