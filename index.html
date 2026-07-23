@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Digimon V-Pet 顯示控制器</title>
+<link rel="icon" type="image/png" sizes="192x192" href="Logo-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="Logo-512.png">
+<link rel="apple-touch-icon" sizes="192x192" href="Logo-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="Logo-512.png">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
 body{
@@ -131,6 +135,43 @@ body{
 .food-item:hover{ background:#555; }
 .food-item:active{ background:#c42222; }
 
+/* 訓練面板 */
+.training-click-btn{
+  width:100%;
+  max-width:360px;
+  height:70px;
+  background:#c42222;
+  color:#fff;
+  border:none;
+  border-radius:10px;
+  font-size:26px;
+  font-weight:700;
+  cursor:pointer;
+  margin-top:8px;
+}
+.training-click-btn:active{ background:#ff4444; }
+.training-timer{
+  position:absolute;
+  left:50%;
+  top:-150px;
+  transform:translateX(-50%);
+  font-size:48px;
+  font-weight:bold;
+  color:#ff0;
+  text-shadow:2px 2px 0 #000;
+}
+.training-back-btn{
+  display:block;
+  margin:8px auto 0;
+  padding:8px 24px;
+  background:#555;
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  font-size:14px;
+  cursor:pointer;
+}
+
 /* 圖鑑面板 */
 .digidex-stage{
   margin-bottom:12px;
@@ -213,6 +254,16 @@ body{
   </div>
 </div>
 
+<!-- 訓練面板 -->
+<div class="stats-display" id="trainingDisplay" style="display:none;">
+  <div class="sd-title">訓練</div>
+  <div style="text-align:center; position:relative;">
+    <div id="trainingTimerDisplay" class="training-timer">3</div>
+    <button class="training-click-btn" id="trainingClickBtn">點擊</button>
+    <button class="training-back-btn" id="trainingBackBtn">返回</button>
+  </div>
+</div>
+
 <!-- 圖鑑面板 -->
 <div class="stats-display" id="digidexDisplay" style="display:none;">
   <div class="sd-title">圖鑑</div>
@@ -255,11 +306,10 @@ const ALL_NAMES = [
   "機械暴龍獸(藍)","豆豆獸","門左衛獸",
 ];
 
-// 精靈圖路徑
-const SPRITE_SRC = "sprites/all_grid_transparent.png";
+// 精靈圖路徑（獨立行圖片）
 const BG_NAMES = ["Normal", "Noon", "dusk", "Night"];
 
-let sheetImage = new Image();
+let rowImages = new Array(18); // row_00.png ~ row_17.png
 let meatImage = new Image();
 let bgImages = {};
 let currentBgName = "Normal";
@@ -311,6 +361,10 @@ function getColForAuto(){
 }
 
 function renderFrame(){
+  if(trainingMode){
+    renderTrainingCanvas();
+    return;
+  }
   ctx.fillStyle="#000";
   ctx.fillRect(0,0,32,16);
   // 背景（根據目前時間）
@@ -331,8 +385,8 @@ function renderFrame(){
     }
     // 龍在右邊 (autoX=14)，面向左（預設方向）
     ctx.drawImage(
-      sheetImage,
-      col * PITCH, currentRow * PITCH,
+      rowImages[currentRow],
+      col * PITCH, 0,
       CELL_SIZE, CELL_SIZE,
       16, 0,  // 龍靠右邊站位
       CELL_SIZE, CELL_SIZE
@@ -351,8 +405,8 @@ function renderFrame(){
       drawX = 16 - 8; // 翻轉後座標校正
     }
     ctx.drawImage(
-      sheetImage,
-      6 * PITCH, currentRow * PITCH,  // col 6 = refuse frame
+      rowImages[currentRow],
+      6 * PITCH, 0,  // col 6 = refuse frame, source y=0
       CELL_SIZE, CELL_SIZE,
       drawX, 0,
       CELL_SIZE, CELL_SIZE
@@ -374,8 +428,8 @@ function renderFrame(){
     drawX = 16 - spriteX; // 翻转後座標校正
   }
   ctx.drawImage(
-    sheetImage,
-    colIndex * PITCH, currentRow * PITCH,
+    rowImages[currentRow],
+    colIndex * PITCH, 0,
     CELL_SIZE, CELL_SIZE,
     drawX, 0,
     CELL_SIZE, CELL_SIZE
@@ -478,6 +532,437 @@ function startAutoPlay(){
   renderFrame();
 }
 
+// ========== 訓練系統 ==========
+let trainingMode = false;
+let trainingLevel = 0;       // 0~6, 已充能格數
+let trainingClickCount = 0;  // 點擊次數（每2次+1級）
+let trainingAttackActive = false;
+let trainingProjectileX = 0;
+let trainingProjectileTimer = null;
+let powerImage = new Image();
+let attackProjImage = new Image();
+let tbgImage = new Image();  // 訓練背景
+let sandbagImage = new Image();
+let sandbagImage2 = new Image();
+let sandbagImage3 = new Image();  // 被打中後的沙包
+let boomImage = new Image();      // 爆炸01
+let boomImage2 = new Image();     // 爆炸02
+let happyImage = new Image();    // 慶祝愛心
+let sandbagState = "normal";     // "normal" | "boom" | "hit"
+let boomFrame = 0;               // 爆炸幀 (0=Boom01, 1=Boom02)
+let boomCycle = 0;               // 爆炸已播放的完整週期
+let sandbagTimer = null;
+let boomTimer = null;
+
+let trainingIdleFrame = 0;         // idle 幀切換 (0/1)
+let trainingIdleTimer = null;
+let trainingPowerHidden = false;   // 攻擊完成後隱藏 Power
+let trainingCelebrationActive = false;
+let trainingCelebrationTimer = null;
+let trainingCelebrationStep = 0;
+const TRAINING_CELEBRATION_SEQ = [0, 7, 0, 7]; // idle, happy, idle, happy
+let trainingTimer = null;           // 倒數計時 interval
+let trainingCountdown = 3;          // 剩餘秒數
+let trainingFailed = false;         // 是否失敗
+let trainingFailureActive = false;  // 失敗動畫播放中
+let trainingFailureTimer = null;
+let trainingFailureStep = 0;
+const TRAINING_FAILURE_SEQ = [0, 10, 0, 10]; // idle, sad, idle, sad
+let sadImage = new Image();        // 失敗難過圖
+const TRAIN_SLOTS = 5;
+// 主 canvas 在訓練時改為 64×16：
+// [---Projectile@16---][Dragon@32][Power@48]
+const CANVAS_NORMAL_W = 32;
+const CANVAS_TRAIN_W = 64;
+
+function startTraining(){
+  const trainPanel = document.getElementById("trainingDisplay");
+  
+  // 若訓練面板已顯示則關閉（切換）
+  if(trainPanel.style.display === "block"){
+    stopTraining();
+    return;
+  }
+  
+  // 關閉其他面板
+  document.getElementById("statsDisplay").style.display = "none";
+  document.getElementById("foodDisplay").style.display = "none";
+  document.getElementById("digidexDisplay").style.display = "none";
+  
+  // 暫停自動模式
+  if(autoTimer) clearInterval(autoTimer);
+  if(autoMoveTimer) clearInterval(autoMoveTimer);
+  autoTimer = null;
+  autoMoveTimer = null;
+  
+  trainingMode = true;
+  trainingLevel = 0;
+  trainingClickCount = 0;
+  trainingAttackActive = false;
+  trainingIdleFrame = 0;
+  if(trainingProjectileTimer){
+    clearInterval(trainingProjectileTimer);
+    trainingProjectileTimer = null;
+  }
+  if(trainingIdleTimer){
+    clearInterval(trainingIdleTimer);
+    trainingIdleTimer = null;
+  }
+  if(sandbagTimer){
+    clearInterval(sandbagTimer);
+    sandbagTimer = null;
+  }
+  if(boomTimer){
+    clearInterval(boomTimer);
+    boomTimer = null;
+  }
+  trainingProjectileX = 0;
+  sandbagState = "normal";
+  boomFrame = 0;
+  boomCycle = 0;
+  
+  // 開 idle 動畫定時器（切換 idle1/idle2）
+  trainingIdleTimer = setInterval(() => {
+    trainingIdleFrame = trainingIdleFrame === 0 ? 1 : 0;
+    renderFrame();
+  }, 800);
+  
+  // 重置慶祝狀態
+  trainingPowerHidden = false;
+  trainingCelebrationActive = false;
+  trainingCelebrationStep = 0;
+  if(trainingCelebrationTimer){
+    clearInterval(trainingCelebrationTimer);
+    trainingCelebrationTimer = null;
+  }
+
+  // 重置失敗狀態
+  trainingFailed = false;
+  trainingFailureActive = false;
+  trainingFailureStep = 0;
+  if(trainingFailureTimer){
+    clearInterval(trainingFailureTimer);
+    trainingFailureTimer = null;
+  }
+  if(trainingTimer){
+    clearInterval(trainingTimer);
+    trainingTimer = null;
+  }
+
+  // 開始 3 秒倒數計時（UI 每秒更新）
+  trainingCountdown = 3;
+  document.getElementById("trainingTimerDisplay").textContent = trainingCountdown;
+  trainingTimer = setInterval(() => {
+    trainingCountdown--;
+    document.getElementById("trainingTimerDisplay").textContent = trainingCountdown;
+    if(trainingCountdown <= 0){
+      clearInterval(trainingTimer);
+      trainingTimer = null;
+      document.getElementById("trainingTimerDisplay").textContent = "";
+      triggerTrainingFailure();
+    }
+  }, 1000);
+
+  // 主 canvas 寬度改為 64
+  canvas.width = CANVAS_TRAIN_W;
+  canvas.style.width = (CANVAS_TRAIN_W * 6) + "px";
+  renderFrame();
+
+  trainPanel.style.display = "block";
+}
+
+function stopTraining(){
+  trainingMode = false;
+  if(trainingProjectileTimer){
+    clearInterval(trainingProjectileTimer);
+    trainingProjectileTimer = null;
+  }
+  if(trainingIdleTimer){
+    clearInterval(trainingIdleTimer);
+    trainingIdleTimer = null;
+  }
+  if(sandbagTimer){
+    clearInterval(sandbagTimer);
+    sandbagTimer = null;
+  }
+  if(boomTimer){
+    clearInterval(boomTimer);
+    boomTimer = null;
+  }
+  if(trainingCelebrationTimer){
+    clearInterval(trainingCelebrationTimer);
+    trainingCelebrationTimer = null;
+  }
+  if(trainingTimer){
+    clearInterval(trainingTimer);
+    trainingTimer = null;
+  }
+  document.getElementById("trainingTimerDisplay").textContent = "";
+  if(trainingFailureTimer){
+    clearInterval(trainingFailureTimer);
+    trainingFailureTimer = null;
+  }
+  document.getElementById("trainingDisplay").style.display = "none";
+  // 恢復 canvas 尺寸
+  canvas.width = CANVAS_NORMAL_W;
+  canvas.style.width = "";
+  // 恢復自動模式
+  startAutoPlay();
+}
+
+function handleTrainingClick(){
+  if(trainingAttackActive) return;  // 攻擊動畫中不可操作
+  if(trainingFailed || trainingFailureActive) return; // 失敗後不可再點
+  
+  trainingClickCount++;
+  // 每2次點擊向右移動1格
+  if(trainingClickCount % 2 === 0){
+    trainingLevel++;
+    if(trainingLevel >= TRAIN_SLOTS){
+      // 成功滿能 → 清除計時器，觸發攻擊
+      if(trainingTimer){
+        clearInterval(trainingTimer);
+        trainingTimer = null;
+      }
+      document.getElementById("trainingTimerDisplay").textContent = "";
+      triggerTrainingAttack();
+      return;
+    }
+  }
+  renderFrame();
+}
+
+function triggerTrainingAttack(){
+  trainingAttackActive = true;
+  trainingLevel = 6;
+  // 確保計時器清除
+  if(trainingTimer){
+    clearInterval(trainingTimer);
+    trainingTimer = null;
+  }
+  document.getElementById("trainingTimerDisplay").textContent = "";
+  // 攻擊時停止 idle 與沙包動畫
+  if(trainingIdleTimer){
+    clearInterval(trainingIdleTimer);
+    trainingIdleTimer = null;
+  }
+  if(sandbagTimer){
+    clearInterval(sandbagTimer);
+    sandbagTimer = null;
+  }
+  trainingProjectileX = 16;
+  renderFrame();
+  
+  // 火球連續每像素向左移動
+  trainingProjectileTimer = setInterval(() => {
+    trainingProjectileX -= 1;
+    renderFrame();
+    if(trainingProjectileX <= 0){
+      // 火球擊中沙包 → 停止移動、觸發爆炸
+      clearInterval(trainingProjectileTimer);
+      trainingProjectileTimer = null;
+      trainingAttackActive = false;
+      startBoomSequence();
+    } else if(trainingProjectileX < -16){
+      // 防護：若直接飛過頭則重置
+      clearInterval(trainingProjectileTimer);
+      trainingProjectileTimer = null;
+      trainingAttackActive = false;
+      endTrainingAttack();
+    }
+  }, 16);
+}
+
+function startBoomSequence(){
+  // 切換到爆炸狀態
+  sandbagState = "boom";
+  boomFrame = 0;
+  boomCycle = 0;
+  renderFrame();
+  
+  // 每 200ms 切換爆炸幀，2 週期後結束
+  boomTimer = setInterval(() => {
+    boomFrame = boomFrame === 0 ? 1 : 0;
+    if(boomFrame === 0){
+      boomCycle++; // 完成一個完整週期 (01→02)
+    }
+    if(boomCycle >= 2){
+      clearInterval(boomTimer);
+      boomTimer = null;
+      // 爆炸結束 → 換成被打中的沙包
+      sandbagState = "hit";
+      renderFrame();
+      endTrainingAttack();
+      return;
+    }
+    renderFrame();
+  }, 200);
+}
+
+function endTrainingAttack(){
+  // 攻擊/爆炸完成的清理與重置
+  trainingLevel = 0;
+  trainingClickCount = 0;
+  trainingProjectileX = 0;
+  trainingAttackActive = false;
+  trainingPowerHidden = true;
+
+  // 停止 idle 定時器（若有）
+  if(trainingIdleTimer){
+    clearInterval(trainingIdleTimer);
+    trainingIdleTimer = null;
+  }
+
+  // 開始慶祝動畫：idle → happy → idle → happy
+  trainingCelebrationActive = true;
+  trainingCelebrationStep = 0;
+  trainingCelebrationTimer = setInterval(() => {
+    trainingCelebrationStep++;
+    if(trainingCelebrationStep >= TRAINING_CELEBRATION_SEQ.length){
+      // 慶祝結束，自動返回
+      clearInterval(trainingCelebrationTimer);
+      trainingCelebrationTimer = null;
+      trainingCelebrationActive = false;
+      stopTraining();
+    }
+    renderFrame();
+  }, 600);
+
+  renderFrame();
+}
+
+function triggerTrainingFailure(){
+  if(trainingAttackActive) return;  // 攻擊中不算失敗
+  if(trainingFailed) return;       // 已經失敗了
+  if(trainingLevel >= TRAIN_SLOTS) return; // 已滿不算
+  if(trainingFailureActive) return;
+
+  // 確保計時器已清除
+  if(trainingTimer){
+    clearInterval(trainingTimer);
+    trainingTimer = null;
+  }
+  document.getElementById("trainingTimerDisplay").textContent = "";
+
+  trainingFailed = true;
+  trainingFailureActive = true;
+  trainingPowerHidden = true;
+
+  // 停止 Idle 動畫
+  if(trainingIdleTimer){
+    clearInterval(trainingIdleTimer);
+    trainingIdleTimer = null;
+  }
+
+  // 開始失敗動畫：idle → sad → idle → sad
+  trainingFailureStep = 0;
+  trainingFailureTimer = setInterval(() => {
+    trainingFailureStep++;
+    if(trainingFailureStep >= TRAINING_FAILURE_SEQ.length){
+      clearInterval(trainingFailureTimer);
+      trainingFailureTimer = null;
+      trainingFailureActive = false;
+      trainingFailed = false;
+      stopTraining();
+    }
+    renderFrame();
+  }, 600);
+
+  renderFrame();
+}
+
+function renderTrainingCanvas(){
+  // 繪製訓練背景 (384×96 等比繪於 64×16 canvas)
+  if(tbgImage.complete && tbgImage.naturalWidth > 0){
+    ctx.drawImage(tbgImage, 0, 0, CANVAS_TRAIN_W, 16);
+  } else {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, CANVAS_TRAIN_W, 16);
+  }
+  
+  // 1) 最左側訓練靶子 (x=0)，依狀態顯示不同圖
+  if(sandbagState === "hit"){
+    // 被打中後：顯示 Sandbag03
+    if(sandbagImage3.complete && sandbagImage3.naturalWidth > 0){
+      ctx.drawImage(sandbagImage3, 0, 0, 16, 16);
+    }
+  } else if(sandbagState === "boom"){
+    // 爆炸動畫：顯示 Boom01/Boom02
+    const bImg = boomFrame === 0 ? boomImage : boomImage2;
+    if(bImg.complete && bImg.naturalWidth > 0){
+      ctx.drawImage(bImg, 0, 0, 16, 16);
+    }
+  } else {
+    // 正常狀態：靜止顯示 Sandbag01
+    if(sandbagImage.complete && sandbagImage.naturalWidth > 0){
+      ctx.drawImage(sandbagImage, 0, 0, 16, 16);
+    }
+  }
+  
+  // 2) 龍在中間（x=32）：攻擊時 frame 11，慶祝時 idle/happy，平時 idle
+  let dragonFrame;
+  if(trainingFailureActive){
+    dragonFrame = TRAINING_FAILURE_SEQ[trainingFailureStep];
+  } else if(trainingCelebrationActive){
+    dragonFrame = TRAINING_CELEBRATION_SEQ[trainingCelebrationStep];
+  } else if(trainingAttackActive){
+    dragonFrame = 11;
+  } else {
+    dragonFrame = trainingIdleFrame;
+  }
+  if(rowImages[currentRow] && rowImages[currentRow].complete && rowImages[currentRow].naturalWidth > 0){
+    ctx.drawImage(
+      rowImages[currentRow],
+      dragonFrame * PITCH, 0,
+      16, 16,
+      32, 0,  // 龍在 x=32
+      16, 16
+    );
+  }
+  
+  // 慶祝時只在 happy 幀顯示愛心，idle 幀隱藏
+  if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
+     && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
+    // 左側（x=24）上下各一個
+    ctx.drawImage(happyImage, 24, 0, 8, 8);
+    ctx.drawImage(happyImage, 24, 8, 8, 8);
+    // 右側（x=48）上下各一個
+    ctx.drawImage(happyImage, 48, 0, 8, 8);
+    ctx.drawImage(happyImage, 48, 8, 8, 8);
+  }
+  // 失敗時只在 sad 幀顯示難過圖
+  if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
+     && TRAINING_FAILURE_SEQ[trainingFailureStep] === 10){
+    // 左側（x=24）上下各一個
+    ctx.drawImage(sadImage, 24, 0, 8, 8);
+    ctx.drawImage(sadImage, 24, 8, 8, 8);
+    // 右側（x=48）上下各一個
+    ctx.drawImage(sadImage, 48, 0, 8, 8);
+    ctx.drawImage(sadImage, 48, 8, 8, 8);
+  }
+  
+  // 2) Power 在龍右側（x=48），攻擊完成後隱藏
+  if(!trainingPowerHidden){
+    if(powerImage.complete && powerImage.naturalWidth > 0){
+      const powerFrame = Math.min(trainingLevel, 5);
+      ctx.drawImage(
+        powerImage,
+        powerFrame * 16, 0, 16, 16,
+        48, 0,
+        16, 16
+      );
+    } else {
+      ctx.fillStyle = "#ff0";
+      ctx.fillRect(49, 1, 14, 14);
+    }
+  }
+  
+  // 3) 攻擊彈在龍左方，火球連續移動（精靈 16×8 繪於上方）
+  if(trainingAttackActive && attackProjImage.complete && attackProjImage.naturalWidth > 0){
+    ctx.drawImage(attackProjImage, trainingProjectileX, 0, 16, 8);
+  }
+}
+
 // ========== 功能按鈕 ==========
 const FUNCTION_BTNS = ["狀態","食物","訓練","對戰","清理","睡眠","治療","圖鑑"];
 
@@ -548,6 +1033,7 @@ function clickFunction(idx){
   console.log(`功能: ${FUNCTION_BTNS[idx]}`);
   if(idx === 0) showStats();   // 狀態
   else if(idx === 1) showFood(); // 食物
+  else if(idx === 2) startTraining(); // 訓練
   else if(idx === 7) showDigidex(); // 圖鑑
 }
 
@@ -561,9 +1047,10 @@ function showStats(){
     panel.style.display = "none";
     return;
   }
-  // 關閉食物面板與圖鑑面板
+  // 關閉其他面板
   foodPanel.style.display = "none";
   document.getElementById("digidexDisplay").style.display = "none";
+  document.getElementById("trainingDisplay").style.display = "none";
   const years = Math.floor(gameAge / 1440);
   const hours = Math.floor((gameAge % 1440) / 60);
   const mins = gameAge % 60;
@@ -591,6 +1078,7 @@ function showFood(){
   // 關閉狀態面板與圖鑑面板
   statsPanel.style.display = "none";
   document.getElementById("digidexDisplay").style.display = "none";
+  document.getElementById("trainingDisplay").style.display = "none";
   panel.style.display = "block";
 }
 
@@ -600,7 +1088,7 @@ function createMiniSprite(row, size){
   c.width = 16; c.height = 16;
   const cx = c.getContext('2d');
   cx.imageSmoothingEnabled = false;
-  cx.drawImage(sheetImage, 0, row * PITCH, 16, 16, 0, 0, 16, 16);
+  cx.drawImage(rowImages[row], 0, 0, 16, 16, 0, 0, 16, 16);
   // 設 CSS 尺寸，保持畫素感
   c.style.width = size + 'px';
   c.style.height = size + 'px';
@@ -614,6 +1102,7 @@ function showDigidex(){
   if(panel.style.display === "block"){ panel.style.display = "none"; return; }
   statsPanel.style.display = "none";
   foodPanel.style.display = "none";
+  document.getElementById("trainingDisplay").style.display = "none";
 
   const container = document.getElementById("digidexContent");
   container.innerHTML = "";
@@ -720,7 +1209,7 @@ buildFunctionButtons();
 loadGameState(); // 讀取存檔
 
 let loadedCount = 0;
-const TOTAL_IMAGES = 1 + BG_NAMES.length + 1; // 1 sprite + 4 backgrounds + 1 food
+const TOTAL_IMAGES = 18 + BG_NAMES.length + 1 + 10; // 18 row + 4 bg + 1 meat + 10 training
 function onImageLoaded(){
   loadedCount++;
   if(loadedCount >= TOTAL_IMAGES) {
@@ -731,13 +1220,53 @@ function onImageError(){
   onImageLoaded();
 }
 
-sheetImage.src = SPRITE_SRC;
-sheetImage.onload = onImageLoaded;
-sheetImage.onerror = onImageError;
+// 加載 18 張獨立行圖片
+for(let r = 0; r < 18; r++){
+  const img = new Image();
+  const idx = String(r).padStart(2, '0');
+  img.src = `sprites/row_${idx}.png`;
+  img.onload = onImageLoaded;
+  img.onerror = onImageError;
+  rowImages[r] = img;
+}
 
 meatImage.src = "Food/meat.png";
 meatImage.onload = onImageLoaded;
 meatImage.onerror = onImageError;
+
+// 訓練用圖片
+powerImage.src = "BG/Power.png";
+powerImage.onload = onImageLoaded;
+powerImage.onerror = onImageError;
+attackProjImage.src = "sprites/Attack/02_at.png";
+attackProjImage.onload = onImageLoaded;
+attackProjImage.onerror = onImageError;
+tbgImage.src = "BG/TBG01.png";
+tbgImage.onload = onImageLoaded;
+tbgImage.onerror = onImageError;
+sandbagImage.src = "BG/Sandbag01.png";
+sandbagImage.onload = onImageLoaded;
+sandbagImage.onerror = onImageError;
+sandbagImage2.src = "BG/Sandbag02.png";
+sandbagImage2.onload = onImageLoaded;
+sandbagImage2.onerror = onImageError;
+sandbagImage3.src = "BG/Sandbag03.png";
+sandbagImage3.onload = onImageLoaded;
+sandbagImage3.onerror = onImageError;
+boomImage.src = "BG/Boom01.png";
+boomImage.onload = onImageLoaded;
+boomImage.onerror = onImageError;
+boomImage2.src = "BG/Boom02.png";
+boomImage2.onload = onImageLoaded;
+boomImage2.onerror = onImageError;
+
+happyImage.src = "BG/Happy.png";
+happyImage.onload = onImageLoaded;
+happyImage.onerror = onImageError;
+
+sadImage.src = "BG/sad.png";
+sadImage.onload = onImageLoaded;
+sadImage.onerror = onImageError;
 
 BG_NAMES.forEach(name => {
   const img = new Image();
@@ -759,6 +1288,10 @@ setInterval(() => { gameHunger = Math.max(0, gameHunger - 1); }, 1800000);
 setInterval(saveGameState, 30000);
 // 頁面關閉/重新整理時存檔
 window.addEventListener("beforeunload", saveGameState);
+
+// 訓練按鈕事件綁定
+document.getElementById("trainingClickBtn").onclick = handleTrainingClick;
+document.getElementById("trainingBackBtn").onclick = stopTraining;
 </script>
 </body>
 </html>
