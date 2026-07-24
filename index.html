@@ -136,6 +136,27 @@ body{
 .food-item:active{ background:#c42222; }
 
 /* 訓練面板 */
+.training-mode-selector{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  margin-bottom:8px;
+}
+.training-mode-btn{
+  flex:1;
+  padding:6px;
+  background:#333;
+  color:#fff;
+  border:2px solid #888;
+  border-radius:4px;
+  cursor:pointer;
+  font-size:12px;
+  font-family:inherit;
+}
+.training-mode-btn.active{
+  background:#333;
+  border-color:#fff;
+}
 .training-click-btn{
   width:100%;
   max-width:360px;
@@ -257,10 +278,21 @@ body{
 <!-- 訓練面板 -->
 <div class="stats-display" id="trainingDisplay" style="display:none;">
   <div class="sd-title">訓練</div>
-  <div style="text-align:center; position:relative;">
+  <!-- 模式選擇 -->
+  <div id="trainingModeSelect">
+    <div class="training-mode-selector">
+      <button class="training-mode-btn" id="trainingModeAttack" data-mode="attack">1. 攻擊訓練</button>
+      <button class="training-mode-btn" id="trainingModeLife" data-mode="life">2. 生命訓練</button>
+    </div>
+    <div style="text-align:center;">
+      <button class="training-back-btn" id="trainingBackBtn">返回</button>
+    </div>
+  </div>
+  <!-- 開始訓練後 -->
+  <div id="trainingPlayView" style="display:none; text-align:center; position:relative;">
     <div id="trainingTimerDisplay" class="training-timer">3</div>
     <button class="training-click-btn" id="trainingClickBtn">點擊</button>
-    <button class="training-back-btn" id="trainingBackBtn">返回</button>
+    <button class="training-back-btn" id="trainingModeBackBtn">返回選擇</button>
   </div>
 </div>
 
@@ -563,17 +595,40 @@ let trainingCelebrationStep = 0;
 const TRAINING_CELEBRATION_SEQ = [0, 7, 0, 7]; // idle, happy, idle, happy
 let trainingTimer = null;           // 倒數計時 interval
 let trainingCountdown = 3;          // 剩餘秒數
+let trainingType = "attack";        // "attack" | "life"
 let trainingFailed = false;         // 是否失敗
 let trainingFailureActive = false;  // 失敗動畫播放中
 let trainingFailureTimer = null;
 let trainingFailureStep = 0;
 const TRAINING_FAILURE_SEQ = [0, 10, 0, 10]; // idle, sad, idle, sad
 let sadImage = new Image();        // 失敗難過圖
+let shieldImage = new Image();     // 生命訓練盾牌
+let pointImage = new Image();      // 生命訓練點
+let shieldBreakImage = new Image();// 盾牌破壞圖
+let lifePointsRemaining = 4;       // 剩餘 point 數 (2~4)
+let lifeShieldBroken = false;      // 盾牌是否破壞
+let boxingImage = new Image();     // 生命訓練成功時的拳擊手
+let lifePhase = "play";            // 生命訓練階段: "play" | "boxing" | "boom" | "shieldHold" | "celebration"
+let lifeBoxingX = 0;               // 拳擊手當前 x 位置
+let lifeBoxingTimer = null;
+let lifeBoomTimer = null;
+let lifeShieldHoldTimer = null;
+let lifeFailureHoldTimer = null;   // 生命訓練失敗時等待 1 秒的計時器
+let lifeDragonMoveX = 48;          // 龍慶祝時的 x 位置（會從 48 移動到 32）
 const TRAIN_SLOTS = 5;
 // 主 canvas 在訓練時改為 64×16：
 // [---Projectile@16---][Dragon@32][Power@48]
 const CANVAS_NORMAL_W = 32;
 const CANVAS_TRAIN_W = 64;
+
+function selectTrainingType(type){
+  if(trainingAttackActive || trainingCelebrationActive || trainingFailureActive) return;
+  trainingType = type;
+  document.getElementById("trainingModeAttack").classList.toggle("active", type === "attack");
+  document.getElementById("trainingModeLife").classList.toggle("active", type === "life");
+  // 選完後直接開始倒數
+  startTrainingPlay();
+}
 
 function startTraining(){
   const trainPanel = document.getElementById("trainingDisplay");
@@ -648,9 +703,43 @@ function startTraining(){
     clearInterval(trainingTimer);
     trainingTimer = null;
   }
+  document.getElementById("trainingTimerDisplay").textContent = "";
+  lifePhase = "play";
 
-  // 開始 3 秒倒數計時（UI 每秒更新）
-  trainingCountdown = 3;
+  // 預設模式（高亮 1. 攻擊訓練）
+  trainingType = "attack";
+  document.getElementById("trainingModeAttack").classList.add("active");
+  document.getElementById("trainingModeLife").classList.remove("active");
+  // 顯示模式選擇，隱藏開始訓練視圖
+  document.getElementById("trainingModeSelect").style.display = "block";
+  document.getElementById("trainingPlayView").style.display = "none";
+
+  // 主 canvas 寬度改為 64
+  canvas.width = CANVAS_TRAIN_W;
+  canvas.style.width = (CANVAS_TRAIN_W * 6) + "px";
+  renderFrame();
+
+  trainPanel.style.display = "block";
+}
+
+function startTrainingPlay(){
+  // 從模式選擇切換到開始訓練視圖，並啟動 3 秒倒數
+  if(trainingAttackActive || trainingCelebrationActive || trainingFailureActive) return;
+
+  document.getElementById("trainingModeSelect").style.display = "none";
+  document.getElementById("trainingPlayView").style.display = "block";
+
+  // 重置充能狀態
+  trainingLevel = 0;
+  trainingClickCount = 0;
+  trainingPowerHidden = false;
+  // 重置生命訓練狀態（隨機 2~4 個 point）
+  lifePointsRemaining = Math.floor(Math.random() * 3) + 2;
+  lifeShieldBroken = false;
+  lifePhase = "play";
+
+  // 開始倒數計時（UI 每秒更新）
+  trainingCountdown = (trainingType === "life") ? 2 : 3;
   document.getElementById("trainingTimerDisplay").textContent = trainingCountdown;
   trainingTimer = setInterval(() => {
     trainingCountdown--;
@@ -659,16 +748,39 @@ function startTraining(){
       clearInterval(trainingTimer);
       trainingTimer = null;
       document.getElementById("trainingTimerDisplay").textContent = "";
-      triggerTrainingFailure();
+      // 生命訓練：4 個點全消失 = 成功，否則失敗
+      if(trainingType === "life"){
+        if(lifePointsRemaining <= 0 && !lifeShieldBroken){
+          triggerTrainingAttack();
+        } else {
+          triggerTrainingFailure();
+        }
+      } else {
+        triggerTrainingFailure();
+      }
     }
   }, 1000);
 
-  // 主 canvas 寬度改為 64
-  canvas.width = CANVAS_TRAIN_W;
-  canvas.style.width = (CANVAS_TRAIN_W * 6) + "px";
   renderFrame();
+}
 
-  trainPanel.style.display = "block";
+function backToTrainingModeSelect(){
+  if(trainingAttackActive || trainingCelebrationActive || trainingFailureActive) return;
+  // 清除計時器
+  if(trainingTimer){
+    clearInterval(trainingTimer);
+    trainingTimer = null;
+  }
+  document.getElementById("trainingTimerDisplay").textContent = "";
+  // 重置充能狀態
+  trainingLevel = 0;
+  trainingClickCount = 0;
+  trainingPowerHidden = false;
+  lifePhase = "play";
+  // 切換視圖
+  document.getElementById("trainingPlayView").style.display = "none";
+  document.getElementById("trainingModeSelect").style.display = "block";
+  renderFrame();
 }
 
 function stopTraining(){
@@ -702,6 +814,24 @@ function stopTraining(){
     clearInterval(trainingFailureTimer);
     trainingFailureTimer = null;
   }
+  // 生命訓練成功動畫的計時器
+  if(lifeBoxingTimer){
+    clearInterval(lifeBoxingTimer);
+    lifeBoxingTimer = null;
+  }
+  if(lifeBoomTimer){
+    clearInterval(lifeBoomTimer);
+    lifeBoomTimer = null;
+  }
+  if(lifeShieldHoldTimer){
+    clearTimeout(lifeShieldHoldTimer);
+    lifeShieldHoldTimer = null;
+  }
+  if(lifeFailureHoldTimer){
+    clearTimeout(lifeFailureHoldTimer);
+    lifeFailureHoldTimer = null;
+  }
+  lifePhase = "play";
   document.getElementById("trainingDisplay").style.display = "none";
   // 恢復 canvas 尺寸
   canvas.width = CANVAS_NORMAL_W;
@@ -712,7 +842,27 @@ function stopTraining(){
 
 function handleTrainingClick(){
   if(trainingAttackActive) return;  // 攻擊動畫中不可操作
+  if(trainingCelebrationActive) return; // 慶祝中不可操作
   if(trainingFailed || trainingFailureActive) return; // 失敗後不可再點
+  
+  // 生命訓練邏輯
+  if(trainingType === "life"){
+    if(lifeShieldBroken) return;
+    if(lifePointsRemaining <= 0){
+      // 點完所有 point 再點 → 盾牌破壞 = 失敗
+      lifeShieldBroken = true;
+      if(trainingTimer){
+        clearInterval(trainingTimer);
+        trainingTimer = null;
+      }
+      document.getElementById("trainingTimerDisplay").textContent = "";
+      triggerTrainingFailure();
+      return;
+    }
+    lifePointsRemaining--;
+    renderFrame();
+    return;
+  }
   
   trainingClickCount++;
   // 每2次點擊向右移動1格
@@ -750,6 +900,13 @@ function triggerTrainingAttack(){
     clearInterval(sandbagTimer);
     sandbagTimer = null;
   }
+
+  // 生命訓練：新的成功動畫序列（boxing → boom → shield 完好 → 龍移動 happy）
+  if(trainingType === "life"){
+    startLifeSuccessAnimation();
+    return;
+  }
+
   trainingProjectileX = 16;
   renderFrame();
   
@@ -854,7 +1011,33 @@ function triggerTrainingFailure(){
     trainingIdleTimer = null;
   }
 
-  // 開始失敗動畫：idle → sad → idle → sad
+  // 生命訓練：先等 1 秒（盾牌完好），龍再移動到盾牌位置 + SAD
+  if(trainingType === "life"){
+    lifePhase = "failureHold";      // 等 1 秒，龍在 x=48，盾牌完好
+    renderFrame();
+    lifeFailureHoldTimer = setTimeout(() => {
+      lifeFailureHoldTimer = null;
+      lifePhase = "failure";        // 盾牌隱藏，龍移到盾牌位置
+      lifeDragonMoveX = 32;
+      // 開始 SAD 動畫
+      trainingFailureStep = 0;
+      trainingFailureTimer = setInterval(() => {
+        trainingFailureStep++;
+        if(trainingFailureStep >= TRAINING_FAILURE_SEQ.length){
+          clearInterval(trainingFailureTimer);
+          trainingFailureTimer = null;
+          trainingFailureActive = false;
+          trainingFailed = false;
+          stopTraining();
+        }
+        renderFrame();
+      }, 600);
+      renderFrame();
+    }, 1000);
+    return;
+  }
+
+  // 其他訓練：直接失敗動畫
   trainingFailureStep = 0;
   trainingFailureTimer = setInterval(() => {
     trainingFailureStep++;
@@ -871,6 +1054,97 @@ function triggerTrainingFailure(){
   renderFrame();
 }
 
+// ========== 生命訓練成功動畫 ==========
+function startLifeSuccessAnimation(){
+  // 確保計時器清除
+  if(trainingTimer){
+    clearInterval(trainingTimer);
+    trainingTimer = null;
+  }
+  document.getElementById("trainingTimerDisplay").textContent = "";
+  if(trainingCelebrationTimer){
+    clearInterval(trainingCelebrationTimer);
+    trainingCelebrationTimer = null;
+  }
+  trainingCelebrationActive = false;
+  trainingCelebrationStep = 0;
+  trainingPowerHidden = true;
+
+  // 龍保持原本位置 x=48
+  lifeDragonMoveX = 48;
+
+  // 階段 1: boxing 從最左一格一格向右移動到盾牌
+  lifePhase = "boxing";
+  lifeBoxingX = 0;
+  renderFrame();
+
+  let boxingStepCount = 0;
+  lifeBoxingTimer = setInterval(() => {
+    boxingStepCount++;
+    if(boxingStepCount >= 32){
+      // 已到達盾牌位置 (x=32)，切到 BOOM 階段
+      clearInterval(lifeBoxingTimer);
+      lifeBoxingTimer = null;
+      lifePhase = "boom";
+      startLifeBoom();
+    } else {
+      lifeBoxingX += 1; // 每次移動 1 像素
+      renderFrame();
+    }
+  }, 30);
+}
+
+function startLifeBoom(){
+  // 顯示 BOOM 動畫覆蓋盾牌位置
+  boomFrame = 0;
+  boomCycle = 0;
+  renderFrame();
+
+  lifeBoomTimer = setInterval(() => {
+    boomFrame = boomFrame === 0 ? 1 : 0;
+    if(boomFrame === 0) boomCycle++;
+    if(boomCycle >= 2){
+      // BOOM 結束 → 盾牌完好顯示 1 秒
+      clearInterval(lifeBoomTimer);
+      lifeBoomTimer = null;
+      lifePhase = "shieldHold";
+      renderFrame();
+      lifeShieldHoldTimer = setTimeout(() => {
+        lifeShieldHoldTimer = null;
+        // 盾牌隱藏，龍移動到盾牌位置 + happy
+        lifePhase = "celebration";
+        startLifeCelebration();
+      }, 1000);
+      return;
+    }
+    renderFrame();
+  }, 200);
+}
+
+function startLifeCelebration(){
+  lifeDragonMoveX = 48;
+  trainingCelebrationActive = true;
+  trainingCelebrationStep = 0;
+  trainingAttackActive = false; // 慶祝階段由 trainingCelebrationActive 阻擋操作
+
+  trainingCelebrationTimer = setInterval(() => {
+    trainingCelebrationStep++;
+    // 龍在慶祝過程中從 x=48 移動到 x=32（盾牌位置，從右到左第2個16×16）
+    if(trainingCelebrationStep === 1) lifeDragonMoveX = 32;       // 第1下 happy 就到盾牌位置
+    else if(trainingCelebrationStep >= 2) lifeDragonMoveX = 32;   // 停留
+
+    if(trainingCelebrationStep >= TRAINING_CELEBRATION_SEQ.length){
+      clearInterval(trainingCelebrationTimer);
+      trainingCelebrationTimer = null;
+      trainingCelebrationActive = false;
+      stopTraining();
+      return;
+    }
+    renderFrame();
+  }, 600);
+  renderFrame();
+}
+
 function renderTrainingCanvas(){
   // 繪製訓練背景 (384×96 等比繪於 64×16 canvas)
   if(tbgImage.complete && tbgImage.naturalWidth > 0){
@@ -879,7 +1153,89 @@ function renderTrainingCanvas(){
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, CANVAS_TRAIN_W, 16);
   }
-  
+
+  // 龍幀選擇：慶祝/失敗/攻擊/平時
+  let dragonFrame;
+  if(trainingFailureActive){
+    dragonFrame = TRAINING_FAILURE_SEQ[trainingFailureStep];
+  } else if(trainingCelebrationActive){
+    dragonFrame = TRAINING_CELEBRATION_SEQ[trainingCelebrationStep];
+  } else if(trainingAttackActive && trainingType !== "life"){
+    dragonFrame = 11;
+  } else {
+    dragonFrame = trainingIdleFrame;
+  }
+
+  if(trainingType === "life"){
+    // 生命訓練：根據 lifePhase 決定顯示
+    // 計算龍當前 x 位置（慶祝/失敗 sad 時在盾牌位置 x=32，其餘固定 x=48）
+    const lifeDragonX = (lifePhase === "celebration" || lifePhase === "failure") ? lifeDragonMoveX : 48;
+
+    // 盾牌 / BOOM 顯示
+    if(lifePhase === "boom"){
+      // 階段 2: BOOM 動畫覆蓋盾牌位置
+      const bImg = boomFrame === 0 ? boomImage : boomImage2;
+      if(bImg.complete && bImg.naturalWidth > 0){
+        ctx.drawImage(bImg, 32, 0, 16, 16);
+      }
+    } else if(lifePhase === "celebration" || lifePhase === "failure"){
+      // 階段 5: 盾牌隱藏（慶祝 / 失敗 SAD 時）
+    } else {
+      // 階段 play / boxing / shieldHold：顯示盾牌
+      const shieldImg = lifeShieldBroken ? shieldBreakImage : shieldImage;
+      if(shieldImg.complete && shieldImg.naturalWidth > 0){
+        ctx.drawImage(shieldImg, 32, 0, 16, 16);
+      }
+      // 僅 play 階段顯示剩餘 point
+      if(lifePhase === "play" && !lifeShieldBroken && pointImage.complete && pointImage.naturalWidth > 0){
+        const positions = [
+          [32, 0], // 上左
+          [40, 0], // 上右
+          [32, 8], // 下左
+          [40, 8], // 下右
+        ];
+        for(let i = 0; i < lifePointsRemaining && i < 4; i++){
+          ctx.drawImage(pointImage, positions[i][0], positions[i][1], 8, 8);
+        }
+      }
+    }
+
+    // 顯示 boxing 圖（僅 boxing 階段）
+    if(lifePhase === "boxing" && boxingImage.complete && boxingImage.naturalWidth > 0){
+      ctx.drawImage(boxingImage, lifeBoxingX, 0, 16, 16);
+    }
+
+    // 龍（跟隨 lifeDragonX，慶祝時從 48 移動到 32）
+    if(rowImages[currentRow] && rowImages[currentRow].complete && rowImages[currentRow].naturalWidth > 0){
+      ctx.drawImage(
+        rowImages[currentRow],
+        dragonFrame * PITCH, 0,
+        16, 16,
+        lifeDragonX, 0,
+        16, 16
+      );
+    }
+
+    // 慶祝時 happy icons（固定位置 x=24, x=48，與攻擊訓練相同）
+    if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
+       && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
+      ctx.drawImage(happyImage, 24, 0, 8, 8);
+      ctx.drawImage(happyImage, 24, 8, 8, 8);
+      ctx.drawImage(happyImage, 48, 0, 8, 8);
+      ctx.drawImage(happyImage, 48, 8, 8, 8);
+    }
+    // 失敗時 sad icons（固定位置 x=24, x=48，與攻擊訓練相同）
+    if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
+       && TRAINING_FAILURE_SEQ[trainingFailureStep] === 10){
+      ctx.drawImage(sadImage, 24, 0, 8, 8);
+      ctx.drawImage(sadImage, 24, 8, 8, 8);
+      ctx.drawImage(sadImage, 48, 0, 8, 8);
+      ctx.drawImage(sadImage, 48, 8, 8, 8);
+    }
+    return;
+  }
+
+  // 攻擊訓練：原來的布局
   // 1) 最左側訓練靶子 (x=0)，依狀態顯示不同圖
   if(sandbagState === "hit"){
     // 被打中後：顯示 Sandbag03
@@ -899,49 +1255,35 @@ function renderTrainingCanvas(){
     }
   }
   
-  // 2) 龍在中間（x=32）：攻擊時 frame 11，慶祝時 idle/happy，平時 idle
-  let dragonFrame;
-  if(trainingFailureActive){
-    dragonFrame = TRAINING_FAILURE_SEQ[trainingFailureStep];
-  } else if(trainingCelebrationActive){
-    dragonFrame = TRAINING_CELEBRATION_SEQ[trainingCelebrationStep];
-  } else if(trainingAttackActive){
-    dragonFrame = 11;
-  } else {
-    dragonFrame = trainingIdleFrame;
-  }
+  // 2) 龍在中間（x=32）
   if(rowImages[currentRow] && rowImages[currentRow].complete && rowImages[currentRow].naturalWidth > 0){
     ctx.drawImage(
       rowImages[currentRow],
       dragonFrame * PITCH, 0,
       16, 16,
-      32, 0,  // 龍在 x=32
+      32, 0,
       16, 16
     );
   }
   
-  // 慶祝時只在 happy 幀顯示愛心，idle 幀隱藏
+  // 慶祝時只在 happy 幀顯示愛心
   if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
      && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
-    // 左側（x=24）上下各一個
     ctx.drawImage(happyImage, 24, 0, 8, 8);
     ctx.drawImage(happyImage, 24, 8, 8, 8);
-    // 右側（x=48）上下各一個
     ctx.drawImage(happyImage, 48, 0, 8, 8);
     ctx.drawImage(happyImage, 48, 8, 8, 8);
   }
   // 失敗時只在 sad 幀顯示難過圖
   if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
      && TRAINING_FAILURE_SEQ[trainingFailureStep] === 10){
-    // 左側（x=24）上下各一個
     ctx.drawImage(sadImage, 24, 0, 8, 8);
     ctx.drawImage(sadImage, 24, 8, 8, 8);
-    // 右側（x=48）上下各一個
     ctx.drawImage(sadImage, 48, 0, 8, 8);
     ctx.drawImage(sadImage, 48, 8, 8, 8);
   }
   
-  // 2) Power 在龍右側（x=48），攻擊完成後隱藏
+  // Power 在龍右側（x=48），攻擊完成後隱藏
   if(!trainingPowerHidden){
     if(powerImage.complete && powerImage.naturalWidth > 0){
       const powerFrame = Math.min(trainingLevel, 5);
@@ -957,7 +1299,7 @@ function renderTrainingCanvas(){
     }
   }
   
-  // 3) 攻擊彈在龍左方，火球連續移動（精靈 16×8 繪於上方）
+  // 攻擊彈在龍左方，火球連續移動（精靈 16×8 繪於上方）
   if(trainingAttackActive && attackProjImage.complete && attackProjImage.naturalWidth > 0){
     ctx.drawImage(attackProjImage, trainingProjectileX, 0, 16, 8);
   }
@@ -1209,7 +1551,7 @@ buildFunctionButtons();
 loadGameState(); // 讀取存檔
 
 let loadedCount = 0;
-const TOTAL_IMAGES = 18 + BG_NAMES.length + 1 + 10; // 18 row + 4 bg + 1 meat + 10 training
+const TOTAL_IMAGES = 18 + BG_NAMES.length + 1 + 14; // 18 row + 4 bg + 1 meat + 14 training
 function onImageLoaded(){
   loadedCount++;
   if(loadedCount >= TOTAL_IMAGES) {
@@ -1268,6 +1610,22 @@ sadImage.src = "BG/sad.png";
 sadImage.onload = onImageLoaded;
 sadImage.onerror = onImageError;
 
+shieldImage.src = "BG/shield.png";
+shieldImage.onload = onImageLoaded;
+shieldImage.onerror = onImageError;
+
+pointImage.src = "BG/point.png";
+pointImage.onload = onImageLoaded;
+pointImage.onerror = onImageError;
+
+shieldBreakImage.src = "BG/Shield Break.png";
+shieldBreakImage.onload = onImageLoaded;
+shieldBreakImage.onerror = onImageError;
+
+boxingImage.src = "BG/boxing.png";
+boxingImage.onload = onImageLoaded;
+boxingImage.onerror = onImageError;
+
 BG_NAMES.forEach(name => {
   const img = new Image();
   img.src = `BG/${name}.png`;
@@ -1292,6 +1650,9 @@ window.addEventListener("beforeunload", saveGameState);
 // 訓練按鈕事件綁定
 document.getElementById("trainingClickBtn").onclick = handleTrainingClick;
 document.getElementById("trainingBackBtn").onclick = stopTraining;
+document.getElementById("trainingModeAttack").onclick = () => selectTrainingType("attack");
+document.getElementById("trainingModeLife").onclick = () => selectTrainingType("life");
+document.getElementById("trainingModeBackBtn").onclick = backToTrainingModeSelect;
 </script>
 </body>
 </html>
