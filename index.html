@@ -1752,6 +1752,10 @@ document.getElementById("btnRight").onclick = () => {
 };
 
 // ========== 啟動 ==========
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
+}
+
 buildFunctionButtons();
 loadGameState(); // 讀取存檔
 

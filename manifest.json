@@ -2,7 +2,7 @@
   "name": "Digimon V-Pet",
   "short_name": "V-Pet",
   "description": "數碼寶貝 V-Pet 模擬器",
-  "start_url": "index.html",
+  "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#111111",
