@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="DigiVpet">
 <title>Digimon V-Pet 顯示控制器</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="Logo-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="Logo-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="Logo-512.png">
 <link rel="apple-touch-icon" sizes="192x192" href="Logo-192.png">
@@ -1753,8 +1754,23 @@ document.getElementById("btnRight").onclick = () => {
 
 // ========== 啟動 ==========
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("sw.js");
+  if(location.protocol === "file:"){
+    console.warn("⚠️ 無法在 file:// 協定下註冊 Service Worker，請使用 HTTP/HTTPS 伺服器開啟");
+  } else {
+    navigator.serviceWorker.register("sw.js").then(() => {
+      console.log("✅ Service Worker 註冊成功");
+    }).catch(err => {
+      console.warn("❌ SW 註冊失敗", err);
+    });
+  }
 }
+// 偵測 PWA 安裝提示（用於偵錯）
+let deferredPrompt;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  console.log("✅ Chrome 已觸發安裝條件（beforeinstallprompt）");
+});
 
 buildFunctionButtons();
 loadGameState(); // 讀取存檔
