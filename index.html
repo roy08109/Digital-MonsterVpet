@@ -303,6 +303,10 @@ body{
         <span>4. 閃避訓練</span>
         <span class="help-icon" data-mode="evade">!</span>
       </div>
+      <div class="training-mode-btn" id="trainingModeSpeed" data-mode="speed">
+        <span>5. 攻速訓練</span>
+        <span class="help-icon" data-mode="speed">!</span>
+      </div>
     </div>
     <div id="trainingHelpPopup" style="display:none;background:#1a1a2e;border:1px solid #ffcc00;border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:12px;color:#ddd;line-height:1.6;"></div>
     <div style="text-align:center;">
@@ -313,6 +317,10 @@ body{
   <div id="trainingPlayView" style="display:none; text-align:center; position:relative;">
     <div id="trainingTimerDisplay" class="training-timer">3</div>
     <button class="training-click-btn" id="trainingClickBtn">點擊</button>
+    <div id="speedTrainingBtns" style="display:none; gap:8px; justify-content:center;">
+      <button class="training-click-btn" id="speedBtnA" style="background:#e74c3c; width:64px;">A</button>
+      <button class="training-click-btn" id="speedBtnB" style="background:#3498db; width:64px;">B</button>
+    </div>
     <button class="training-back-btn" id="trainingModeBackBtn">返回選擇</button>
   </div>
 </div>
@@ -588,6 +596,7 @@ let trainingProjectileTimer = null;
 let powerImage = new Image();
 let attackProjImage = new Image();
 let evadeMissileImage = new Image();  // 閃避訓練飛彈
+let abGuideImage = new Image();      // 攻速訓練 AB 指引圖
 let tbgImage = new Image();  // 訓練背景
 let sandbagImage = new Image();
 let sandbagImage2 = new Image();
@@ -653,6 +662,18 @@ let evadeInstructFrame = 0;          // instruct 當前幀 0-2
 let evadePhase = "idle";             // "idle"|"moving"|"success"|"failure"
 let evadeDragonFlipped = false;      // 成功後翻轉龍面向右
 let evadeSucceeded = false;
+// ========== 攻速訓練變量 ==========
+let speedActive = false;             // 攻速訓練進行中
+let speedSequence = [];              // 當前 AB 序列 (6個字母)
+let speedCurrentIndex = 0;           // 當前要按的索引 0-5
+let speedDragonX = 48;               // 龍 x 位置（成功後動畫用）
+let speedMovePhase = "";             // "" | "movingLeft" | "returning" | "done"
+let speedMoveTimer = null;           // 移動計時器
+let speedCorrectFlashAt = -1;        // 正確閃現的字母索引
+let speedCorrectFlashTimer = null;   // 正確閃現計時器
+let speedCountdown = 3;              // 攻速訓練倒數（3秒）
+let speedCountdownTimer = null;      // 倒數計時器
+const SPEED_SEQ_COUNT = 6;           // 序列長度
 const TRAIN_SLOTS = 5;
 // 主 canvas 在訓練時改為 64×16：
 // [---Projectile@16---][Dragon@32][Power@48]
@@ -666,6 +687,7 @@ function selectTrainingType(type){
   document.getElementById("trainingModeLife").classList.toggle("active", type === "life");
   document.getElementById("trainingModeCritical").classList.toggle("active", type === "critical");
   document.getElementById("trainingModeEvade").classList.toggle("active", type === "evade");
+  document.getElementById("trainingModeSpeed").classList.toggle("active", type === "speed");
   // 選完後直接開始倒數
   startTrainingPlay();
 }
@@ -751,6 +773,8 @@ function startTraining(){
   document.getElementById("trainingModeAttack").classList.add("active");
   document.getElementById("trainingModeLife").classList.remove("active");
   document.getElementById("trainingModeCritical").classList.remove("active");
+  document.getElementById("trainingModeEvade").classList.remove("active");
+  document.getElementById("trainingModeSpeed").classList.remove("active");
   // 顯示模式選擇，隱藏開始訓練視圖
   document.getElementById("trainingModeSelect").style.display = "block";
   document.getElementById("trainingPlayView").style.display = "none";
@@ -758,6 +782,9 @@ function startTraining(){
   // 主 canvas 寬度改為 64
   canvas.width = CANVAS_TRAIN_W;
   canvas.style.width = (CANVAS_TRAIN_W * 6) + "px";
+  // 重置按鈕顯示
+  document.getElementById("trainingClickBtn").style.display = "";
+  document.getElementById("speedTrainingBtns").style.display = "none";
   renderFrame();
 
   trainPanel.style.display = "block";
@@ -796,6 +823,38 @@ function startTrainingPlay(){
     evadeSucceeded = false;
     evadeDragonFlipped = false;
     startEvadeProjectile();
+    renderFrame();
+    return;
+  }
+
+  // 攻速訓練：序列 AB 配對，從左到右點擊
+  if(trainingType === "speed"){
+    speedActive = true;
+    speedSequence = [];
+    speedCurrentIndex = 0;
+    speedDragonX = 48;
+    speedMovePhase = "";
+    speedCorrectFlashAt = -1;
+    // 隨機生成 6 個 A/B 字母
+    for(let i = 0; i < SPEED_SEQ_COUNT; i++){
+      speedSequence.push(Math.random() < 0.5 ? "A" : "B");
+    }
+    speedCountdown = 3;
+    document.getElementById("trainingTimerDisplay").textContent = speedCountdown;
+    if(speedCountdownTimer){ clearInterval(speedCountdownTimer); }
+    speedCountdownTimer = setInterval(() => {
+      speedCountdown--;
+      document.getElementById("trainingTimerDisplay").textContent = speedCountdown;
+      if(speedCountdown <= 0){
+        clearInterval(speedCountdownTimer);
+        speedCountdownTimer = null;
+        clearSpeedTraining();
+        speedDragonX = 32;
+        triggerTrainingFailure();
+      }
+    }, 1000);
+    document.getElementById("trainingClickBtn").style.display = "none";
+    document.getElementById("speedTrainingBtns").style.display = "flex";
     renderFrame();
     return;
   }
@@ -860,6 +919,8 @@ function backToTrainingModeSelect(){
   evadeDragonFlipped = false;
   if(evadeInstructTimer){ clearInterval(evadeInstructTimer); evadeInstructTimer = null; }
   evadeInstructFrame = 0;
+  // 攻速訓練清理
+  clearSpeedTraining();
   // 切換視圖
   document.getElementById("trainingPlayView").style.display = "none";
   document.getElementById("trainingModeSelect").style.display = "block";
@@ -935,6 +996,8 @@ function stopTraining(){
   evadeDragonFlipped = false;
   if(evadeInstructTimer){ clearInterval(evadeInstructTimer); evadeInstructTimer = null; }
   evadeInstructFrame = 0;
+  // 攻速訓練清理
+  clearSpeedTraining();
   lifePhase = "play";
   document.getElementById("trainingDisplay").style.display = "none";
   // 恢復 canvas 尺寸
@@ -1436,6 +1499,93 @@ function startEvadeCelebration(){
   renderFrame();
 }
 
+// ========== 攻速訓練函數 ==========
+function handleSpeedClick(btn){
+  if(!speedActive || speedMovePhase !== "") return;
+  if(btn === speedSequence[speedCurrentIndex]){
+    // 正確：顯示正確指示器並前進到下一個字母
+    const justCorrectIdx = speedCurrentIndex;
+    speedCorrectFlashAt = justCorrectIdx;
+    if(speedCorrectFlashTimer){ clearTimeout(speedCorrectFlashTimer); }
+    speedCorrectFlashTimer = setTimeout(() => {
+      speedCorrectFlashAt = -1;
+      speedCorrectFlashTimer = null;
+      renderFrame();
+    }, 400);
+    speedCurrentIndex++;
+    if(speedCurrentIndex >= SPEED_SEQ_COUNT){
+      // 全部正確！停止倒數並開始龍向左走的成功動畫
+      speedActive = false;
+      if(speedCountdownTimer){ clearInterval(speedCountdownTimer); speedCountdownTimer = null; }
+      document.getElementById("trainingTimerDisplay").textContent = "";
+      document.getElementById("speedTrainingBtns").style.display = "none";
+      document.getElementById("trainingClickBtn").style.display = "";
+      startSpeedWalkAnimation();
+    }
+    renderFrame();
+  } else {
+    // 錯誤 → 立刻失敗，龍移到 x=32
+    clearSpeedTraining();
+    speedDragonX = 32;
+    triggerTrainingFailure();
+  }
+}
+
+function startSpeedWalkAnimation(){
+  // 第一階段：龍從 x=48 一格一格往左走到 x=0
+  speedMovePhase = "movingLeft";
+  speedDragonX = 48;
+  if(speedMoveTimer){ clearInterval(speedMoveTimer); }
+  speedMoveTimer = setInterval(() => {
+    speedDragonX--;
+    renderFrame();
+    if(speedDragonX <= 0){
+      // 走到最左，開始返回
+      clearInterval(speedMoveTimer);
+      speedMovePhase = "returning";
+      speedMoveTimer = setInterval(() => {
+        speedDragonX++;
+        renderFrame();
+        if(speedDragonX >= 32){
+          // 回到 x=32，顯示 happy
+          clearInterval(speedMoveTimer);
+          speedMoveTimer = null;
+          speedMovePhase = "done";
+          // 開始慶祝動畫
+          trainingCelebrationActive = true;
+          trainingCelebrationStep = 0;
+          trainingCelebrationTimer = setInterval(() => {
+            trainingCelebrationStep++;
+            if(trainingCelebrationStep >= TRAINING_CELEBRATION_SEQ.length){
+              clearInterval(trainingCelebrationTimer);
+              trainingCelebrationTimer = null;
+              trainingCelebrationActive = false;
+              stopTraining();
+            }
+            renderFrame();
+          }, 600);
+          renderFrame();
+        }
+      }, 15);
+    }
+  }, 15);
+}
+
+function clearSpeedTraining(){
+  speedActive = false;
+  speedMovePhase = "";
+  speedCurrentIndex = 0;
+  speedSequence = [];
+  speedDragonX = 48;
+  speedCorrectFlashAt = -1;
+  if(speedMoveTimer){ clearInterval(speedMoveTimer); speedMoveTimer = null; }
+  if(speedCorrectFlashTimer){ clearTimeout(speedCorrectFlashTimer); speedCorrectFlashTimer = null; }
+  if(speedCountdownTimer){ clearInterval(speedCountdownTimer); speedCountdownTimer = null; }
+  document.getElementById("trainingTimerDisplay").textContent = "";
+  document.getElementById("trainingClickBtn").style.display = "";
+  document.getElementById("speedTrainingBtns").style.display = "none";
+}
+
 function renderTrainingCanvas(){
   // 繪製訓練背景 (384×96 等比繪於 64×16 canvas)
   if(tbgImage.complete && tbgImage.naturalWidth > 0){
@@ -1627,6 +1777,76 @@ function renderTrainingCanvas(){
     }
 
     // 失敗 sad icons
+    if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
+       && TRAINING_FAILURE_SEQ[trainingFailureStep] === 10){
+      ctx.drawImage(sadImage, 24, 0, 8, 8);
+      ctx.drawImage(sadImage, 24, 8, 8, 8);
+      ctx.drawImage(sadImage, 48, 0, 8, 8);
+      ctx.drawImage(sadImage, 48, 8, 8, 8);
+    }
+    return;
+  }
+
+  // 攻速訓練：序列 AB 配對，龍在右邊面向左
+  if(trainingType === "speed"){
+    // 龍位置：遊戲中在 x=48，動畫中在 speedDragonX
+    const dragonPosX = (!speedActive)
+      ? speedDragonX : 48;
+    const faceRight = (speedMovePhase === "returning" || speedMovePhase === "done");
+    if(rowImages[currentRow] && rowImages[currentRow].complete && rowImages[currentRow].naturalWidth > 0){
+      if(faceRight){
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(rowImages[currentRow], dragonFrame * PITCH, 0, 16, 16, -(dragonPosX + 16), 0, 16, 16);
+        ctx.restore();
+      } else {
+        ctx.drawImage(rowImages[currentRow], dragonFrame * PITCH, 0, 16, 16, dragonPosX, 0, 16, 16);
+      }
+    }
+    // 使用 AB.png 精靈繪製序列：箭頭 + 6 個 A/B
+    if(speedSequence.length > 0 && (speedActive || speedCorrectFlashAt >= 0) && abGuideImage.complete && abGuideImage.naturalWidth > 0){
+      // 箭頭
+      ctx.font = "6px monospace";
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#aaa";
+      ctx.fillText("→", 0, 10);
+      // 繪製每個字母（AB.png 下半部：A=sx:0,sy:8, B=sx:8,sy:8）
+      const lxStart = 5;
+      const lSpacing = 7;
+      for(let i = 0; i < speedSequence.length; i++){
+        const lx = lxStart + i * lSpacing;
+        const isCurrent = (i === speedCurrentIndex);
+        const isDone = (i < speedCurrentIndex);
+        const isFlash = (i === speedCorrectFlashAt);
+        const letter = speedSequence[i];
+        const sx = (letter === "A") ? 0 : 8;
+        // 字母精靈 6×6
+        ctx.drawImage(abGuideImage, sx, 8, 8, 8, lx, 8, 6, 6);
+        // 已完成：上方繪製「正確」指示器
+        if(isDone && abGuideImage.complete){
+          ctx.drawImage(abGuideImage, 0, 0, 8, 8, lx, 0, 6, 6);
+        }
+        // 當前字母：黃色底線 + 箭頭
+        if(isCurrent){
+          ctx.fillStyle = "#ffcc00";
+          ctx.fillRect(lx, 14, 6, 2);
+          ctx.fillText("▲", lx + 1, 7);
+        }
+        // 剛按下正確：閃現「正確」
+        if(isFlash && abGuideImage.complete){
+          ctx.drawImage(abGuideImage, 0, 0, 8, 8, lx + 1, 0, 8, 8);
+        }
+      }
+    }
+    // 慶祝 (左右各一對)
+    if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
+       && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
+      ctx.drawImage(happyImage, 24, 0, 8, 8);
+      ctx.drawImage(happyImage, 24, 8, 8, 8);
+      ctx.drawImage(happyImage, 48, 0, 8, 8);
+      ctx.drawImage(happyImage, 48, 8, 8, 8);
+    }
+    // 失敗
     if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
        && TRAINING_FAILURE_SEQ[trainingFailureStep] === 10){
       ctx.drawImage(sadImage, 24, 0, 8, 8);
@@ -1997,6 +2217,9 @@ attackProjImage.onerror = onImageError;
 evadeMissileImage.src = "BG/missile.png";
 evadeMissileImage.onload = onImageLoaded;
 evadeMissileImage.onerror = onImageError;
+abGuideImage.src = "BG/AB.png";
+abGuideImage.onload = onImageLoaded;
+abGuideImage.onerror = onImageError;
 tbgImage.src = "BG/TBG01.png";
 tbgImage.onload = onImageLoaded;
 tbgImage.onerror = onImageError;
@@ -2084,7 +2307,8 @@ const trainingHelpTexts = {
   attack: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 攻擊訓練</div><div>倒數結束前點擊「點擊」按鈕蓄力，每 2 次點擊向右移動 1 格，全滿後龍會自動發射火球攻擊沙包！</div>',
   life: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 生命訓練</div><div>倒數結束前點擊消除盾牌上的紅色點數，全部消除且沒打中盾牌即成功！</div>',
   critical: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 爆擊訓練</div><div>爆擊條從左到右來回移動，在最右格時點擊即成功擊碎牆壁！</div>',
-  evade: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 閃避訓練</div><div>飛彈從左方飛來，在飛彈碰到 instruct（x=40）時點擊即可閃避成功！<br>太早或太晚點擊都會失敗！</div>'
+  evade: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 閃避訓練</div><div>飛彈從左方飛來，在飛彈碰到 instruct（x=40）時點擊即可閃避成功！<br>太早或太晚點擊都會失敗！</div>',
+  speed: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 攻速訓練</div><div>螢幕左側顯示 "→ABABAB" 隨機序列，<br>依序從左到右按下對應的 A（紅色）或 B（藍色）按鈕！<br>全部答對即成功，龍會往左走到最左再回到中央開心！<br>按錯即失敗。</div>'
 };
 document.querySelectorAll(".help-icon").forEach(el => {
   el.onclick = (e) => {
@@ -2094,7 +2318,7 @@ document.querySelectorAll(".help-icon").forEach(el => {
     popup.style.display = "block";
   };
 });
-["trainingModeAttack","trainingModeLife","trainingModeCritical","trainingModeEvade"].forEach(id => {
+["trainingModeAttack","trainingModeLife","trainingModeCritical","trainingModeEvade","trainingModeSpeed"].forEach(id => {
   const btn = document.getElementById(id);
   btn.onclick = (e) => {
     if(e.target.classList.contains("help-icon")) return;
@@ -2103,6 +2327,8 @@ document.querySelectorAll(".help-icon").forEach(el => {
   };
 });
 document.getElementById("trainingModeBackBtn").onclick = backToTrainingModeSelect;
+document.getElementById("speedBtnA").onclick = () => handleSpeedClick("A");
+document.getElementById("speedBtnB").onclick = () => handleSpeedClick("B");
 </script>
 </body>
 </html>
