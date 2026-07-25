@@ -299,6 +299,10 @@ body{
         <span>3. 爆擊訓練</span>
         <span class="help-icon" data-mode="critical">!</span>
       </div>
+      <div class="training-mode-btn" id="trainingModeEvade" data-mode="evade">
+        <span>4. 閃避訓練</span>
+        <span class="help-icon" data-mode="evade">!</span>
+      </div>
     </div>
     <div id="trainingHelpPopup" style="display:none;background:#1a1a2e;border:1px solid #ffcc00;border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:12px;color:#ddd;line-height:1.6;"></div>
     <div style="text-align:center;">
@@ -583,6 +587,7 @@ let trainingProjectileX = 0;
 let trainingProjectileTimer = null;
 let powerImage = new Image();
 let attackProjImage = new Image();
+let evadeMissileImage = new Image();  // 閃避訓練飛彈
 let tbgImage = new Image();  // 訓練背景
 let sandbagImage = new Image();
 let sandbagImage2 = new Image();
@@ -630,6 +635,7 @@ let lifeDragonMoveX = 48;          // 龍慶祝時的 x 位置（會從 48 移�
 let criticalBarImage = new Image();  // 爆擊條 (64x16)
 let wallImage = new Image();         // 牆 (16x16)
 let wallBrokenImage = new Image();   // 破壞的牆 (16x16)
+let instructImage = new Image();      // 閃避指示箭頭 (48x16, 3幀循環)
 let criticalWallBroken = false;      // 牆是否已破壞
 let criticalPos = 0;                 // 當前位置 0-3
 let criticalDirection = 1;           // 1=右移, -1=左移
@@ -639,6 +645,14 @@ let criticalBarTimer = null;
 let criticalAttackTimer = null;
 let criticalAttackStep = 0;          // 成功攻擊步驟
 let criticalBoomY = 0;               // 攻擊時 BOOM 的 y 位置
+// ========== 閃避訓練變量 ==========
+let evadeProjX = -16;                  // 飛彈 x 位置（從左往右）
+let evadeProjTimer = null;           // 飛彈移動計時器
+let evadeInstructTimer = null;       // instruct 3幀循環計時器
+let evadeInstructFrame = 0;          // instruct 當前幀 0-2
+let evadePhase = "idle";             // "idle"|"moving"|"success"|"failure"
+let evadeDragonFlipped = false;      // 成功後翻轉龍面向右
+let evadeSucceeded = false;
 const TRAIN_SLOTS = 5;
 // 主 canvas 在訓練時改為 64×16：
 // [---Projectile@16---][Dragon@32][Power@48]
@@ -651,6 +665,7 @@ function selectTrainingType(type){
   document.getElementById("trainingModeAttack").classList.toggle("active", type === "attack");
   document.getElementById("trainingModeLife").classList.toggle("active", type === "life");
   document.getElementById("trainingModeCritical").classList.toggle("active", type === "critical");
+  document.getElementById("trainingModeEvade").classList.toggle("active", type === "evade");
   // 選完後直接開始倒數
   startTrainingPlay();
 }
@@ -773,6 +788,18 @@ function startTrainingPlay(){
     return;
   }
 
+  // 閃避訓練：不計時，飛彈移動
+  if(trainingType === "evade"){
+    document.getElementById("trainingTimerDisplay").textContent = "";
+    evadePhase = "moving";
+    evadeProjX = -16;
+    evadeSucceeded = false;
+    evadeDragonFlipped = false;
+    startEvadeProjectile();
+    renderFrame();
+    return;
+  }
+
   // 開始倒數計時（UI 每秒更新）
   trainingCountdown = (trainingType === "life") ? 2 : 3;
   document.getElementById("trainingTimerDisplay").textContent = trainingCountdown;
@@ -822,6 +849,17 @@ function backToTrainingModeSelect(){
     criticalAttackTimer = null;
   }
   criticalBarActive = false;
+  // 閃避訓練清理
+  if(evadeProjTimer){
+    clearInterval(evadeProjTimer);
+    evadeProjTimer = null;
+  }
+  evadePhase = "idle";
+  evadeProjX = -16;
+  evadeSucceeded = false;
+  evadeDragonFlipped = false;
+  if(evadeInstructTimer){ clearInterval(evadeInstructTimer); evadeInstructTimer = null; }
+  evadeInstructFrame = 0;
   // 切換視圖
   document.getElementById("trainingPlayView").style.display = "none";
   document.getElementById("trainingModeSelect").style.display = "block";
@@ -886,6 +924,17 @@ function stopTraining(){
     criticalAttackTimer = null;
   }
   criticalBarActive = false;
+  // 閃避訓練清理
+  if(evadeProjTimer){
+    clearInterval(evadeProjTimer);
+    evadeProjTimer = null;
+  }
+  evadePhase = "idle";
+  evadeProjX = -16;
+  evadeSucceeded = false;
+  evadeDragonFlipped = false;
+  if(evadeInstructTimer){ clearInterval(evadeInstructTimer); evadeInstructTimer = null; }
+  evadeInstructFrame = 0;
   lifePhase = "play";
   document.getElementById("trainingDisplay").style.display = "none";
   // 恢復 canvas 尺寸
@@ -923,6 +972,37 @@ function handleTrainingClick(){
   if(trainingType === "critical"){
     if(!criticalBarActive) return;
     stopCriticalBar();
+    return;
+  }
+
+  // 閃避訓練：飛彈碰到 instruct 即成功
+  if(trainingType === "evade"){
+    if(evadePhase !== "moving") return;
+    // 成功區間：飛彈頭（右側）碰到 instruct（x=40~48）
+    if(evadeProjX >= 24 && evadeProjX <= 32){
+      evadePhase = "success";
+      evadeSucceeded = true;
+      evadeDragonFlipped = true;  // 成功後龍面向右
+      clearInterval(evadeProjTimer);
+      evadeProjTimer = null;
+      // 飛彈穿過（繼續往右飛出畫面消失）
+      const finishTimer = setInterval(() => {
+        evadeProjX += 2;
+        if(evadeProjX >= 64){
+          clearInterval(finishTimer);
+          evadePhase = "done";
+          startEvadeCelebration();
+        }
+        renderFrame();
+      }, 30);
+    } else {
+      // 不在躲避區點擊 = 失敗
+      evadePhase = "failure";
+      evadeSucceeded = false;
+      clearInterval(evadeProjTimer);
+      evadeProjTimer = null;
+      triggerTrainingFailure();
+    }
     return;
   }
   
@@ -1302,6 +1382,60 @@ function startCriticalSuccessAnimation(){
   }, 16);
 }
 
+// ========== 閃避訓練函式 ==========
+function startEvadeProjectile(){
+  // instruct 3幀循環固定 x=40（每200ms切換一幀）
+  evadeInstructFrame = 0;
+  if(evadeInstructTimer){ clearInterval(evadeInstructTimer); }
+  evadeInstructTimer = setInterval(() => {
+    evadeInstructFrame = (evadeInstructFrame + 1) % 3;
+    renderFrame();
+  }, 200);
+
+  // 飛彈移動（從左往右，每20ms移動1像素）
+  evadeProjTimer = setInterval(() => {
+    evadeProjX += 1;
+    if(evadeProjX >= 48){
+      // 飛彈到達龍的位置而沒被閃避 → 失敗（被擊中）
+      clearInterval(evadeProjTimer);
+      evadeProjTimer = null;
+      if(evadeInstructTimer){ clearInterval(evadeInstructTimer); evadeInstructTimer = null; }
+      if(evadePhase === "moving"){
+        evadePhase = "failure";
+        evadeSucceeded = false;
+        triggerTrainingFailure();
+      }
+    }
+    renderFrame();
+  }, 30);
+}
+
+function startEvadeCelebration(){
+  // 清除計時器
+  if(trainingTimer){ clearInterval(trainingTimer); trainingTimer = null; }
+  document.getElementById("trainingTimerDisplay").textContent = "";
+  if(trainingCelebrationTimer){ clearInterval(trainingCelebrationTimer); trainingCelebrationTimer = null; }
+  trainingCelebrationActive = false;
+  trainingCelebrationStep = 0;
+  trainingPowerHidden = true;
+  trainingAttackActive = false;
+
+  trainingCelebrationActive = true;
+  trainingCelebrationStep = 0;
+  trainingCelebrationTimer = setInterval(() => {
+    trainingCelebrationStep++;
+    if(trainingCelebrationStep >= TRAINING_CELEBRATION_SEQ.length){
+      clearInterval(trainingCelebrationTimer);
+      trainingCelebrationTimer = null;
+      trainingCelebrationActive = false;
+      trainingCelebrationStep = 0;
+      stopTraining();
+    }
+    renderFrame();
+  }, 600);
+  renderFrame();
+}
+
 function renderTrainingCanvas(){
   // 繪製訓練背景 (384×96 等比繪於 64×16 canvas)
   if(tbgImage.complete && tbgImage.naturalWidth > 0){
@@ -1440,6 +1574,58 @@ function renderTrainingCanvas(){
       ctx.drawImage(happyImage, 48, 0, 8, 8);
       ctx.drawImage(happyImage, 48, 8, 8, 8);
     }
+    // 失敗 sad icons
+    if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
+       && TRAINING_FAILURE_SEQ[trainingFailureStep] === 10){
+      ctx.drawImage(sadImage, 24, 0, 8, 8);
+      ctx.drawImage(sadImage, 24, 8, 8, 8);
+      ctx.drawImage(sadImage, 48, 0, 8, 8);
+      ctx.drawImage(sadImage, 48, 8, 8, 8);
+    }
+    return;
+  }
+
+  // 閃避訓練：飛彈從左方飛來，龍在 x=48，x=40 有 instruct 3幀循環
+  if(trainingType === "evade"){
+    // instruct 在 x=40，三幀循環（成功/失敗後隱藏）
+    if(instructImage.complete && instructImage.naturalWidth > 0
+       && !trainingCelebrationActive && !trainingFailureActive){
+      ctx.drawImage(instructImage, evadeInstructFrame * 8, 0, 8, 16, 40, 0, 8, 16);
+    }
+
+    // 飛彈（從畫外飛入，missile.png 16×16）
+    if(evadeMissileImage.complete && evadeMissileImage.naturalWidth > 0 && evadePhase !== "done"){
+      ctx.drawImage(evadeMissileImage, 0, 0, 16, 16, evadeProjX, 0, 16, 16);
+    }
+
+    // 龍：遊戲時間在 x=48，成功/失敗後移到 x=32
+    const isCelebrating = trainingCelebrationActive || trainingFailureActive;
+    const dragonX = isCelebrating ? 32 : 48;
+    if(rowImages[currentRow] && rowImages[currentRow].complete && rowImages[currentRow].naturalWidth > 0){
+      if(evadeDragonFlipped){
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(rowImages[currentRow], dragonFrame * PITCH, 0, 16, 16, -(dragonX + 16), 0, 16, 16);
+        ctx.restore();
+      } else {
+        ctx.drawImage(rowImages[currentRow], dragonFrame * PITCH, 0, 16, 16, dragonX, 0, 16, 16);
+      }
+    }
+
+    // 成功飛彈穿過後消失位置再畫一次（確保飛彈超出左邊界時不再繪製）
+    if(attackProjImage.complete && attackProjImage.naturalWidth > 0 && evadeSucceeded && evadePhase === "done"){
+      // 飛彈已消失
+    }
+
+    // 慶祝 happy icons
+    if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
+       && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
+      ctx.drawImage(happyImage, 24, 0, 8, 8);
+      ctx.drawImage(happyImage, 24, 8, 8, 8);
+      ctx.drawImage(happyImage, 48, 0, 8, 8);
+      ctx.drawImage(happyImage, 48, 8, 8, 8);
+    }
+
     // 失敗 sad icons
     if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
        && TRAINING_FAILURE_SEQ[trainingFailureStep] === 10){
@@ -1808,6 +1994,9 @@ powerImage.onerror = onImageError;
 attackProjImage.src = "sprites/Attack/02_at.png";
 attackProjImage.onload = onImageLoaded;
 attackProjImage.onerror = onImageError;
+evadeMissileImage.src = "BG/missile.png";
+evadeMissileImage.onload = onImageLoaded;
+evadeMissileImage.onerror = onImageError;
 tbgImage.src = "BG/TBG01.png";
 tbgImage.onload = onImageLoaded;
 tbgImage.onerror = onImageError;
@@ -1863,6 +2052,10 @@ wallBrokenImage.src = "BG/Wall broken.png";
 wallBrokenImage.onload = onImageLoaded;
 wallBrokenImage.onerror = onImageError;
 
+instructImage.src = "BG/instruct.png";
+instructImage.onload = onImageLoaded;
+instructImage.onerror = onImageError;
+
 BG_NAMES.forEach(name => {
   const img = new Image();
   img.src = `BG/${name}.png`;
@@ -1890,7 +2083,8 @@ document.getElementById("trainingBackBtn").onclick = stopTraining;
 const trainingHelpTexts = {
   attack: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 攻擊訓練</div><div>倒數結束前點擊「點擊」按鈕蓄力，每 2 次點擊向右移動 1 格，全滿後龍會自動發射火球攻擊沙包！</div>',
   life: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 生命訓練</div><div>倒數結束前點擊消除盾牌上的紅色點數，全部消除且沒打中盾牌即成功！</div>',
-  critical: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 爆擊訓練</div><div>爆擊條從左到右來回移動，在最右格時點擊即成功擊碎牆壁！</div>'
+  critical: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 爆擊訓練</div><div>爆擊條從左到右來回移動，在最右格時點擊即成功擊碎牆壁！</div>',
+  evade: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 閃避訓練</div><div>飛彈從左方飛來，在飛彈碰到 instruct（x=40）時點擊即可閃避成功！<br>太早或太晚點擊都會失敗！</div>'
 };
 document.querySelectorAll(".help-icon").forEach(el => {
   el.onclick = (e) => {
@@ -1900,7 +2094,7 @@ document.querySelectorAll(".help-icon").forEach(el => {
     popup.style.display = "block";
   };
 });
-["trainingModeAttack","trainingModeLife","trainingModeCritical"].forEach(id => {
+["trainingModeAttack","trainingModeLife","trainingModeCritical","trainingModeEvade"].forEach(id => {
   const btn = document.getElementById(id);
   btn.onclick = (e) => {
     if(e.target.classList.contains("help-icon")) return;
