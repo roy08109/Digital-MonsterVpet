@@ -148,6 +148,16 @@ body{
   background:#333;
   border-color:#fff;
 }
+.training-mode-btn.disabled{
+  opacity:0.35;
+  pointer-events:none;
+  cursor:not-allowed;
+}
+.training-mode-btn.disabled::after{
+  content:" (不可用)";
+  color:#999;
+  font-size:10px;
+}
 .training-mode-btn .help-icon{
   display:inline-flex;
   align-items:center;
@@ -198,6 +208,23 @@ body{
   font-size:14px;
   cursor:pointer;
 }
+
+/* 特殊進化訓練卡片 */
+.evo-card{
+  width:44px; height:44px;
+  border:2px solid #666;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:20px;
+  color:#fff;
+  transition: background 0.3s, transform 0.15s;
+}
+.evo-card:active{ transform:scale(0.9); }
+.evo-card.flipped{ background:#444; color:#888; }
+.evo-card.found{ opacity:0.5; pointer-events:none; }
+.evo-card-type-0{ background:url('BG/Card core.png') center/cover; }   /* 紅色組→核心卡 */
+.evo-card-type-1{ background:url('BG/Card Star.png') center/cover; }  /* 黃色組→星卡 */
+.evo-card-type-2{ background:url('BG/4-leaf clover.png') center/cover; } /* 綠色組→四葉草 */
 
 /* 圖鑑面板 */
 .digidex-stage{
@@ -265,12 +292,15 @@ body{
 <div class="stats-display" id="statsDisplay">
   <div class="sd-title" id="sdName">Agumon</div>
   <div class="sd-row"><span>年齡</span><span id="sdAge">0歲</span></div>
+  <div class="sd-row"><span>體重</span><span id="sdWeight">5</span></div>
   <div class="sd-row"><span>飢餓</span><span id="sdHunger" style="font-size:12px;letter-spacing:1px;">❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️</span></div>
   <div class="sd-row"><span>血量</span><span id="sdHp">120 / 120</span></div>
   <div class="sd-row"><span>攻擊力</span><span id="sdAtk">12</span></div>
-  <div class="sd-row"><span>雙攻擊</span><span id="sdDouble">8%</span></div>
-  <div class="sd-row"><span>攻速</span><span id="sdSpeed">3</span></div>
-  <div class="sd-row"><span>閃避</span><span id="sdEvade">5%</span></div>
+  <div class="sd-row"><span>爆擊力</span><span id="sdDouble">8%</span></div>
+  <div class="sd-row"><span>攻速力</span><span id="sdSpeed">3</span></div>
+  <div class="sd-row"><span>閃避力</span><span id="sdEvade">5%</span></div>
+  <div class="sd-row"><span>親和力</span><span id="sdAffinity">0</span></div>
+  <div class="sd-row"><span>訓練點</span><span id="sdTrainingPoints">0</span></div>
 </div>
 
 <!-- 食物面板（按鈕下方） -->
@@ -307,6 +337,10 @@ body{
         <span>5. 攻速訓練</span>
         <span class="help-icon" data-mode="speed">!</span>
       </div>
+      <div class="training-mode-btn" id="trainingModeEvo" data-mode="evo">
+        <span>6. 特殊進化訓練</span>
+        <span class="help-icon" data-mode="evo">!</span>
+      </div>
     </div>
     <div id="trainingHelpPopup" style="display:none;background:#1a1a2e;border:1px solid #ffcc00;border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:12px;color:#ddd;line-height:1.6;"></div>
     <div style="text-align:center;">
@@ -320,6 +354,23 @@ body{
     <div id="speedTrainingBtns" style="display:none; gap:8px; justify-content:center;">
       <button class="training-click-btn" id="speedBtnA" style="background:#e74c3c; width:64px;">A</button>
       <button class="training-click-btn" id="speedBtnB" style="background:#3498db; width:64px;">B</button>
+    </div>
+    <div id="evoGrid" style="display:none; flex-direction:column; gap:4px; align-items:center; margin:8px 0;">
+      <div style="display:flex; gap:4px;">
+        <button class="evo-card" data-idx="0"></button>
+        <button class="evo-card" data-idx="1"></button>
+        <button class="evo-card" data-idx="2"></button>
+      </div>
+      <div style="display:flex; gap:4px;">
+        <button class="evo-card" data-idx="3"></button>
+        <button class="evo-card" data-idx="4"></button>
+        <button class="evo-card" data-idx="5"></button>
+      </div>
+      <div style="display:flex; gap:4px;">
+        <button class="evo-card" data-idx="6"></button>
+        <button class="evo-card" data-idx="7"></button>
+        <button class="evo-card" data-idx="8"></button>
+      </div>
     </div>
     <button class="training-back-btn" id="trainingModeBackBtn">返回選擇</button>
   </div>
@@ -360,10 +411,20 @@ const ALL_NAMES = [
   "機械暴龍獸(藍)","豆豆獸","門左衛獸",
 ];
 
+// 進化路線：根據當前 row 返回下一階段的隨機 row
+function getEvolutionRow(row) {
+  if (row === 0) return 1;                         // 黑球獸 → 滾球獸
+  if (row === 1) return 2 + Math.floor(Math.random() * 2); // 滾球獸 → 隨機成長期 (2~3)
+  if (row >= 2 && row <= 3) return 4 + Math.floor(Math.random() * 7); // 成長期 → 隨機成熟期 (4~10)
+  if (row >= 4 && row <= 10) return 11 + Math.floor(Math.random() * 3); // 成熟期 → 隨機完全體 (11~13)
+  return row;                                      // 完全體 → 不變
+}
+
 // 精靈圖路徑（獨立行圖片）
 const BG_NAMES = ["Normal", "Noon", "dusk", "Night"];
 
 let rowImages = new Array(18); // row_00.png ~ row_17.png
+let attackRowImages = new Array(14); // Attack/00_at.png ~ 13_at.png（龍發射的火球圖）
 let meatImage = new Image();
 let bgImages = {};
 let currentBgName = "Normal";
@@ -591,6 +652,7 @@ let trainingMode = false;
 let trainingLevel = 0;       // 0~6, 已充能格數
 let trainingClickCount = 0;  // 點擊次數（每2次+1級）
 let trainingAttackActive = false;
+let trainingSucceeded = false;   // 本次訓練是否成功
 let trainingProjectileX = 0;
 let trainingProjectileTimer = null;
 let powerImage = new Image();
@@ -645,6 +707,8 @@ let criticalBarImage = new Image();  // 爆擊條 (64x16)
 let wallImage = new Image();         // 牆 (16x16)
 let wallBrokenImage = new Image();   // 破壞的牆 (16x16)
 let instructImage = new Image();      // 閃避指示箭頭 (48x16, 3幀循環)
+let evolutionImage = new Image();     // 進化掃描遮罩 (上→下移動覆蓋龍)
+let evoColorImages = new Array(3);   // 進化訓練三色圖：紅(Card core)/黃(Card Star)/綠(4-leaf clover)
 let criticalWallBroken = false;      // 牆是否已破壞
 let criticalPos = 0;                 // 當前位置 0-3
 let criticalDirection = 1;           // 1=右移, -1=左移
@@ -674,6 +738,29 @@ let speedCorrectFlashTimer = null;   // 正確閃現計時器
 let speedCountdown = 3;              // 攻速訓練倒數（3秒）
 let speedCountdownTimer = null;      // 倒數計時器
 const SPEED_SEQ_COUNT = 6;           // 序列長度
+// ========== 特殊進化訓練變量 ==========
+let evoActive = false;               // 遊戲進行中
+let evoCards = [];                   // 9 卡片類型 [0,1,2,0,1,2,0,1,2]
+let evoTarget = -1;                  // 要找的類型 0/1/2
+let evoFound = 0;                    // 已找到數量（需 3 個）
+let evoPhase = "";                   // "showing" | "playing" | "success" | "failed"
+let evoFlipTimer = null;             // 翻牌計時器
+let evoEvolutionActive = false;     // 進化動畫進行中
+let evoEvolutionStep = 0;           // 進化動畫通用步數計數器
+let evoEvolutionTimer = null;       // 進化動畫計時器
+let evoEvolvePhase = "";            // "evolving" | "attack" | "devolve" | "happy"
+let evoNewRow = -1;                 // 進化後的新形態 row
+let evoOldRow = -1;                 // 進化前的原始形態 row
+let evoMissileX = 16;              // 火球當前 x 位置
+const EVO_TYPES = 3;
+const EVO_EVOLVE_END = 13;         // 進化結束步數(4下+5停+4上=13)
+const EVO_ATTACK_END = 25;         // 攻擊結束步數(13+12，發射時間*2)
+const EVO_DEVOLVE_END = 38;        // 退化結束步數(25+13，同進化：4下+5停+4上)
+const EVO_SEQ_INTERVAL = 100;      // 每步間隔 ms
+const EVO_EACH = 3;
+const EVO_SHOW_MS = 2000;            // 展示 2 秒
+const EVO_COLORS = ["#e74c3c","#f1c40f","#2ecc71"]; // 紅黃綠
+const EVO_COLOR_IMGS = ["BG/Card core.png","BG/Card Star.png","BG/4-leaf clover.png"]; // 紅→核心卡, 黃→星卡, 綠→四葉草
 const TRAIN_SLOTS = 5;
 // 主 canvas 在訓練時改為 64×16：
 // [---Projectile@16---][Dragon@32][Power@48]
@@ -682,12 +769,15 @@ const CANVAS_TRAIN_W = 64;
 
 function selectTrainingType(type){
   if(trainingAttackActive || trainingCelebrationActive || trainingFailureActive) return;
+  // 幼年期/幼年期Ⅱ 不能進行特殊進化訓練
+  if(type === "evo" && currentRow < 2) return;
   trainingType = type;
   document.getElementById("trainingModeAttack").classList.toggle("active", type === "attack");
   document.getElementById("trainingModeLife").classList.toggle("active", type === "life");
   document.getElementById("trainingModeCritical").classList.toggle("active", type === "critical");
   document.getElementById("trainingModeEvade").classList.toggle("active", type === "evade");
   document.getElementById("trainingModeSpeed").classList.toggle("active", type === "speed");
+  document.getElementById("trainingModeEvo").classList.toggle("active", type === "evo");
   // 選完後直接開始倒數
   startTrainingPlay();
 }
@@ -713,6 +803,13 @@ function startTraining(){
   autoMoveTimer = null;
   
   trainingMode = true;
+  // 幼年期/幼年期Ⅱ 禁用特殊進化訓練
+  const evoBtn = document.getElementById("trainingModeEvo");
+  if(currentRow < 2){
+    evoBtn.classList.add("disabled");
+  } else {
+    evoBtn.classList.remove("disabled");
+  }
   trainingLevel = 0;
   trainingClickCount = 0;
   trainingAttackActive = false;
@@ -859,10 +956,44 @@ function startTrainingPlay(){
     return;
   }
 
+  // 特殊進化訓練：記憶翻牌
+  if(trainingType === "evo"){
+    evoActive = true;
+    evoFound = 0;
+    evoPhase = "showing";
+    evoTarget = Math.floor(Math.random() * EVO_TYPES);
+    // 每種類型各 3 張，共 9 張，打亂
+    evoCards = [];
+    for(let t = 0; t < EVO_TYPES; t++){
+      for(let n = 0; n < EVO_EACH; n++){
+        evoCards.push(t);
+      }
+    }
+    for(let i = evoCards.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [evoCards[i], evoCards[j]] = [evoCards[j], evoCards[i]];
+    }
+    // 顯示卡片顏色
+    updateEvoCards(true);
+    // 2 秒後翻牌
+    if(evoFlipTimer) clearTimeout(evoFlipTimer);
+    evoFlipTimer = setTimeout(() => {
+      evoPhase = "playing";
+      updateEvoCards(false);
+    }, EVO_SHOW_MS);
+    document.getElementById("trainingTimerDisplay").textContent = "";
+    document.getElementById("trainingClickBtn").style.display = "none";
+    document.getElementById("speedTrainingBtns").style.display = "none";
+    document.getElementById("evoGrid").style.display = "flex";
+    renderFrame();
+    return;
+  }
+
   // 開始倒數計時（UI 每秒更新）
   trainingCountdown = (trainingType === "life") ? 2 : 3;
   document.getElementById("trainingTimerDisplay").textContent = trainingCountdown;
   trainingTimer = setInterval(() => {
+    if(!trainingMode) return; // 已退出訓練，立即停止
     trainingCountdown--;
     document.getElementById("trainingTimerDisplay").textContent = trainingCountdown;
     if(trainingCountdown <= 0){
@@ -921,6 +1052,8 @@ function backToTrainingModeSelect(){
   evadeInstructFrame = 0;
   // 攻速訓練清理
   clearSpeedTraining();
+  // 特殊進化訓練清理
+  clearEvoTraining();
   // 切換視圖
   document.getElementById("trainingPlayView").style.display = "none";
   document.getElementById("trainingModeSelect").style.display = "block";
@@ -998,8 +1131,17 @@ function stopTraining(){
   evadeInstructFrame = 0;
   // 攻速訓練清理
   clearSpeedTraining();
+  // 特殊進化訓練清理
+  clearEvoTraining();
   lifePhase = "play";
   document.getElementById("trainingDisplay").style.display = "none";
+  // 訓練成功獎勵
+  if(trainingSucceeded){
+    gameAffinity = Math.min(100, gameAffinity + 2);
+    gameTrainingPoints += 1;
+    gameWeight = Math.max(1, gameWeight - 1); // 訓練減肥
+    trainingSucceeded = false;
+  }
   // 恢復 canvas 尺寸
   canvas.width = CANVAS_NORMAL_W;
   canvas.style.width = "";
@@ -1088,6 +1230,7 @@ function handleTrainingClick(){
 }
 
 function triggerTrainingAttack(){
+  trainingSucceeded = true;
   trainingAttackActive = true;
   trainingLevel = 6;
   // 確保計時器清除
@@ -1117,6 +1260,7 @@ function triggerTrainingAttack(){
   
   // 火球連續每像素向左移動
   trainingProjectileTimer = setInterval(() => {
+    if(!trainingMode) return;
     trainingProjectileX -= 1;
     renderFrame();
     if(trainingProjectileX <= 0){
@@ -1144,6 +1288,7 @@ function startBoomSequence(){
   
   // 每 200ms 切換爆炸幀，2 週期後結束
   boomTimer = setInterval(() => {
+    if(!trainingMode) return;
     boomFrame = boomFrame === 0 ? 1 : 0;
     if(boomFrame === 0){
       boomCycle++; // 完成一個完整週期 (01→02)
@@ -1179,6 +1324,7 @@ function endTrainingAttack(){
   trainingCelebrationActive = true;
   trainingCelebrationStep = 0;
   trainingCelebrationTimer = setInterval(() => {
+    if(!trainingMode) return;
     trainingCelebrationStep++;
     if(trainingCelebrationStep >= TRAINING_CELEBRATION_SEQ.length){
       // 慶祝結束，自動返回
@@ -1227,6 +1373,7 @@ function triggerTrainingFailure(){
       // 開始 SAD 動畫
       trainingFailureStep = 0;
       trainingFailureTimer = setInterval(() => {
+        if(!trainingMode) return;
         trainingFailureStep++;
         if(trainingFailureStep >= TRAINING_FAILURE_SEQ.length){
           clearInterval(trainingFailureTimer);
@@ -1245,6 +1392,7 @@ function triggerTrainingFailure(){
   // 其他訓練：直接失敗動畫
   trainingFailureStep = 0;
   trainingFailureTimer = setInterval(() => {
+    if(!trainingMode) return;
     trainingFailureStep++;
     if(trainingFailureStep >= TRAINING_FAILURE_SEQ.length){
       clearInterval(trainingFailureTimer);
@@ -1261,6 +1409,7 @@ function triggerTrainingFailure(){
 
 // ========== 生命訓練成功動畫 ==========
 function startLifeSuccessAnimation(){
+  trainingSucceeded = true;
   // 確保計時器清除
   if(trainingTimer){
     clearInterval(trainingTimer);
@@ -1285,6 +1434,7 @@ function startLifeSuccessAnimation(){
 
   let boxingStepCount = 0;
   lifeBoxingTimer = setInterval(() => {
+    if(!trainingMode) return;
     boxingStepCount++;
     if(boxingStepCount >= 32){
       // 已到達盾牌位置 (x=32)，切到 BOOM 階段
@@ -1306,6 +1456,7 @@ function startLifeBoom(){
   renderFrame();
 
   lifeBoomTimer = setInterval(() => {
+    if(!trainingMode) return;
     boomFrame = boomFrame === 0 ? 1 : 0;
     if(boomFrame === 0) boomCycle++;
     if(boomCycle >= 2){
@@ -1333,6 +1484,7 @@ function startLifeCelebration(){
   trainingAttackActive = false; // 慶祝階段由 trainingCelebrationActive 阻擋操作
 
   trainingCelebrationTimer = setInterval(() => {
+    if(!trainingMode) return;
     trainingCelebrationStep++;
     // 龍在慶祝過程中從 x=48 移動到 x=32（盾牌位置，從右到左第2個16×16）
     if(trainingCelebrationStep === 1) lifeDragonMoveX = 32;       // 第1下 happy 就到盾牌位置
@@ -1409,6 +1561,7 @@ function stopCriticalBar(){
 }
 
 function startCriticalSuccessAnimation(){
+  trainingSucceeded = true;
   // 成功：龍在 x=32 發射雙火球 → 抵達牆後 BOOM → 牆變 broken → 慶祝
   trainingAttackActive = true;
   criticalAttackStep = 16;  // 火球起始 x 位置
@@ -1417,6 +1570,7 @@ function startCriticalSuccessAnimation(){
 
   // Phase 1：火球從 x=16 一格一格向左移動到牆（16ms 每格）
   criticalAttackTimer = setInterval(() => {
+    if(!trainingMode) return;
     criticalAttackStep -= 1;
     if(criticalAttackStep <= 0){
       // 火球抵達牆，切到 Phase 2：BOOM 動畫
@@ -1426,6 +1580,7 @@ function startCriticalSuccessAnimation(){
       renderFrame();
 
       criticalAttackTimer = setInterval(() => {
+        if(!trainingMode) return;
         boomFrame = boomFrame === 0 ? 1 : 0;
         if(boomFrame === 0) boomCycle++;
         if(boomCycle >= 2){
@@ -1457,6 +1612,7 @@ function startEvadeProjectile(){
 
   // 飛彈移動（從左往右，每20ms移動1像素）
   evadeProjTimer = setInterval(() => {
+    if(!trainingMode) return;
     evadeProjX += 1;
     if(evadeProjX >= 48){
       // 飛彈到達龍的位置而沒被閃避 → 失敗（被擊中）
@@ -1486,6 +1642,7 @@ function startEvadeCelebration(){
   trainingCelebrationActive = true;
   trainingCelebrationStep = 0;
   trainingCelebrationTimer = setInterval(() => {
+    if(!trainingMode) return;
     trainingCelebrationStep++;
     if(trainingCelebrationStep >= TRAINING_CELEBRATION_SEQ.length){
       clearInterval(trainingCelebrationTimer);
@@ -1532,6 +1689,7 @@ function handleSpeedClick(btn){
 }
 
 function startSpeedWalkAnimation(){
+  trainingSucceeded = true;
   // 第一階段：龍從 x=48 一格一格往左走到 x=0
   speedMovePhase = "movingLeft";
   speedDragonX = 48;
@@ -1555,6 +1713,7 @@ function startSpeedWalkAnimation(){
           trainingCelebrationActive = true;
           trainingCelebrationStep = 0;
           trainingCelebrationTimer = setInterval(() => {
+            if(!trainingMode) return;
             trainingCelebrationStep++;
             if(trainingCelebrationStep >= TRAINING_CELEBRATION_SEQ.length){
               clearInterval(trainingCelebrationTimer);
@@ -1584,6 +1743,141 @@ function clearSpeedTraining(){
   document.getElementById("trainingTimerDisplay").textContent = "";
   document.getElementById("trainingClickBtn").style.display = "";
   document.getElementById("speedTrainingBtns").style.display = "none";
+  document.getElementById("evoGrid").style.display = "none";
+}
+
+// ========== 特殊進化訓練函數 ==========
+function updateEvoCards(show){
+  const cards = document.querySelectorAll(".evo-card");
+  cards.forEach(card => {
+    const idx = parseInt(card.getAttribute("data-idx"));
+    const type = evoCards[idx];
+    card.className = "evo-card";
+    card.style.backgroundImage = ""; // 清除上局殘留的 inline style
+    card.style.backgroundSize = "";
+    card.style.backgroundPosition = "";
+    if(show){
+      // 顯示顏色
+      card.classList.add("evo-card-type-"+type);
+      card.textContent = "";
+    } else {
+      // 翻牌（背面）
+      card.classList.add("flipped");
+      card.textContent = "?";
+    }
+  });
+}
+
+function handleEvoClick(idx){
+  if(!evoActive || evoPhase !== "playing") return;
+  const card = document.querySelector(`.evo-card[data-idx="${idx}"]`);
+  if(!card || card.classList.contains("found")) return;
+  const type = evoCards[idx];
+  if(type === evoTarget){
+    // 正確！
+    evoFound++;
+    card.classList.add("found");
+    card.textContent = "✓";
+    card.style.backgroundImage = "url('" + EVO_COLOR_IMGS[type] + "')";
+    card.style.backgroundSize = "cover";
+    card.style.backgroundPosition = "center";
+    if(evoFound >= EVO_EACH){
+      // 全部找到 → 成功
+      trainingSucceeded = true;
+      evoActive = false;
+      evoPhase = "success";
+      if(evoFlipTimer){ clearTimeout(evoFlipTimer); evoFlipTimer = null; }
+      document.getElementById("trainingTimerDisplay").textContent = "";
+      document.getElementById("trainingClickBtn").style.display = "none";
+      updateEvoCards(true);
+      // 記錄形態（還不切換，等遮罩完全蓋住龍時才換）
+      evoOldRow = currentRow;
+      evoNewRow = getEvolutionRow(currentRow);
+      // 階段1: 進化掃描 (步驟 0~12, 100ms/步)
+      //   步驟0~3: 從上方一格一格向下 (y:-16→-4)
+      //   步驟4~8: 停在 y=0 遮蓋龍，步驟4時切換為進化龍 (0.5秒)
+      //   步驟9~12: 一格一格向上收回 (y:-4→-16)
+      evoEvolvePhase = "evolving";
+      evoEvolutionActive = true;
+      evoEvolutionStep = 0;
+      if(evoEvolutionTimer){ clearInterval(evoEvolutionTimer); }
+      evoEvolutionTimer = setInterval(() => {
+        if(!trainingMode){ return; } // 已退出訓練，立即停止
+        evoEvolutionStep++;
+        if(evoEvolutionStep < EVO_EVOLVE_END){
+          // 步驟4時：掃描遮罩完全蓋住龍 → 切換為進化龍
+          if(evoEvolutionStep === 4){
+            currentRow = evoNewRow;
+          }
+        } else if(evoEvolutionStep === EVO_EVOLVE_END){
+          // 階段2: 新龍發出攻擊
+          evoEvolvePhase = "attack";
+          evoEvolutionActive = false;
+        } else if(evoEvolutionStep < EVO_ATTACK_END){
+          // 持續攻擊
+        } else if(evoEvolutionStep === EVO_ATTACK_END){
+          // 階段3: 退化掃描（和進化相同：遮罩下→覆蓋→換回原龍→遮罩上）
+          evoEvolvePhase = "devolve";
+          // 還不切換 currentRow，等遮罩完全蓋住龍時才換（sub-step 4）
+        } else if(evoEvolutionStep < EVO_DEVOLVE_END){
+          // 步驟23時（EVO_ATTACK_END+4）：遮罩完全蓋住 → 切換回原形態
+          if(evoEvolutionStep === EVO_ATTACK_END + 4){
+            currentRow = evoOldRow;
+          }
+        } else if(evoEvolutionStep === EVO_DEVOLVE_END){
+          // 階段4: 開心慶祝
+          evoEvolvePhase = "happy";
+          trainingCelebrationActive = true;
+          trainingCelebrationStep = 0;
+        } else if(evoEvolutionStep >= EVO_DEVOLVE_END){
+          // 開心階段，每2-3 tick推進(平均250ms一步)
+          const offset = evoEvolutionStep - EVO_DEVOLVE_END;
+          if(offset > 0 && (offset % 5 === 0 || offset % 5 === 2)){
+            trainingCelebrationStep++;
+          }
+          if(trainingCelebrationStep >= TRAINING_CELEBRATION_SEQ.length){ // 開心2次
+            clearInterval(evoEvolutionTimer);
+            evoEvolutionTimer = null;
+            evoEvolutionActive = false;
+            trainingCelebrationActive = false;
+            saveGameState();
+            stopTraining();
+            return;
+          }
+        }
+        renderFrame();
+      }, EVO_SEQ_INTERVAL);
+      renderFrame();
+    }
+  } else {
+    // 錯誤 → 立刻失敗
+    // 顯示錯誤卡片原圖
+    card.style.backgroundImage = "url('" + EVO_COLOR_IMGS[type] + "')";
+    card.style.backgroundSize = "cover";
+    card.style.backgroundPosition = "center";
+    card.textContent = "✗";
+    clearEvoTraining();
+    triggerTrainingFailure();
+  }
+}
+
+function clearEvoTraining(){
+  evoActive = false;
+  evoPhase = "";
+  evoCards = [];
+  evoFound = 0;
+  evoTarget = -1;
+  if(evoFlipTimer){ clearTimeout(evoFlipTimer); evoFlipTimer = null; }
+  if(evoEvolutionTimer){ clearInterval(evoEvolutionTimer); evoEvolutionTimer = null; }
+  evoEvolutionActive = false;
+  evoEvolutionStep = 0;
+  evoEvolvePhase = "";
+  evoNewRow = -1;
+  evoOldRow = -1;
+  evoMissileX = 16;
+  document.getElementById("trainingTimerDisplay").textContent = "";
+  document.getElementById("trainingClickBtn").style.display = "";
+  document.getElementById("evoGrid").style.display = "none";
 }
 
 function renderTrainingCanvas(){
@@ -1600,7 +1894,8 @@ function renderTrainingCanvas(){
   if(trainingFailureActive){
     dragonFrame = TRAINING_FAILURE_SEQ[trainingFailureStep];
   } else if(trainingCelebrationActive){
-    dragonFrame = TRAINING_CELEBRATION_SEQ[trainingCelebrationStep];
+    const idx = trainingType === "evo" ? trainingCelebrationStep % TRAINING_CELEBRATION_SEQ.length : trainingCelebrationStep;
+    dragonFrame = TRAINING_CELEBRATION_SEQ[idx];
   } else if(trainingAttackActive && trainingType !== "life"){
     dragonFrame = 11;
   } else {
@@ -1694,9 +1989,10 @@ function renderTrainingCanvas(){
     if(trainingAttackActive){
       if(criticalAttackStep > 0){
         // 火球移動中（從 x=16 一格一格向左到 x=0）
-        if(attackProjImage.complete && attackProjImage.naturalWidth > 0){
-          ctx.drawImage(attackProjImage, 0, 0, 16, 8, criticalAttackStep, 0, 16, 8);
-          ctx.drawImage(attackProjImage, 0, 0, 16, 8, criticalAttackStep, 8, 16, 8);
+        const fireImg = (currentRow < 14) ? attackRowImages[currentRow] : attackRowImages[0];
+        if(fireImg && fireImg.complete){
+          ctx.drawImage(fireImg, 0, 0, 16, 8, criticalAttackStep, 0, 16, 8);
+          ctx.drawImage(fireImg, 0, 0, 16, 8, criticalAttackStep, 8, 16, 8);
         }
       } else {
         // 火球到達牆壁，BOOM 動畫覆蓋牆位置
@@ -1857,6 +2153,91 @@ function renderTrainingCanvas(){
     return;
   }
 
+  // 特殊進化訓練：龍在 x=32，右側顯示目標顏色
+  if(trainingType === "evo"){
+    // 決定龍的動畫幀（攻擊時交替動畫）
+    let evoDrawFrame = dragonFrame;
+    if(evoEvolvePhase === "attack"){
+      evoDrawFrame = 11; // 張嘴攻擊幀
+    } else if(evoEvolvePhase === "evolving" || evoEvolvePhase === "devolve"){
+      evoDrawFrame = trainingIdleFrame; // 閒置態
+    }
+    // 進化成功後全程顯示牆（x=0）
+    if(evoOldRow >= 0){
+      if(evoEvolvePhase === "attack"){
+        // 攻擊階段：子步3火球擊中後換破牆 + 爆炸
+        const atkSub = evoEvolutionStep - EVO_EVOLVE_END;
+        const wallHit = atkSub >= 3;
+        const wall = wallHit ? wallBrokenImage : wallImage;
+        if(wall.complete && wall.naturalWidth > 0){
+          ctx.drawImage(wall, 0, 0, 16, 16);
+        }
+        // 火球從龍射向牆（單發，取上半 16×8）
+        const fireImg = (currentRow < 14) ? attackRowImages[currentRow] : attackRowImages[0];
+        if(fireImg && fireImg.complete && atkSub >= 0 && atkSub < 3){
+          const missileX = 16 - 6 * atkSub; // 16→10→4
+          ctx.drawImage(fireImg, 0, 0, 16, 8, missileX, 0, 16, 8);
+        }
+        // 擊中爆炸
+        if(atkSub >= 3 && atkSub <= 5){
+          const bImg = (atkSub % 2 === 0) ? boomImage : boomImage2;
+          if(bImg.complete && bImg.naturalWidth > 0){
+            ctx.drawImage(bImg, 0, 0, 16, 16);
+          }
+        }
+      } else {
+        // 進化/退化/開心階段：破牆
+        const useBroken = evoEvolvePhase !== "evolving";
+        const wall = useBroken ? wallBrokenImage : wallImage;
+        if(wall.complete && wall.naturalWidth > 0){
+          ctx.drawImage(wall, 0, 0, 16, 16);
+        }
+      }
+    }
+    // 先畫龍在 x=32（進化動畫播放時也不消失）
+    if(rowImages[currentRow] && rowImages[currentRow].complete && rowImages[currentRow].naturalWidth > 0){
+      ctx.drawImage(rowImages[currentRow], evoDrawFrame * PITCH, 0, 16, 16, 32, 0, 16, 16);
+    }
+    // 階段「evolving」或「devolve」：掃描遮罩從上往下一格一格移動再收回
+    if((evoEvolvePhase === "evolving" || evoEvolvePhase === "devolve") && evolutionImage.complete && evolutionImage.naturalWidth > 0){
+      // 計算子步數：evolving 從0開始；devolve 從 EVO_ATTACK_END 開始
+      const sub = evoEvolvePhase === "evolving" ? evoEvolutionStep : (evoEvolutionStep - EVO_ATTACK_END);
+      const s = Math.min(sub, 12); // 確保不超出 0-12 範圍
+      let maskY;
+      if(s < 4){ maskY = -16 + 4*s; }                    // 向下: 0→-16, 1→-12, 2→-8, 3→-4
+      else if(s < 9){ maskY = 0; }                        // 停在封面: 4-8
+      else { maskY = -4 - 4*(s-9); }                      // 向上: 9→-4, 10→-8, 11→-12, 12→-16
+      ctx.drawImage(evolutionImage, 32, maskY, 16, 16);
+    }
+    // 右側顯示目標圖案（僅遊戲進行中），用圖片替代純色方塊
+    if(evoPhase === "playing" && evoTarget >= 0 && evoTarget < EVO_TYPES){
+      const iconImg = evoColorImages[evoTarget];
+      if(iconImg && iconImg.complete && iconImg.naturalWidth > 0){
+        ctx.drawImage(iconImg, 50, 3, 10, 10);
+      }
+      ctx.strokeStyle = "#ffcc00";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(50, 3, 10, 10);
+    }
+    // 開心階段：顯示 happy 圖標
+    if(evoEvolvePhase === "happy" && happyImage.complete && happyImage.naturalWidth > 0
+       && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep % TRAINING_CELEBRATION_SEQ.length] === 7){
+      ctx.drawImage(happyImage, 24, 0, 8, 8);
+      ctx.drawImage(happyImage, 24, 8, 8, 8);
+      ctx.drawImage(happyImage, 48, 0, 8, 8);
+      ctx.drawImage(happyImage, 48, 8, 8, 8);
+    }
+    // 失敗圖標
+    if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
+       && TRAINING_FAILURE_SEQ[trainingFailureStep] === 10){
+      ctx.drawImage(sadImage, 24, 0, 8, 8);
+      ctx.drawImage(sadImage, 24, 8, 8, 8);
+      ctx.drawImage(sadImage, 48, 0, 8, 8);
+      ctx.drawImage(sadImage, 48, 8, 8, 8);
+    }
+    return;
+  }
+
   // 攻擊訓練：原來的布局
   // 1) 最左側訓練靶子 (x=0)，依狀態顯示不同圖
   if(sandbagState === "hit"){
@@ -1921,9 +2302,12 @@ function renderTrainingCanvas(){
     }
   }
   
-  // 攻擊彈在龍左方，火球連續移動（精靈 16×8 繪於上方）
-  if(trainingAttackActive && attackProjImage.complete && attackProjImage.naturalWidth > 0){
-    ctx.drawImage(attackProjImage, trainingProjectileX, 0, 16, 8);
+  // 攻擊彈在龍左方，火球連續移動（單發，取上半 16×8）
+  if(trainingAttackActive){
+    const fireImg = (currentRow < 14) ? attackRowImages[currentRow] : attackRowImages[0];
+    if(fireImg && fireImg.complete){
+      ctx.drawImage(fireImg, 0, 0, 16, 8, trainingProjectileX, 0, 16, 8);
+    }
   }
 }
 
@@ -1938,6 +2322,9 @@ function saveGameState(){
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       gameAge,
       gameHunger,
+      gameWeight,
+      gameAffinity,
+      gameTrainingPoints,
       currentRow,
       timestamp: Date.now()
     }));
@@ -1951,29 +2338,35 @@ function loadGameState(){
     const elapsed = Math.floor((Date.now() - data.timestamp) / 60000); // 經過分鐘
     gameAge = (data.gameAge || 0) + elapsed;
     gameHunger = Math.max(0, (data.gameHunger ?? 5) - Math.floor(elapsed / 30));
+    gameWeight = data.gameWeight ?? DIGIMON_STATS[data.currentRow ?? 2].weight;
+    gameAffinity = data.gameAffinity ?? 0;
+    gameTrainingPoints = data.gameTrainingPoints ?? 0;
     currentRow = data.currentRow ?? 2;
   } catch(e){ /* 忽略讀檔錯誤 */ }
 }
 
-let gameAge = 0;      // 年齡（分鐘）
-let gameHunger = 5; // 飢餓度 0~10（心）
+let gameAge = 0;             // 年齡（分鐘）
+let gameHunger = 5;           // 飢餓度 0~10（心）
+let gameWeight = 5;           // 體重
+let gameAffinity = 0;         // 親和力
+let gameTrainingPoints = 0;   // 訓練點
 
 const DIGIMON_STATS = {
-  // [hp, atk, doubleAtk%, speed, evade%]
-  0: {name:"黑球獸",        hp: 50, atk: 2,  doubleAtk:0,  speed:1, evade:1},
-  1: {name:"滾球獸",        hp: 80, atk: 5,  doubleAtk:5,  speed:2, evade:3},
-  2: {name:"亞古獸",        hp:120, atk:12, doubleAtk:8,  speed:3, evade:5},
-  3: {name:"貝塔獸",        hp:160, atk:18, doubleAtk:10, speed:3, evade:6},
-  4: {name:"暴龍獸",        hp:200, atk:25, doubleAtk:12, speed:4, evade:8},
-  5: {name:"巨龍獸",        hp:240, atk:30, doubleAtk:13, speed:4, evade:10},
-  6: {name:"惡魔獸",        hp:260, atk:35, doubleAtk:14, speed:5, evade:11},
-  7: {name:"火焰獸",        hp:280, atk:38, doubleAtk:14, speed:5, evade:11},
-  8: {name:"飛龍獸",        hp:300, atk:40, doubleAtk:15, speed:5, evade:12},
-  9: {name:"海龍獸",        hp:320, atk:42, doubleAtk:16, speed:5, evade:12},
-  10:{name:"鼻涕獸",        hp:350, atk:45, doubleAtk:17, speed:6, evade:14},
-  11:{name:"機械暴龍獸(藍)", hp:400, atk:55, doubleAtk:20, speed:6, evade:16},
-  12:{name:"豆豆獸",        hp:450, atk:60, doubleAtk:22, speed:7, evade:18},
-  13:{name:"門左衛獸",      hp:500, atk:70, doubleAtk:25, speed:7, evade:20},
+  // [hp, atk, doubleAtk%, speed, evade%], weight, affinity
+  0: {name:"黑球獸",        hp: 50, atk: 2,  doubleAtk:0,  speed:1, evade:1,  weight:5,   affinity:0},
+  1: {name:"滾球獸",        hp: 80, atk: 5,  doubleAtk:5,  speed:2, evade:3,  weight:8,   affinity:0},
+  2: {name:"亞古獸",        hp:120, atk:12, doubleAtk:8,  speed:3, evade:5,  weight:20,  affinity:0},
+  3: {name:"貝塔獸",        hp:160, atk:18, doubleAtk:10, speed:3, evade:6,  weight:30,  affinity:0},
+  4: {name:"暴龍獸",        hp:200, atk:25, doubleAtk:12, speed:4, evade:8,  weight:80,  affinity:0},
+  5: {name:"巨龍獸",        hp:240, atk:30, doubleAtk:13, speed:4, evade:10, weight:120, affinity:0},
+  6: {name:"惡魔獸",        hp:260, atk:35, doubleAtk:14, speed:5, evade:11, weight:100, affinity:0},
+  7: {name:"火焰獸",        hp:280, atk:38, doubleAtk:14, speed:5, evade:11, weight:90,  affinity:0},
+  8: {name:"飛龍獸",        hp:300, atk:40, doubleAtk:15, speed:5, evade:12, weight:110, affinity:0},
+  9: {name:"海龍獸",        hp:320, atk:42, doubleAtk:16, speed:5, evade:12, weight:130, affinity:0},
+  10:{name:"鼻涕獸",        hp:350, atk:45, doubleAtk:17, speed:6, evade:14, weight:60,  affinity:0},
+  11:{name:"機械暴龍獸(藍)", hp:400, atk:55, doubleAtk:20, speed:6, evade:16, weight:200, affinity:0},
+  12:{name:"豆豆獸",        hp:450, atk:60, doubleAtk:22, speed:7, evade:18, weight:150, affinity:0},
+  13:{name:"門左衛獸",      hp:500, atk:70, doubleAtk:25, speed:7, evade:20, weight:180, affinity:0},
 };
 
 function buildFunctionButtons(){
@@ -1990,6 +2383,12 @@ function buildFunctionButtons(){
 }
 
 function clickFunction(idx){
+  // 進食中不能點其他按鈕
+  if(gameMode === "eating") return;
+  // 訓練中點其他按鈕 → 退出訓練
+  if(trainingMode && idx !== 2){
+    stopTraining();
+  }
   const btn = document.querySelector(`.func-btn[data-idx="${idx}"]`);
   if(!btn) return;
   btn.classList.add('active');
@@ -2018,16 +2417,18 @@ function showStats(){
   const years = Math.floor(gameAge / 1440);
   const hours = Math.floor((gameAge % 1440) / 60);
   const mins = gameAge % 60;
-  const hpLost = Math.max(0, Math.floor((10 - gameHunger) * s.hp / 20));
   const hearts = "❤️".repeat(gameHunger) + "🖤".repeat(10 - gameHunger);
   document.getElementById("sdName").textContent = s.name;
   document.getElementById("sdAge").textContent = `${years}歲:${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+  document.getElementById("sdWeight").textContent = gameWeight;
   document.getElementById("sdHunger").innerHTML = hearts;
-  document.getElementById("sdHp").textContent = `${s.hp - hpLost} / ${s.hp}`;
+  document.getElementById("sdHp").textContent = s.hp;
   document.getElementById("sdAtk").textContent = s.atk;
   document.getElementById("sdDouble").textContent = `${s.doubleAtk}%`;
   document.getElementById("sdSpeed").textContent = s.speed;
   document.getElementById("sdEvade").textContent = `${s.evade}%`;
+  document.getElementById("sdAffinity").textContent = gameAffinity;
+  document.getElementById("sdTrainingPoints").textContent = gameTrainingPoints;
   panel.style.display = "block";
 }
 
@@ -2118,6 +2519,8 @@ function feedDigimon(food){
       return;
     }
     gameHunger = Math.min(10, gameHunger + 1);
+    gameWeight = Math.max(1, gameWeight + 1);       // 吃東西增加體重
+    gameAffinity = Math.min(100, gameAffinity + 1);  // 進食增加親和力
     // 進食：eat1/eat2 動畫，龍在右邊，食物從左到右
     gameMode = "eating";
     gameModeStep = 0;
@@ -2180,9 +2583,16 @@ window.addEventListener("beforeinstallprompt", (e) => {
 
 buildFunctionButtons();
 loadGameState(); // 讀取存檔
+// 首次啟動時以當前選擇的數碼獸初始化體重/親和力/訓練點
+if(!localStorage.getItem(SAVE_KEY)){
+  const s = DIGIMON_STATS[currentRow];
+  gameWeight = s.weight;
+  gameAffinity = s.affinity;
+  gameTrainingPoints = 0;
+}
 
 let loadedCount = 0;
-const TOTAL_IMAGES = 18 + BG_NAMES.length + 1 + 15; // 18 row + 4 bg + 1 meat + 15 training
+const TOTAL_IMAGES = 18 + BG_NAMES.length + 1 + 15 + 1 + 14 + 3; // 18 row + 4 bg + 1 meat + 15 training + 1 evolution + 14 attack fireballs + 3 evo color icons
 function onImageLoaded(){
   loadedCount++;
   if(loadedCount >= TOTAL_IMAGES) {
@@ -2201,6 +2611,16 @@ for(let r = 0; r < 18; r++){
   img.onload = onImageLoaded;
   img.onerror = onImageError;
   rowImages[r] = img;
+}
+
+// 加載 14 張攻擊火球圖片 (00_at ~ 13_at，16×8 上半部)
+for(let r = 0; r < 14; r++){
+  const img = new Image();
+  const idx = String(r).padStart(2, '0');
+  img.src = `sprites/Attack/${idx}_at.png`;
+  img.onload = onImageLoaded;
+  img.onerror = onImageError;
+  attackRowImages[r] = img;
 }
 
 meatImage.src = "Food/meat.png";
@@ -2278,6 +2698,18 @@ wallBrokenImage.onerror = onImageError;
 instructImage.src = "BG/instruct.png";
 instructImage.onload = onImageLoaded;
 instructImage.onerror = onImageError;
+evolutionImage.src = "BG/evolution.png";
+evolutionImage.onload = onImageLoaded;
+evolutionImage.onerror = onImageError;
+
+// 加載進化訓練三色圖標
+for(let i = 0; i < 3; i++){
+  const img = new Image();
+  img.src = EVO_COLOR_IMGS[i];
+  img.onload = onImageLoaded;
+  img.onerror = onImageError;
+  evoColorImages[i] = img;
+}
 
 BG_NAMES.forEach(name => {
   const img = new Image();
@@ -2308,7 +2740,8 @@ const trainingHelpTexts = {
   life: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 生命訓練</div><div>倒數結束前點擊消除盾牌上的紅色點數，全部消除且沒打中盾牌即成功！</div>',
   critical: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 爆擊訓練</div><div>爆擊條從左到右來回移動，在最右格時點擊即成功擊碎牆壁！</div>',
   evade: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 閃避訓練</div><div>飛彈從左方飛來，在飛彈碰到 instruct（x=40）時點擊即可閃避成功！<br>太早或太晚點擊都會失敗！</div>',
-  speed: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 攻速訓練</div><div>螢幕左側顯示 "→ABABAB" 隨機序列，<br>依序從左到右按下對應的 A（紅色）或 B（藍色）按鈕！<br>全部答對即成功，龍會往左走到最左再回到中央開心！<br>按錯即失敗。</div>'
+  speed: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 攻速訓練</div><div>螢幕左側顯示 "→ABABAB" 隨機序列，<br>依序從左到右按下對應的 A（紅色）或 B（藍色）按鈕！<br>全部答對即成功，龍會往左走到最左再回到中央開心！<br>按錯即失敗。</div>',
+  evo: '<div style="font-weight:700;color:#ffcc00;margin-bottom:4px;">📖 特殊進化訓練</div><div>9 張卡片中分為紅/藍/綠 3 組，每組 3 張！<br>先記憶 2 秒，翻牌後根據右側顯示的目標顏色，<br>找出 3 張相同顏色的卡片即成功！<br>點錯即失敗。<br><span style="color:#ff6b6b;">⚠ 幼年期/幼年期Ⅱ 無法進行此訓練</span></div>'
 };
 document.querySelectorAll(".help-icon").forEach(el => {
   el.onclick = (e) => {
@@ -2318,7 +2751,7 @@ document.querySelectorAll(".help-icon").forEach(el => {
     popup.style.display = "block";
   };
 });
-["trainingModeAttack","trainingModeLife","trainingModeCritical","trainingModeEvade","trainingModeSpeed"].forEach(id => {
+["trainingModeAttack","trainingModeLife","trainingModeCritical","trainingModeEvade","trainingModeSpeed","trainingModeEvo"].forEach(id => {
   const btn = document.getElementById(id);
   btn.onclick = (e) => {
     if(e.target.classList.contains("help-icon")) return;
@@ -2329,6 +2762,9 @@ document.querySelectorAll(".help-icon").forEach(el => {
 document.getElementById("trainingModeBackBtn").onclick = backToTrainingModeSelect;
 document.getElementById("speedBtnA").onclick = () => handleSpeedClick("A");
 document.getElementById("speedBtnB").onclick = () => handleSpeedClick("B");
+document.querySelectorAll(".evo-card").forEach(card => {
+  card.onclick = () => handleEvoClick(parseInt(card.getAttribute("data-idx")));
+});
 </script>
 </body>
 </html>
