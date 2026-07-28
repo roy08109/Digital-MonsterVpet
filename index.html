@@ -737,7 +737,8 @@ const REFUSE_IV = 300;
 
 // ========== 繪製 ==========
 function getColForAuto(){
-  const isEdge = autoX <= 1 || autoX >= 17;
+  const poopShift = getPoopOffset();
+  const isEdge = autoX <= 1 - poopShift || autoX >= 17 - poopShift;
   const isMoving = autoTargetX !== null;
   if(isEdge && !isMoving) return EDGE_SEQ[autoAnimStep % 4];
   return MID_SEQ[autoAnimStep % 4];
@@ -752,12 +753,30 @@ function renderFrame(){
     renderBattleScene();
     return;
   }
+  // === 清潔沖水模式 ===
+  if(flushingMode){
+    renderFlushingFrame();
+    return;
+  }
   ctx.clearRect(0,0,32,16);
+
+  // === 繪製糞便（主螢幕：auto/eating/refusing 模式，訓練/對戰已提前 return）===
+  if(poopsOnScreen > 0 && fecesImage.complete && fecesImage.naturalWidth > 0){
+    for(let i = 0; i < poopsOnScreen; i++){
+      const pos = POOP_POSITIONS[i];
+      ctx.drawImage(
+        fecesImage,
+        poopFrame * 8, 0, 8, 8,   // 來源：左右2幀8x8
+        pos.x, pos.y, 8, 8         // 糞便位置固定，不受偏移影響
+      );
+    }
+  }
 
   if(gameMode === "eating"){
     // 進食模式：龍在右邊向左，食物固定，動畫依序切換 4 幀
+    const poopShift = getPoopOffset();
     const col = (gameModeStep % 2 === 0) ? 2 : 3; // eat1 / eat2
-    const foodX = 0;                                // 食物固定在左側
+    const foodX = 0 - poopShift;                    // 食物隨糞便偏移左移
     const foodFrame = Math.floor((gameModeStep + 1) / 2); // 只在 EAT2 時進幀
     // 畫肉
     if(meatImage.complete && meatImage.naturalWidth > 0){
@@ -767,26 +786,27 @@ function renderFrame(){
         foodX, 0, CELL_SIZE, CELL_SIZE
       );
     }
-    // 龍在右邊 (autoX=14)，面向左（預設方向）
+    // 龍在右邊 (autoX=14)，面向左（預設方向），依糞便偏移
     ctx.drawImage(
       rowImages[currentRow],
       col * PITCH, 0,
       CELL_SIZE, CELL_SIZE,
-      16, 0,  // 龍靠右邊站位
+      16 - poopShift, 0,
       CELL_SIZE, CELL_SIZE
     );
     return;
   }
 
   if(gameMode === "refusing"){
-    // 拒絕模式：龍在中間左右面向交替（左→右→左→右）
+    // 拒絕模式：龍在中間左右面向交替（左→右→左→右），依糞便偏移
+    const poopShift = getPoopOffset();
     const faceFlip = gameModeStep % 2 === 0;
     ctx.save();
-    let drawX = 8;
+    let drawX = 8 - poopShift;
     if(faceFlip){
       ctx.translate(32, 0);
       ctx.scale(-1, 1);
-      drawX = 16 - 8; // 翻轉後座標校正
+      drawX = 8 + poopShift; // 翻轉後座標校正：16 - (8 - poopShift)
     }
     ctx.drawImage(
       rowImages[currentRow],
@@ -801,8 +821,10 @@ function renderFrame(){
 
   // 普通模式
   const colIndex = getColForAuto();
-  const faceRight = (autoTargetX !== null && autoX < autoTargetX) || (autoTargetX === null && autoX >= 9);
-  const spriteX = autoX - 1;
+  const poopShift = getPoopOffset();
+  const scootedCenter = 9 - poopShift;
+  const faceRight = (autoTargetX !== null && autoX < autoTargetX) || (autoTargetX === null && autoX >= scootedCenter);
+  const spriteX = autoX - 1 - poopShift;
 
   ctx.save();
   let drawX = spriteX;
@@ -830,7 +852,7 @@ function stepAutoAnim(){
       gameMode = "auto";
       gameModeStep = 0;
       // 動畫結束後走回中間
-      autoTargetX = 9;
+      autoTargetX = 9 - getPoopOffset();
       autoAnimStep = 0;
       restartAnimTimer(ANIM_IV);
       if(!autoMoveTimer) autoMoveTimer = setInterval(stepAutoMove, MOVE_IV);
@@ -847,7 +869,7 @@ function stepAutoAnim(){
       gameMode = "auto";
       gameModeStep = 0;
       autoAnimStep = 0;
-      autoTargetX = 9;
+      autoTargetX = 9 - getPoopOffset();
       restartAnimTimer(ANIM_IV);
       if(!autoMoveTimer) autoMoveTimer = setInterval(stepAutoMove, MOVE_IV);
       renderFrame();
@@ -874,7 +896,8 @@ function stepAutoAnim(){
   }
   autoAnimStep++;
   renderFrame();
-  const isEdge = autoX <= 1 || autoX >= 17;
+  const poopShift = getPoopOffset();
+  const isEdge = autoX <= 1 - poopShift || autoX >= 17 - poopShift;
   if(isEdge && autoTargetX === null && autoAnimIv !== EDGE_IV){
     restartAnimTimer(EDGE_IV);
   } else if(!isEdge && autoAnimIv !== ANIM_IV){
@@ -884,15 +907,19 @@ function stepAutoAnim(){
 
 function stepAutoMove(){
   if(autoTargetX !== null) return;
-  const isEdge = autoX <= 1 || autoX >= 17;
+  const poopShift = getPoopOffset();
+  const lo = 1 - poopShift;
+  const hi = 17 - poopShift;
+  const center = 9 - poopShift;
+  const isEdge = autoX <= lo || autoX >= hi;
   if(isEdge){
     if(autoAnimStep < 5) return;
-    autoTargetX = 9;
+    autoTargetX = center;
   } else {
     if(Math.random() < 0.1) return;
     const dir = Math.random() < 0.5 ? -1 : 1;
     const t = autoX + dir * 5;
-    autoTargetX = Math.max(1, Math.min(17, t));
+    autoTargetX = Math.max(lo, Math.min(hi, t));
     if(autoTargetX === autoX) return;
   }
   autoAnimStep = 0;
@@ -905,15 +932,198 @@ function restartAnimTimer(iv){
   autoTimer = setInterval(stepAutoAnim, iv);
 }
 
+// === 排便系統 ===
+function randPoopInterval(){ return 6600 + Math.floor(Math.random() * 1201); } // 110~130分鐘 (6600~7800秒)
+
+function resetPoopCountdown(){
+  poopCountdown = randPoopInterval();
+}
+
+function startPoopTimer(){
+  if(poopTimer) clearInterval(poopTimer);
+  if(poopCountdown <= 0) resetPoopCountdown();
+  poopTimer = setInterval(() => {
+    poopCountdown--;
+    if(poopCountdown <= 0){
+      if(poopsOnScreen < 8){
+        poopsOnScreen++;
+        saveGameState();
+      }
+      resetPoopCountdown();
+    }
+  }, 1000);
+
+  // 獨立動畫幀切換
+  if(!poopFrameTimer){
+    poopFrameTimer = setInterval(() => {
+      poopFrame = (poopFrame + 1) % 2;
+    }, 500);
+  }
+}
+
+function stopPoopTimer(){
+  if(poopTimer){ clearInterval(poopTimer); poopTimer = null; }
+}
+
+function getPoopOffset(){
+  if(poopsOnScreen === 0) return 0;
+  if(poopsOnScreen <= 2) return 8;
+  if(poopsOnScreen <= 4) return 16;
+  if(poopsOnScreen <= 6) return 24;
+  return 32;
+}
+
+function startFlushing(){
+  if(flushingMode) return;
+  if(poopsOnScreen === 0) return; // 無屎可清
+  flushingMode = true;
+  flushingPhase = 0;
+  flushingStep = 0;
+  flushingPushX = 0;
+  // 暫停 auto 計時器
+  if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+  if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+  flushingTimer = setInterval(stepFlushing, FLUSHING_PUSH_INTERVAL);
+  renderFrame();
+}
+
+function stepFlushing(){
+  if(!flushingMode) return;
+  if(flushingPhase === 0){
+    // === 推擠階段 ===
+    flushingStep++;
+    flushingPushX = flushingStep; // 每步推 1px（龍+屎向左偏移）
+    autoAnimStep++; // 龍走路動畫
+    if(flushingStep >= FLUSHING_PUSH_STEPS){
+      // 推擠結束 → 清除糞便 → 進入 Happy 階段
+      poopsOnScreen = 0;
+      resetPoopCountdown();
+      flushingPhase = 1;
+      flushingStep = 0;
+      flushingPushX = 0;
+      autoX = 9; // 龍回到中間
+      autoAnimStep = 0;
+      if(flushingTimer){ clearInterval(flushingTimer); }
+      flushingTimer = setInterval(stepFlushing, FLUSHING_HAPPY_INTERVAL);
+      saveGameState();
+      renderFrame();
+      return;
+    }
+    // flushingPushX 已在 renderFlushingFrame 中處理視覺偏移，無需改 autoX
+    renderFrame();
+  } else if(flushingPhase === 1){
+    // === Happy 階段 ===
+    const col = FLUSHING_HAPPY_SEQ[flushingStep];
+    const faceRight = false; // 龍固定面向左
+    // renderFrame 會處理 happy 渲染
+    flushingStep++;
+    if(flushingStep >= FLUSHING_HAPPY_STEPS){
+      stopFlushing();
+      return;
+    }
+    autoAnimStep = flushingStep; // 同步步數給 renderFrame 判斷柱位
+    renderFrame();
+  }
+}
+
+function renderFlushingFrame(){
+  ctx.clearRect(0, 0, 32, 16);
+
+  if(flushingPhase === 0){
+    // === 推擠階段：沖水從右側推入，龍和屎向左移動 ===
+
+    // 1) 畫糞便（向左偏移 pushX）
+    if(poopsOnScreen > 0 && fecesImage.complete && fecesImage.naturalWidth > 0){
+      // 在推擠階段暫時還沒清除 poops，需要畫偏移後的屎
+      for(let i = 0; i < poopsOnScreen; i++){
+        const pos = POOP_POSITIONS[i];
+        ctx.drawImage(
+          fecesImage,
+          poopFrame * 8, 0, 8, 8,
+          pos.x - flushingPushX, pos.y, 8, 8
+        );
+      }
+    }
+
+    // 2) 畫龍（向左偏移 pushX）
+    const dSpriteX = autoX - 1 - flushingPushX;
+    if(rowImages[currentRow] && rowImages[currentRow].complete){
+      const col = (autoAnimStep % 2 === 0) ? 0 : 1; // 走路動畫
+      ctx.drawImage(
+        rowImages[currentRow],
+        col * PITCH, 0, CELL_SIZE, CELL_SIZE,
+        dSpriteX, 0, CELL_SIZE, CELL_SIZE
+      );
+    }
+
+    // 3) 畫沖水 sprite (16x16 全圖，從右側外完整滑入，不裁切不壓縮)
+    if(flushingImage.complete && flushingImage.naturalWidth > 0){
+      const waterX = 32 - flushingStep; // 逐像素左移，從 x=32 外側滑入
+      ctx.drawImage(flushingImage, 0, 0, 16, 16, waterX, 0, 16, 16);
+    }
+
+  } else if(flushingPhase === 1){
+    // === Happy 階段：龍在中間，播放 idle/happy 動畫 ===
+
+    const col = FLUSHING_HAPPY_SEQ[Math.min(flushingStep, FLUSHING_HAPPY_STEPS - 1)];
+    const isHappy = col === 7;
+
+    // 1) 畫龍 (autoX=9, 固定面向左)
+    const faceRight = false;
+    if(rowImages[currentRow] && rowImages[currentRow].complete){
+      ctx.save();
+      let dX = 8;
+      if(faceRight){
+        ctx.translate(32, 0);
+        ctx.scale(-1, 1);
+        dX = 8; // 翻轉後座標: 16 - 8 = 8
+      }
+      ctx.drawImage(
+        rowImages[currentRow],
+        col * PITCH, 0, CELL_SIZE, CELL_SIZE,
+        dX, 0, CELL_SIZE, CELL_SIZE
+      );
+      ctx.restore();
+    }
+
+    // 2) 畫 Happy.png 左右各一個 (僅在 happy 幀)
+    if(isHappy && happyImage.complete && happyImage.naturalWidth > 0){
+      ctx.drawImage(happyImage, 2, 0, 8, 8);
+      ctx.drawImage(happyImage, 22, 0, 8, 8);
+    }
+  }
+}
+
+function stopFlushing(){
+  if(flushingTimer){ clearInterval(flushingTimer); flushingTimer = null; }
+  flushingMode = false;
+  flushingPhase = 0;
+  flushingStep = 0;
+  flushingPushX = 0;
+  // 恢復 auto 模式
+  autoX = 9;
+  autoTargetX = null;
+  autoAnimStep = 0;
+  startAutoPlay();
+}
+
+function cleanPoops(){
+  if(poopsOnScreen === 0) return;
+  // 如果在訓練/對戰中，不啟動沖水
+  if(trainingMode || gameMode === "battle") return;
+  startFlushing();
+}
+
 function startAutoPlay(){
   updateBgByTime(); // 首次根據時間設定背景
-  autoX = 9;
+  autoX = 9 - getPoopOffset();
   autoTargetX = null;
   autoAnimStep = 0;
   autoAnimIv = ANIM_IV;
   autoTimer = setInterval(stepAutoAnim, ANIM_IV);
   autoMoveTimer = setInterval(stepAutoMove, MOVE_IV);
   renderFrame();
+  startPoopTimer(); // 啟動排便計時器
 }
 
 // ========== 訓練系統 ==========
@@ -935,6 +1145,7 @@ let sandbagImage3 = new Image();  // 被打中後的沙包
 let boomImage = new Image();      // 爆炸01
 let boomImage2 = new Image();     // 爆炸02
 let happyImage = new Image();    // 慶祝愛心
+let flushingImage = new Image(); // 清潔沖水 (16x16, 左右2格8x16)
 let sandbagState = "normal";     // "normal" | "boom" | "hit"
 let boomFrame = 0;               // 爆炸幀 (0=Boom01, 1=Boom02)
 let boomCycle = 0;               // 爆炸已播放的完整週期
@@ -972,6 +1183,7 @@ const BATTLE_BG_SOURCES = [
 ];
 let battleBgIdx = 0; // 當前選中的對戰背景索引
 let battleHpBarImg = new Image();    // 對戰血量 UI 底圖
+let fecesImage = new Image();        // 糞便圖 (16x8, 2幀 8x8)
 let lifePointsRemaining = 4;       // 剩餘 point 數 (2~4)
 let lifeShieldBroken = false;      // 盾牌是否破壞
 let boxingImage = new Image();     // 生命訓練成功時的拳擊手
@@ -1141,6 +1353,7 @@ function selectTrainingType(type){
 }
 
 function startTraining(){
+  if(flushingMode) stopFlushing(); // 中斷清潔動畫
   const trainPanel = document.getElementById("trainingDisplay");
   
   // 若訓練面板已顯示則關閉（切換）
@@ -2314,9 +2527,7 @@ function renderTrainingCanvas(){
     if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
        && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
       ctx.drawImage(happyImage, 24, 0, 8, 8);
-      ctx.drawImage(happyImage, 24, 8, 8, 8);
       ctx.drawImage(happyImage, 48, 0, 8, 8);
-      ctx.drawImage(happyImage, 48, 8, 8, 8);
     }
     // 失敗時 sad icons（固定位置 x=24, x=48，與攻擊訓練相同）
     if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
@@ -2374,9 +2585,7 @@ function renderTrainingCanvas(){
     if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
        && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
       ctx.drawImage(happyImage, 24, 0, 8, 8);
-      ctx.drawImage(happyImage, 24, 8, 8, 8);
       ctx.drawImage(happyImage, 48, 0, 8, 8);
-      ctx.drawImage(happyImage, 48, 8, 8, 8);
     }
     // 失敗 sad icons
     if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
@@ -2425,9 +2634,7 @@ function renderTrainingCanvas(){
     if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
        && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
       ctx.drawImage(happyImage, 24, 0, 8, 8);
-      ctx.drawImage(happyImage, 24, 8, 8, 8);
       ctx.drawImage(happyImage, 48, 0, 8, 8);
-      ctx.drawImage(happyImage, 48, 8, 8, 8);
     }
 
     // 失敗 sad icons
@@ -2496,9 +2703,7 @@ function renderTrainingCanvas(){
     if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
        && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
       ctx.drawImage(happyImage, 24, 0, 8, 8);
-      ctx.drawImage(happyImage, 24, 8, 8, 8);
       ctx.drawImage(happyImage, 48, 0, 8, 8);
-      ctx.drawImage(happyImage, 48, 8, 8, 8);
     }
     // 失敗
     if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
@@ -2531,9 +2736,7 @@ function renderTrainingCanvas(){
     if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
        && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep % TRAINING_CELEBRATION_SEQ.length] === 7){
       ctx.drawImage(happyImage, 24, 0, 8, 8);
-      ctx.drawImage(happyImage, 24, 8, 8, 8);
       ctx.drawImage(happyImage, 48, 0, 8, 8);
-      ctx.drawImage(happyImage, 48, 8, 8, 8);
     }
     // 失敗圖標
     if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
@@ -2581,9 +2784,7 @@ function renderTrainingCanvas(){
   if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
      && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
     ctx.drawImage(happyImage, 24, 0, 8, 8);
-    ctx.drawImage(happyImage, 24, 8, 8, 8);
     ctx.drawImage(happyImage, 48, 0, 8, 8);
-    ctx.drawImage(happyImage, 48, 8, 8, 8);
   }
   // 失敗時只在 sad 幀顯示難過圖
   if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
@@ -2640,6 +2841,7 @@ function saveGameState(){
       gameCritBonus, gameDodgeBonus, gameAffBonus,
       totalTrainingCount, gameAgeLastDay,
       stageStartDay, stageTrainingPointsUsed,
+      poopsOnScreen, poopCountdown,
       timestamp: Date.now()
     }));
   } catch(e){ /* 忽略存檔錯誤 */ }
@@ -2676,6 +2878,19 @@ function loadGameState(){
       gameAgeLastDay = data.gameAgeLastDay ?? 0;
       stageStartDay = data.stageStartDay ?? 0;
       stageTrainingPointsUsed = data.stageTrainingPointsUsed ?? 0;
+      poopsOnScreen = data.poopsOnScreen ?? 0;
+      poopCountdown = data.poopCountdown ?? 0;
+      // 計算離線經過的秒數，處理排便倒數
+      const elapsedSec = Math.floor((Date.now() - data.timestamp) / 1000);
+      if(poopCountdown > 0){
+        let remaining = poopCountdown - elapsedSec;
+        while(remaining <= 0 && poopsOnScreen < 8){
+          poopsOnScreen++;
+          remaining += randPoopInterval();
+        }
+        poopCountdown = Math.max(0, remaining);
+      }
+      if(poopCountdown <= 0) resetPoopCountdown();
     } else {
       gameWeight = DIGIMON_STATS[data.currentRow ?? 2].weight;
       gameAffinity = DIGIMON_STATS[data.currentRow ?? 2].bondInitial || 0;
@@ -2684,6 +2899,7 @@ function loadGameState(){
       totalTrainingCount = 0; gameAgeLastDay = 0;
       stageStartDay = 0; stageTrainingPointsUsed = 0;
       gameTrainingPoints = 12;
+      poopsOnScreen = 0; poopCountdown = 0;
     }
     // 離線期間的階段進化檢查（確保即時觸發）
     if(stageStartDay > 0) checkStageEvolution();
@@ -2707,6 +2923,35 @@ let totalTrainingCount = 0;// 全生命周期累計訓練成功次數
 let gameAgeLastDay = 0;    // 上次加訓練點的日數 floor(gameAge/1440)
 let stageStartDay = 0;     // 當前階段開始的日數
 let stageTrainingPointsUsed = 0; // 當前階段已消耗訓練點
+
+// === 排便系統 ===
+let poopsOnScreen = 0;           // 當前糞便數量 (0~8)
+let poopCountdown = 0;           // 距離下一攤屎的秒數
+let poopTimer = null;            // 排便倒數計時器 (1秒tick)
+let poopFrameTimer = null;       // 糞便動畫幀切換計時器
+let poopFrame = 0;               // 當前動畫幀 (0 或 1)
+const POOP_POSITIONS = [        // 8 個糞便位置 (由右至左, 先下後上)
+  {x:24, y:8},  // 位置1: 右下角
+  {x:24, y:0},  // 位置2: 右上角
+  {x:16, y:8},  // 位置3: 右下角左側
+  {x:16, y:0},  // 位置4: 右上角左側
+  {x:8,  y:8},  // 位置5: 第3攤左側
+  {x:8,  y:0},  // 位置6: 第4攤左側
+  {x:0,  y:8},  // 位置7: 第5攤左側
+  {x:0,  y:0},  // 位置8: 第6攤左側
+];
+
+// === 清潔沖水系統 ===
+let flushingMode = false;          // 清潔動畫模式
+let flushingPhase = 0;             // 0=推擠階段, 1=Happy階段
+let flushingStep = 0;              // 當前步數計數器
+let flushingPushX = 0;             // 推入偏移像素 (逐步增加)
+let flushingTimer = null;          // 清潔動畫計時器
+const FLUSHING_PUSH_STEPS = 48;    // 推擠階段總步數 (每步1px = 48px，水完全出左邊)
+const FLUSHING_PUSH_INTERVAL = 50;    // 推擠每步間隔 ms (40步=2秒)
+const FLUSHING_HAPPY_STEPS = 4;       // Happy階段總步數 (idle,happy,idle,happy)
+const FLUSHING_HAPPY_INTERVAL = 800;  // Happy每步間隔 ms
+const FLUSHING_HAPPY_SEQ = [0, 7, 0, 7]; // idle, happy, idle, happy 柱位
 
 function getTotalHp(){ return DIGIMON_STATS[currentRow].hp + gameHpBonus; }
 function getTotalAtk(){ return DIGIMON_STATS[currentRow].atk + gameAtkBonus; }
@@ -2860,6 +3105,8 @@ function buildFunctionButtons(){
 function clickFunction(idx){
   // 進食中不能點其他按鈕
   if(gameMode === "eating") return;
+  // 清潔動畫中不能操作其他按鈕
+  if(flushingMode && idx !== 4) return;
   // 對戰中：只有「對戰」按鈕本身可操作，其他按鈕無效（不退出對戰）
   if(battleActive && idx !== 3) return;
   // 訓練中點其他按鈕 → 退出訓練（但點戰鬥時直接切換，不經過 auto mode）
@@ -2875,6 +3122,7 @@ function clickFunction(idx){
   else if(idx === 1) showFood(); // 食物
   else if(idx === 2) startTraining(); // 訓練
   else if(idx === 3) startBattle(); // 對戰
+  else if(idx === 4) cleanPoops(); // 清理糞便
   else if(idx === 7) showDigidex(); // 圖鑑
 }
 
@@ -2968,8 +3216,8 @@ function renderBattleLog(){
 function updateBattleHpDisplay(){
   const pHpEl = document.getElementById("battlePlayerHpText");
   const eHpEl = document.getElementById("battleEnemyHpText");
-  if(pHpEl) pHpEl.textContent = "HP " + battlePlayerHp + "/" + battlePlayerMaxHp;
-  if(eHpEl) eHpEl.textContent = "HP " + battleEnemyHp + "/" + battleEnemyMaxHp;
+  if(pHpEl) pHpEl.textContent = "HP " + battlePlayerHp.toFixed(1) + "/" + battlePlayerMaxHp.toFixed(1);
+  if(eHpEl) eHpEl.textContent = "HP " + battleEnemyHp.toFixed(1) + "/" + battleEnemyMaxHp.toFixed(1);
   // 低血量變色
   const pPct = battlePlayerMaxHp > 0 ? battlePlayerHp / battlePlayerMaxHp : 1;
   const ePct = battleEnemyMaxHp > 0 ? battleEnemyHp / battleEnemyMaxHp : 1;
@@ -3017,13 +3265,15 @@ function calcBattleDamage(attackerRow, defenderRow){
 // 逆境進化判定：血量<40%且尚未用完次數，且必須有下一階段可進化
 function tryAdversityEvo(){
   if(battleAdversityTries >= ADVERSITY_EVO_MAX_TRIES) return false;
-  const hpPct = battlePlayerHp / battlePlayerMaxHp;
-  if(hpPct <= 0 || hpPct >= 0.4) return false;
   // 檢查是否有下一階段可進化（完全體為最高階段，不可再進化）
   const curStage = DIGIMON_STATS[currentRow].stage;
   const stageOrder = ["幼年期","幼年期Ⅱ","成長期","成熟期","完全體"];
   const curIdx = stageOrder.indexOf(curStage);
   if(curIdx < 0 || curIdx >= stageOrder.length - 1) return false;
+  // DEBUG: 強制觸發
+  if(window.forceAdversityEvo) return true;
+  const hpPct = battlePlayerHp / battlePlayerMaxHp;
+  if(hpPct <= 0 || hpPct >= 0.4) return false;
   const prob = 0.0542 + (getTotalAffinity() / 100) * (0.1060 - 0.0542);
   return Math.random() < prob;
 }
@@ -3036,7 +3286,7 @@ function doAdversityEvo(nextAttacker, onDone){
   // 確定下一階段
   const stageOrder = ["幼年期","幼年期Ⅱ","成長期","成熟期","完全體"];
   const curIdx = stageOrder.indexOf(curStage);
-  if(curIdx < 0 || curIdx >= stageOrder.length - 1) return;
+  if(curIdx < 0 || curIdx >= stageOrder.length - 1){ executeAttack(nextAttacker, onDone); return; }
 
   const nextStage = stageOrder[curIdx + 1];
 
@@ -3047,7 +3297,7 @@ function doAdversityEvo(nextAttacker, onDone){
       candidates.push(i);
     }
   }
-  if(candidates.length === 0) return;
+  if(candidates.length === 0){ executeAttack(nextAttacker, onDone); return; }
 
   battleEvoNextRow = candidates[Math.floor(Math.random() * candidates.length)];
   if(battleAdversityEvoRow < 0) battleAdversityEvoRow = battleEvoNextRow;
@@ -3080,6 +3330,7 @@ function runEvoAnim(){
       if(battleEvoStep >= 16){
         // 進化！訓練加成完整保留，基礎屬性替換為新形態
         currentRow = battleEvoNextRow;
+        const s = DIGIMON_STATS[currentRow];
         stageStartDay = Math.floor(gameAge / 1440);
         stageTrainingPointsUsed = 0;
         battlePlayerMaxHp = getTotalHp();
@@ -3125,7 +3376,7 @@ function doEnemyAdversityEvo(nextAttacker, onDone){
 
   const stageOrder = ["幼年期","幼年期Ⅱ","成長期","成熟期","完全體"];
   const curIdx = stageOrder.indexOf(curStage);
-  if(curIdx < 0 || curIdx >= stageOrder.length - 1) return;
+  if(curIdx < 0 || curIdx >= stageOrder.length - 1){ executeAttack(nextAttacker, onDone); return; }
 
   const nextStage = stageOrder[curIdx + 1];
   const candidates = [];
@@ -3134,7 +3385,7 @@ function doEnemyAdversityEvo(nextAttacker, onDone){
       candidates.push(i);
     }
   }
-  if(candidates.length === 0) return;
+  if(candidates.length === 0){ executeAttack(nextAttacker, onDone); return; }
 
   battleEnemyEvoNextRow = candidates[Math.floor(Math.random() * candidates.length)];
   if(battleEnemyAdversityEvoRow < 0) battleEnemyAdversityEvoRow = battleEnemyEvoNextRow;
@@ -3218,7 +3469,7 @@ function executeAttack(who, onDone){
   // 敵方攻擊前逆境進化判定
   if(who === "enemy" && battleEnemyAdversityTries < ADVERSITY_EVO_MAX_TRIES){
     const eHpPct = battleEnemyHp / battleEnemyMaxHp;
-    if(eHpPct > 0 && eHpPct < 0.4 && Math.random() < 0.0542){
+    if(window.forceAdversityEvo || (eHpPct > 0 && eHpPct < 0.4 && Math.random() < 0.0542)){
       // 檢查敵方是否有下一階段可進化（完全體不可再進化）
       const eStage = DIGIMON_STATS[battleEnemyRow].stage;
       const eStageIdx = ["幼年期","幼年期Ⅱ","成長期","成熟期","完全體"].indexOf(eStage);
@@ -3397,6 +3648,7 @@ function runBattleAuto(){
 }
 
 function startBattle(){
+  if(flushingMode) stopFlushing(); // 中斷清潔動畫
   const panel = document.getElementById("battleDisplay");
   // 對戰進行中，再次點擊切換為關閉（退出）
   if(battleActive){
@@ -4165,7 +4417,7 @@ if(!localStorage.getItem(SAVE_KEY)){
 }
 
 let loadedCount = 0;
-const TOTAL_IMAGES = 18 + BG_NAMES.length + 1 + 15 + 1 + 14 + 3 + 3 + 4; // 18 row + 3 bg + 1 meat + 15 training + 1 evolution + 14 attack fireballs + 3 evo color icons + 5 battle scenes + 1 hp bar
+const TOTAL_IMAGES = 18 + BG_NAMES.length + 1 + 15 + 1 + 14 + 3 + 3 + 4 + 1 + 1; // 18 row + 3 bg + 1 meat + 15 training + 1 evolution + 14 attack fireballs + 3 evo color icons + 5 battle scenes + 1 hp bar + 1 feces + 1 flushing
 function onImageLoaded(){
   loadedCount++;
   if(loadedCount >= TOTAL_IMAGES) {
@@ -4276,6 +4528,10 @@ evolutionImage.src = "BG/evolution.png";
 evolutionImage.onload = onImageLoaded;
 evolutionImage.onerror = onImageError;
 
+flushingImage.src = "BG/flushing.png";
+flushingImage.onload = onImageLoaded;
+flushingImage.onerror = onImageError;
+
 // 加載進化訓練三色圖標
 for(let i = 0; i < 3; i++){
   const img = new Image();
@@ -4301,6 +4557,11 @@ for(let i = 0; i < BATTLE_BG_SOURCES.length; i++){
 battleHpBarImg.src = "BG/ui_hp_vs.png";
 battleHpBarImg.onload = onImageLoaded;
 battleHpBarImg.onerror = onImageError;
+
+// 加載糞便圖 (16x8, 左右2幀各8x8)
+fecesImage.src = "BG/feces.png";
+fecesImage.onload = onImageLoaded;
+fecesImage.onerror = onImageError;
 
 // 加載進化特效圖片
 battleEvoExclaimImg.src = "BG/!.png";
