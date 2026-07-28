@@ -650,7 +650,7 @@ function getBgNameByHour(h) {
 
 function updateBgByTime() {
   const name = getBgNameByHour(new Date().getHours());
-  if (name !== currentBgName) {
+  if (name !== currentBgName || !mainScreen.style.backgroundImage) {
     currentBgName = name;
     updateCssBackground("auto");
     renderFrame();
@@ -2570,28 +2570,28 @@ function renderTrainingCanvas(){
           ctx.drawImage(bImg, 0, 0, 16, 16);
         }
       }
-      // 龍在 x=32 攻擊
+      // 龍在 x=24 攻擊（真正居中）
       if(rowImages[currentRow] && rowImages[currentRow].complete && rowImages[currentRow].naturalWidth > 0){
-        ctx.drawImage(rowImages[currentRow], 11 * PITCH, 0, 16, 16, 32, 0, 16, 16);
+        ctx.drawImage(rowImages[currentRow], 11 * PITCH, 0, 16, 16, 24, 0, 16, 16);
       }
     } else {
-      // 龍在 x=32
+      // 龍在 x=24（真正居中）
       if(rowImages[currentRow] && rowImages[currentRow].complete && rowImages[currentRow].naturalWidth > 0){
-        ctx.drawImage(rowImages[currentRow], dragonFrame * PITCH, 0, 16, 16, 32, 0, 16, 16);
+        ctx.drawImage(rowImages[currentRow], dragonFrame * PITCH, 0, 16, 16, 24, 0, 16, 16);
       }
     }
 
-    // 慶祝 happy icons
+    // 慶祝 happy icons（避開居中龍 x=24）
     if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
        && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
-      ctx.drawImage(happyImage, 24, 0, 8, 8);
+      ctx.drawImage(happyImage, 8, 0, 8, 8);
       ctx.drawImage(happyImage, 48, 0, 8, 8);
     }
-    // 失敗 sad icons
+    // 失敗 sad icons（避開居中龍 x=24）
     if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
        && TRAINING_FAILURE_SEQ[trainingFailureStep] === 10){
-      ctx.drawImage(sadImage, 24, 0, 8, 8);
-      ctx.drawImage(sadImage, 24, 8, 8, 8);
+      ctx.drawImage(sadImage, 8, 0, 8, 8);
+      ctx.drawImage(sadImage, 8, 8, 8, 8);
       ctx.drawImage(sadImage, 48, 0, 8, 8);
       ctx.drawImage(sadImage, 48, 8, 8, 8);
     }
@@ -2716,14 +2716,14 @@ function renderTrainingCanvas(){
     return;
   }
 
-  // 親密度訓練：記憶翻牌，龍在 x=32
+  // 親密度訓練：記憶翻牌，龍居中 x=24
   if(trainingType === "affinity"){
     // 繪製龍（慶祝時用 idle/happy/idle/happy 序列）
     const dFrame = trainingCelebrationActive
       ? TRAINING_CELEBRATION_SEQ[trainingCelebrationStep % TRAINING_CELEBRATION_SEQ.length]
       : trainingIdleFrame;
     if(rowImages[currentRow] && rowImages[currentRow].complete && rowImages[currentRow].naturalWidth > 0){
-      ctx.drawImage(rowImages[currentRow], dFrame * PITCH, 0, 16, 16, 32, 0, 16, 16);
+      ctx.drawImage(rowImages[currentRow], dFrame * PITCH, 0, 16, 16, 24, 0, 16, 16);
     }
     // 右側顯示目標圖案（僅遊戲進行中）
     if(evoPhase === "playing" && evoTarget >= 0 && evoTarget < EVO_TYPES){
@@ -2732,17 +2732,17 @@ function renderTrainingCanvas(){
         ctx.drawImage(iconImg, 50, 3, 10, 10);
       }
     }
-    // 慶祝時 Happy.png 與龍 happy 幀同步（左右各一對上下）
+    // 慶祝時 Happy.png 與龍 happy 幀同步（左右各一對上下，避開居中龍 x=24）
     if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
        && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep % TRAINING_CELEBRATION_SEQ.length] === 7){
-      ctx.drawImage(happyImage, 24, 0, 8, 8);
+      ctx.drawImage(happyImage, 8, 0, 8, 8);
       ctx.drawImage(happyImage, 48, 0, 8, 8);
     }
-    // 失敗圖標
+    // 失敗圖標（避開居中龍 x=24）
     if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
        && TRAINING_FAILURE_SEQ[trainingFailureStep] === 10){
-      ctx.drawImage(sadImage, 24, 0, 8, 8);
-      ctx.drawImage(sadImage, 24, 8, 8, 8);
+      ctx.drawImage(sadImage, 8, 0, 8, 8);
+      ctx.drawImage(sadImage, 8, 8, 8, 8);
       ctx.drawImage(sadImage, 48, 0, 8, 8);
       ctx.drawImage(sadImage, 48, 8, 8, 8);
     }
@@ -2769,28 +2769,28 @@ function renderTrainingCanvas(){
     }
   }
   
-  // 2) 龍在中間（x=32）
+  // 2) 龍真正居中（x=24，中心在畫布 x=32）
   if(rowImages[currentRow] && rowImages[currentRow].complete && rowImages[currentRow].naturalWidth > 0){
     ctx.drawImage(
       rowImages[currentRow],
       dragonFrame * PITCH, 0,
       16, 16,
-      32, 0,
+      24, 0,
       16, 16
     );
   }
   
-  // 慶祝時只在 happy 幀顯示愛心
+  // 慶祝時只在 happy 幀顯示愛心（避開居中龍的位置）
   if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
      && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
-    ctx.drawImage(happyImage, 24, 0, 8, 8);
+    ctx.drawImage(happyImage, 8, 0, 8, 8);
     ctx.drawImage(happyImage, 48, 0, 8, 8);
   }
-  // 失敗時只在 sad 幀顯示難過圖
+  // 失敗時只在 sad 幀顯示難過圖（避開居中龍的位置）
   if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
      && TRAINING_FAILURE_SEQ[trainingFailureStep] === 10){
-    ctx.drawImage(sadImage, 24, 0, 8, 8);
-    ctx.drawImage(sadImage, 24, 8, 8, 8);
+    ctx.drawImage(sadImage, 8, 0, 8, 8);
+    ctx.drawImage(sadImage, 8, 8, 8, 8);
     ctx.drawImage(sadImage, 48, 0, 8, 8);
     ctx.drawImage(sadImage, 48, 8, 8, 8);
   }
