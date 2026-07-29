@@ -24,6 +24,149 @@ body{
 }
 .title{color:#fff;text-align:center;margin-bottom:16px;font-size:20px}
 
+/* 頂部導航欄 */
+.top-bar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  margin-bottom:16px;
+}
+.top-bar .title{
+  margin-bottom:0;
+  flex:1;
+}
+.settings-btn{
+  position:absolute;
+  right:0;
+  top:50%;
+  transform:translateY(-50%);
+  width:36px;
+  height:36px;
+  background:#333;
+  border:none;
+  border-radius:50%;
+  color:#fff;
+  font-size:20px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:background 0.2s, transform 0.3s;
+  line-height:1;
+}
+.settings-btn:hover{ background:#555; }
+.settings-btn:active{ transform:translateY(-50%) scale(0.92); }
+
+/* 設定面板遮罩 */
+.settings-overlay{
+  display:none;
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.7);
+  z-index:1000;
+  justify-content:center;
+  align-items:center;
+}
+.settings-overlay.open{ display:flex; }
+
+.settings-panel{
+  background:#1a1a2e;
+  border:2px solid #c42222;
+  border-radius:12px;
+  padding:20px;
+  width:90%;
+  max-width:340px;
+  color:#fff;
+  animation:fadeInUp 0.25s ease;
+}
+@keyframes fadeInUp{
+  from{ opacity:0; transform:translateY(20px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+.settings-panel h3{
+  text-align:center;
+  color:#ffcc00;
+  font-size:18px;
+  margin-bottom:16px;
+  padding-bottom:10px;
+  border-bottom:1px solid #333;
+}
+.settings-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 0;
+  border-bottom:1px solid #2a2a3e;
+}
+.settings-row:last-child{ border-bottom:none; }
+.settings-row .setting-label{
+  font-size:14px;
+  color:#ccc;
+}
+.settings-row .setting-desc{
+  font-size:11px;
+  color:#777;
+  margin-top:2px;
+}
+
+/* 開關按鈕 */
+.toggle-switch{
+  position:relative;
+  width:52px;
+  height:28px;
+  background:#444;
+  border-radius:14px;
+  cursor:pointer;
+  transition:background 0.3s;
+  flex-shrink:0;
+}
+.toggle-switch.on{ background:#c42222; }
+.toggle-switch::after{
+  content:'';
+  position:absolute;
+  top:3px;left:3px;
+  width:22px;height:22px;
+  background:#fff;
+  border-radius:50%;
+  transition:left 0.3s;
+}
+.toggle-switch.on::after{ left:27px; }
+
+.settings-close{
+  display:block;
+  width:100%;
+  margin-top:16px;
+  padding:10px 0;
+  background:#c42222;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  font-size:16px;
+  cursor:pointer;
+  font-weight:700;
+  transition:background 0.2s;
+}
+.settings-close:hover{ background:#e03030; }
+
+/* Toast 提示 */
+#toast{
+  position:fixed;
+  bottom:100px;left:50%;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,0.85);
+  color:#fff;
+  padding:10px 24px;
+  border-radius:20px;
+  font-size:14px;
+  z-index:2000;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity 0.3s;
+  white-space:nowrap;
+}
+#toast.show{ opacity:1; }
+
 /* 主LCD螢幕 */
 .main-screen{
   background-color:#000;
@@ -40,6 +183,26 @@ body{
   margin:0 auto 16px;
   transition:background-image 0.3s ease;
 }
+
+/* 屏幕容器 & 關燈遮罩 */
+.screen-container{
+  position:relative;
+  width:fit-content;
+  margin:0 auto 16px;
+}
+.screen-container .main-screen{
+  margin:0 auto 0;
+}
+.dark-overlay{
+  position:absolute;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.7);
+  pointer-events:none;
+  display:none;
+  z-index:10;
+}
+.dark-overlay.on{ display:block; }
 
 /* 左右切換箭頭 */
 .nav-bar{
@@ -455,10 +618,16 @@ body{
 </style>
 </head>
 <body>
-<h2 class="title">Digimon V-Pet</h2>
+<div class="top-bar">
+  <h2 class="title">Digimon V-Pet</h2>
+  <button class="settings-btn" id="settingsBtn" title="設定">⚙</button>
+</div>
 
 <!-- 單個主顯示屏 -->
-<canvas id="screen" class="main-screen" width="32" height="16"></canvas>
+<div class="screen-container">
+  <canvas id="screen" class="main-screen" width="32" height="16"></canvas>
+  <div class="dark-overlay" id="darkOverlay"></div>
+</div>
 
 <!-- 左右箭頭切換 -->
 <div class="nav-bar">
@@ -594,6 +763,39 @@ body{
   <div id="digidexContent"></div>
   <div class="digidex-detail" id="digidexDetail"></div>
 </div>
+
+<!-- 設定面板 -->
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-panel" onclick="event.stopPropagation()">
+    <h3>⚙ 系統設定</h3>
+
+    <!-- 音量設定 -->
+    <div class="settings-row">
+      <div>
+        <div class="setting-label">音效</div>
+        <div class="setting-desc">開啟 / 關閉遊戲音效</div>
+      </div>
+      <div class="toggle-switch on" id="toggleSound" onclick="toggleSoundSetting()"></div>
+    </div>
+
+    <!-- 睡眠時間設定 -->
+    <div class="settings-row">
+      <div>
+        <div class="setting-label">睡眠時間</div>
+        <div class="setting-desc">設定每晚睡覺時間，屆時龍會停止活動進入睡眠</div>
+      </div>
+      <select id="sleepHourSelect" style="
+        background:#333;color:#fff;border:1px solid #555;border-radius:6px;
+        padding:6px 10px;font-size:14px;cursor:pointer;outline:none;
+      "></select>
+    </div>
+
+    <button class="settings-close" id="settingsCloseBtn">關閉</button>
+  </div>
+</div>
+
+<!-- Toast 提示 -->
+<div id="toast"></div>
 
 <script>
 const canvas = document.getElementById('screen');
@@ -735,8 +937,50 @@ let gameModeStep = 0;
 const EAT_IV = 400;
 const REFUSE_IV = 300;
 
+// ========== 睡眠系統 ==========
+let isSleeping = false;
+let lightsOff = false; // 關燈模式
+let sleepZFrame = 0; // ZZZ 動畫幀 (0/1 交替)
+const SLEEP_SEQ = [4, 4, 5, 5]; // col 4="sleep", col 5="sleep2"
+
+function updateSleepByTime(){
+  const wasSleeping = isSleeping;
+  const gameHour = new Date().getHours(); // 同步现实时间
+  const wakeHour = (sleepHour + 8) % 24;
+  if(sleepHour < wakeHour){
+    // 不跨日 e.g. 5:00 ~ 13:00
+    isSleeping = (gameHour >= sleepHour && gameHour < wakeHour);
+  } else {
+    // 跨日 e.g. 22:00 ~ 06:00 (wakeHour=6 < sleepHour=22)
+    isSleeping = (gameHour >= sleepHour || gameHour < wakeHour);
+  }
+  // 只在 auto 模式生效，訓練/對戰中不自動進入睡眠
+  if(isSleeping && (trainingMode || gameMode === "battle")){
+    isSleeping = false;
+  }
+  if(isSleeping && !wasSleeping){
+    // 剛進入睡眠：確保在 auto mode 並停止移動
+    if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+    autoTargetX = null;
+    autoX = 9; // 睡眠時置中
+    if(autoTimer) renderFrame(); // 只當遊戲已初始化才重繪
+  }
+  if(!isSleeping && wasSleeping){
+    // 剛醒來：恢復移動 & 自動開燈
+    if(gameMode === "auto" && !autoMoveTimer){
+      autoMoveTimer = setInterval(stepAutoMove, MOVE_IV);
+    }
+    lightsOff = false;
+    const overlay = document.getElementById("darkOverlay");
+    if(overlay) overlay.classList.remove("on");
+    saveSettings();
+    if(autoTimer) renderFrame(); // 只當遊戲已初始化才重繪
+  }
+}
+
 // ========== 繪製 ==========
 function getColForAuto(){
+  if(isSleeping) return SLEEP_SEQ[autoAnimStep % 4];
   const poopShift = getPoopOffset();
   const isEdge = autoX <= 1 - poopShift || autoX >= 17 - poopShift;
   const isMoving = autoTargetX !== null;
@@ -841,10 +1085,26 @@ function renderFrame(){
     CELL_SIZE, CELL_SIZE
   );
   ctx.restore();
+
+  // === 睡眠 ZZZ 動畫 ===
+  if(isSleeping && sleepingZImage.complete && sleepingZImage.naturalWidth > 0){
+    ctx.drawImage(
+      sleepingZImage,
+      sleepZFrame * 8, 0, 8, 16,  // 來源：左右2幀各8x16
+      24 - poopShift, 0, 8, 16      // 龍右邊
+    );
+  }
 }
 
 // ========== 動畫 / 移動 ==========
 function stepAutoAnim(){
+  // 睡眠模式：只播放睡眠幀，不移動、不吃、不拒絕
+  if(isSleeping){
+    autoAnimStep++;
+    sleepZFrame = Math.floor((autoAnimStep % 4) / 2); // 與 SLEEP_SEQ 同步：sleep→0, sleep2→1
+    renderFrame();
+    return;
+  }
   // 進食模式
   if(gameMode === "eating"){
     gameModeStep++;
@@ -906,6 +1166,7 @@ function stepAutoAnim(){
 }
 
 function stepAutoMove(){
+  if(isSleeping) return;
   if(autoTargetX !== null) return;
   const poopShift = getPoopOffset();
   const lo = 1 - poopShift;
@@ -1121,7 +1382,9 @@ function startAutoPlay(){
   autoAnimStep = 0;
   autoAnimIv = ANIM_IV;
   autoTimer = setInterval(stepAutoAnim, ANIM_IV);
-  autoMoveTimer = setInterval(stepAutoMove, MOVE_IV);
+  if(!isSleeping){
+    autoMoveTimer = setInterval(stepAutoMove, MOVE_IV);
+  }
   renderFrame();
   startPoopTimer(); // 啟動排便計時器
 }
@@ -1146,6 +1409,7 @@ let boomImage = new Image();      // 爆炸01
 let boomImage2 = new Image();     // 爆炸02
 let happyImage = new Image();    // 慶祝愛心
 let flushingImage = new Image(); // 清潔沖水 (16x16, 左右2格8x16)
+let sleepingZImage = new Image(); // ZZZ 睡覺圖 (16x16, 左右2格8x16)
 let sandbagState = "normal";     // "normal" | "boom" | "hit"
 let boomFrame = 0;               // 爆炸幀 (0=Boom01, 1=Boom02)
 let boomCycle = 0;               // 爆炸已播放的完整週期
@@ -2842,6 +3106,7 @@ function saveGameState(){
       totalTrainingCount, gameAgeLastDay,
       stageStartDay, stageTrainingPointsUsed,
       poopsOnScreen, poopCountdown,
+      isSleeping,
       timestamp: Date.now()
     }));
   } catch(e){ /* 忽略存檔錯誤 */ }
@@ -2880,6 +3145,7 @@ function loadGameState(){
       stageTrainingPointsUsed = data.stageTrainingPointsUsed ?? 0;
       poopsOnScreen = data.poopsOnScreen ?? 0;
       poopCountdown = data.poopCountdown ?? 0;
+      isSleeping = data.isSleeping ?? false;
       // 計算離線經過的秒數，處理排便倒數
       const elapsedSec = Math.floor((Date.now() - data.timestamp) / 1000);
       if(poopCountdown > 0){
@@ -3103,12 +3369,22 @@ function buildFunctionButtons(){
 }
 
 function clickFunction(idx){
+  // 睡眠時只允許：狀態(0)、清理(4)、睡眠按鈕關燈(5)、圖鑑(7)
+  if(isSleeping && idx !== 0 && idx !== 4 && idx !== 5 && idx !== 7){
+    showToast("龍正在睡覺，請勿打擾 💤");
+    return;
+  }
+  // 關燈時不能訓練和對戰
+  if(lightsOff && (idx === 2 || idx === 3)){
+    showToast("請開灯 💡");
+    return;
+  }
   // 進食中不能點其他按鈕
   if(gameMode === "eating") return;
   // 清潔動畫中不能操作其他按鈕
   if(flushingMode && idx !== 4) return;
-  // 對戰中：只有「對戰」按鈕本身可操作，其他按鈕無效（不退出對戰）
-  if(battleActive && idx !== 3) return;
+  // 對戰中：所有功能按鈕無效，請使用對戰面板內按鈕操作
+  if(battleActive) return;
   // 訓練中點其他按鈕 → 退出訓練（但點戰鬥時直接切換，不經過 auto mode）
   if(trainingMode && idx !== 2 && idx !== 3){
     stopTraining();
@@ -3123,6 +3399,7 @@ function clickFunction(idx){
   else if(idx === 2) startTraining(); // 訓練
   else if(idx === 3) startBattle(); // 對戰
   else if(idx === 4) cleanPoops(); // 清理糞便
+  else if(idx === 5) toggleLights(); // 關燈/開燈
   else if(idx === 7) showDigidex(); // 圖鑑
 }
 
@@ -4383,6 +4660,110 @@ document.getElementById("btnRight").onclick = () => {
   selectDigimon(idx);
 };
 
+// ========== 關燈 / 開燈 ==========
+function toggleLights(){
+  lightsOff = !lightsOff;
+  const overlay = document.getElementById("darkOverlay");
+  if(overlay){
+    if(lightsOff) overlay.classList.add("on");
+    else overlay.classList.remove("on");
+  }
+  saveSettings();
+}
+
+// ========== Toast 提示系統 ==========
+let toastTimer = null;
+function showToast(msg){
+  const el = document.getElementById("toast");
+  if(!el) return;
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2000);
+}
+
+// ========== 設定面板 ==========
+let soundEnabled = true;
+
+// 打開設定面板
+document.getElementById("settingsBtn").onclick = () => {
+  document.getElementById("settingsOverlay").classList.add("open");
+};
+
+// 點擊遮罩關閉
+document.getElementById("settingsOverlay").onclick = () => {
+  document.getElementById("settingsOverlay").classList.remove("open");
+};
+
+// 關閉按鈕
+document.getElementById("settingsCloseBtn").onclick = () => {
+  document.getElementById("settingsOverlay").classList.remove("open");
+};
+
+// 音效開關
+function toggleSoundSetting(){
+  soundEnabled = !soundEnabled;
+  const tgl = document.getElementById("toggleSound");
+  if(soundEnabled){
+    tgl.classList.add("on");
+  } else {
+    tgl.classList.remove("on");
+  }
+}
+
+// 睡眠時間設定
+let sleepHour = 22; // 預設晚上10點睡覺
+function initSleepHourSelect(){
+  const sel = document.getElementById("sleepHourSelect");
+  for(let h = 0; h < 24; h++){
+    const opt = document.createElement("option");
+    opt.value = h;
+    opt.textContent = h + ":00";
+    if(h === sleepHour) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  sel.onchange = () => {
+    sleepHour = parseInt(sel.value);
+    saveSettings();
+    document.getElementById("settingsOverlay").classList.remove("open");
+    updateSleepByTime(); // 立即反映設定變更
+    const gh = new Date().getHours(); // 显示现实时间
+    const wh = (sleepHour + 8) % 24;
+    setTimeout(() => {
+      showToast("睡眠設定：" + sleepHour + ":00~" + wh + ":00（目前遊戲時間 " + gh + ":00）");
+    }, 300);
+  };
+}
+
+// 儲存設定
+function saveSettings(){
+  localStorage.setItem("digivpet_settings", JSON.stringify({ soundEnabled, sleepHour, lightsOff }));
+}
+function loadSettings(){
+  const raw = localStorage.getItem("digivpet_settings");
+  if(raw){
+    try {
+      const s = JSON.parse(raw);
+      soundEnabled = s.soundEnabled ?? true;
+      sleepHour = s.sleepHour ?? 22;
+      lightsOff = s.lightsOff ?? false;
+    } catch(e){}
+  }
+  const tgl = document.getElementById("toggleSound");
+  if(soundEnabled){
+    tgl.classList.add("on");
+  } else {
+    tgl.classList.remove("on");
+  }
+  // 恢復關燈狀態
+  const overlay = document.getElementById("darkOverlay");
+  if(overlay && lightsOff){
+    overlay.classList.add("on");
+  }
+}
+loadSettings();
+initSleepHourSelect();
+
 // ========== 啟動 ==========
 if("serviceWorker" in navigator){
   if(location.protocol === "file:"){
@@ -4405,6 +4786,7 @@ window.addEventListener("beforeinstallprompt", (e) => {
 
 buildFunctionButtons();
 loadGameState(); // 讀取存檔
+updateSleepByTime(); // 根據存檔時間同步睡眠狀態
 // 首次啟動時以當前選擇的數碼獸初始化數據
 if(!localStorage.getItem(SAVE_KEY)){
   const s = DIGIMON_STATS[currentRow];
@@ -4532,6 +4914,10 @@ flushingImage.src = "BG/flushing.png";
 flushingImage.onload = onImageLoaded;
 flushingImage.onerror = onImageError;
 
+sleepingZImage.src = "BG/sleepingZ.png";
+sleepingZImage.onload = onImageLoaded;
+sleepingZImage.onerror = onImageError;
+
 // 加載進化訓練三色圖標
 for(let i = 0; i < 3; i++){
   const img = new Image();
@@ -4591,6 +4977,7 @@ setInterval(updateBgByTime, 60000);
 // 數值計時器：年齡每分鐘 +1，每日疊加 12 訓練點，檢查階段進化
 setInterval(() => { 
   gameAge++;
+  updateSleepByTime(); // 每分鐘檢查是否需要進入/離開睡眠
   const currentDay = Math.floor(gameAge / 1440);
   if(currentDay > gameAgeLastDay){
     gameTrainingPoints += 12;
