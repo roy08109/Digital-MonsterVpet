@@ -964,6 +964,7 @@ const SLEEP_SEQ = [4, 4, 5, 5]; // col 4="sleep", col 5="sleep2"
 // ========== 蛋時期系統 ==========
 let isEggPhase = true;       // 是否在蛋時期
 let eggStartTime = Date.now();
+let birthTimestamp = 0;      // 出生時間戳（孵化時設定，永不改變，用於精確計算年齡）
 let eggImage = new Image();  // 蛋精靈圖 (48×16, 3幀各16×16)
 
 function updateSleepByTime(){
@@ -1009,6 +1010,7 @@ function startEggPhase() {
   
   // 所有狀態數據歸零
   gameAge = 0;
+  birthTimestamp = 0;  // 新蛋開始，清除舊的出生時間
   gameAgeLastDay = 0;
   stageStartDay = 0;
   gameHunger = 0;
@@ -1053,6 +1055,7 @@ function hatchEgg() {
   currentRow = 0; // 黑球獸
   
   gameAge = 0;
+  birthTimestamp = Date.now(); // 記錄出生時間，後續年齡均以此為基準
   gameAgeLastDay = 0;
   stageStartDay = 0;
   gameHunger = 0;
@@ -1654,6 +1657,7 @@ const TRAINING_CELEBRATION_SEQ = [0, 7, 0, 7]; // idle, happy, idle, happy
 let trainingTimer = null;           // 倒數計時 interval
 let trainingCountdown = 3;          // 剩餘秒數
 let trainingType = "attack";        // "attack" | "life" | "critical"
+let trainingAttackFired = false;   // 攻擊訓練是否已發射過（只限一發）
 let trainingFailed = false;         // 是否失敗
 let trainingFailureActive = false;  // 失敗動畫播放中
 let trainingFailureTimer = null;
@@ -1879,6 +1883,7 @@ function startTraining(){
   trainingLevel = 0;
   trainingClickCount = 0;
   trainingAttackActive = false;
+  trainingAttackFired = false;
   trainingIdleFrame = 0;
   if(trainingProjectileTimer){
     clearInterval(trainingProjectileTimer);
@@ -2143,6 +2148,7 @@ function backToTrainingModeSelect(){
 function clearTrainingState(){
   // 清理訓練狀態但不重置 canvas/bg（供直接切換到對戰使用）
   trainingMode = false;
+  trainingAttackFired = false;
   if(trainingProjectileTimer){ clearInterval(trainingProjectileTimer); trainingProjectileTimer = null; }
   if(trainingIdleTimer){ clearInterval(trainingIdleTimer); trainingIdleTimer = null; }
   if(sandbagTimer){ clearInterval(sandbagTimer); sandbagTimer = null; }
@@ -2180,6 +2186,7 @@ function clearTrainingState(){
 
 function stopTraining(){
   trainingMode = false;
+  trainingAttackFired = false;
   if(trainingProjectileTimer){
     clearInterval(trainingProjectileTimer);
     trainingProjectileTimer = null;
@@ -2276,6 +2283,7 @@ function stopTraining(){
 
 function handleTrainingClick(){
   if(trainingAttackActive) return;  // 攻擊動畫中不可操作
+  if(trainingAttackFired) return;   // 已發射過不再允許點擊
   if(trainingCelebrationActive) return; // 慶祝中不可操作
   if(trainingFailed || trainingFailureActive) return; // 失敗後不可再點
   
@@ -2355,6 +2363,8 @@ function handleTrainingClick(){
 }
 
 function triggerTrainingAttack(){
+  if(trainingAttackFired) return;  // 已發射過，不再發射
+  trainingAttackFired = true;
   trainingSucceeded = true;
   trainingAttackActive = true;
   trainingLevel = 6;
@@ -2931,7 +2941,7 @@ function handleEvoClick(idx){
           return;
         }
         renderFrame();
-      }, EVO_SEQ_INTERVAL * 3);
+      }, 600);
       renderFrame();
     }
   } else {
@@ -3031,11 +3041,13 @@ function renderTrainingCanvas(){
       );
     }
 
-    // 慶祝時 happy icons（固定位置 x=24, x=48，與攻擊訓練相同）
+    // 慶祝時 happy icons（龍x=32，左右各2堆疊）
     if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
        && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
       ctx.drawImage(happyImage, 24, 0, 8, 8);
+      ctx.drawImage(happyImage, 24, 8, 8, 8);
       ctx.drawImage(happyImage, 48, 0, 8, 8);
+      ctx.drawImage(happyImage, 48, 8, 8, 8);
     }
     // 失敗時 sad icons（固定位置 x=24, x=48，與攻擊訓練相同）
     if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
@@ -3089,11 +3101,13 @@ function renderTrainingCanvas(){
       }
     }
 
-    // 慶祝 happy icons（避開居中龍 x=24）
+    // 慶祝 happy icons（龍x=24，左右各2堆疊）
     if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
        && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
-      ctx.drawImage(happyImage, 8, 0, 8, 8);
-      ctx.drawImage(happyImage, 48, 0, 8, 8);
+      ctx.drawImage(happyImage, 16, 0, 8, 8);
+      ctx.drawImage(happyImage, 16, 8, 8, 8);
+      ctx.drawImage(happyImage, 40, 0, 8, 8);
+      ctx.drawImage(happyImage, 40, 8, 8, 8);
     }
     // 失敗 sad icons（避開居中龍 x=24）
     if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
@@ -3138,11 +3152,13 @@ function renderTrainingCanvas(){
       // 飛彈已消失
     }
 
-    // 慶祝 happy icons
+    // 慶祝 happy icons（龍x=32，左右各2堆疊）
     if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
        && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
       ctx.drawImage(happyImage, 24, 0, 8, 8);
+      ctx.drawImage(happyImage, 24, 8, 8, 8);
       ctx.drawImage(happyImage, 48, 0, 8, 8);
+      ctx.drawImage(happyImage, 48, 8, 8, 8);
     }
 
     // 失敗 sad icons
@@ -3207,11 +3223,13 @@ function renderTrainingCanvas(){
         }
       }
     }
-    // 慶祝 (左右各一對)
+    // 慶祝 happy icons（龍x=32，左右各2堆疊）
     if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
        && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
       ctx.drawImage(happyImage, 24, 0, 8, 8);
+      ctx.drawImage(happyImage, 24, 8, 8, 8);
       ctx.drawImage(happyImage, 48, 0, 8, 8);
+      ctx.drawImage(happyImage, 48, 8, 8, 8);
     }
     // 失敗
     if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
@@ -3240,11 +3258,13 @@ function renderTrainingCanvas(){
         ctx.drawImage(iconImg, 50, 3, 10, 10);
       }
     }
-    // 慶祝時 Happy.png 與龍 happy 幀同步（左右各一對上下，避開居中龍 x=24）
+    // 慶祝時 Happy.png 與龍 happy 幀同步（龍x=24，左右各2堆疊）
     if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
        && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep % TRAINING_CELEBRATION_SEQ.length] === 7){
-      ctx.drawImage(happyImage, 8, 0, 8, 8);
-      ctx.drawImage(happyImage, 48, 0, 8, 8);
+      ctx.drawImage(happyImage, 16, 0, 8, 8);
+      ctx.drawImage(happyImage, 16, 8, 8, 8);
+      ctx.drawImage(happyImage, 40, 0, 8, 8);
+      ctx.drawImage(happyImage, 40, 8, 8, 8);
     }
     // 失敗圖標（避開居中龍 x=24）
     if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
@@ -3288,11 +3308,13 @@ function renderTrainingCanvas(){
     );
   }
   
-  // 慶祝時只在 happy 幀顯示愛心（避開居中龍的位置）
+  // 慶祝時只在 happy 幀顯示愛心，左右各2個堆疊（避開居中龍 x=24~39）
   if(trainingCelebrationActive && happyImage.complete && happyImage.naturalWidth > 0
      && TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7){
-    ctx.drawImage(happyImage, 8, 0, 8, 8);
-    ctx.drawImage(happyImage, 48, 0, 8, 8);
+    ctx.drawImage(happyImage, 16, 0, 8, 8);  // 左上（緊貼龍左邊 x=24）
+    ctx.drawImage(happyImage, 16, 8, 8, 8);  // 左下
+    ctx.drawImage(happyImage, 40, 0, 8, 8);  // 右上
+    ctx.drawImage(happyImage, 40, 8, 8, 8);  // 右下
   }
   // 失敗時只在 sad 幀顯示難過圖（避開居中龍的位置）
   if(trainingFailureActive && sadImage.complete && sadImage.naturalWidth > 0
@@ -3354,6 +3376,7 @@ function saveGameState(){
       isEggPhase,
       gameCareMistakes, callMistakeRecorded,
       eggStartTime: isEggPhase ? eggStartTime : undefined,
+      birthTimestamp: birthTimestamp || undefined, // 出生時間戳，永不改變
       timestamp: Date.now()
     }));
   } catch(e){ /* 忽略存檔錯誤 */ }
@@ -3371,8 +3394,9 @@ function loadGameState(){
         isEggPhase = false;
         eggStartTime = 0;
         currentRow = 0;
-        gameAge = 0;
-        gameAgeLastDay = 0;
+        birthTimestamp = data.eggStartTime + 60000; // 孵化時間點 = 蛋開始 + 60秒
+        gameAge = Math.floor((Date.now() - birthTimestamp) / 60000); // 從孵化開始至今的精確年齡
+        gameAgeLastDay = Math.floor(gameAge / 1440);
         stageStartDay = 0;
         gameHunger = 0;
         gameWeight = DIGIMON_STATS[0].weight;
@@ -3382,7 +3406,16 @@ function loadGameState(){
         isSleeping = false;
         poopsOnScreen = 0;
         poopCountdown = 0;
-        return; // 孵化完成，跳過離線計算
+        // 離線期間每天疊加 12 點訓練點
+        const offlineDay = Math.floor(gameAge / 1440);
+        if(offlineDay > 0){
+          gameTrainingPoints += offlineDay * 12;
+          gameAgeLastDay = offlineDay;
+        }
+        // 離線進化捕捉
+        if(currentRow === 0 && gameAge >= 5) evoAnimPending = true;
+        if(currentRow === 1 && gameAge >= 15) evoAnimPending = true;
+        return; // 孵化完成，跳過後續離線計算
       } else {
         // 仍在蛋時期，恢復狀態
         isEggPhase = true;
@@ -3400,8 +3433,14 @@ function loadGameState(){
     } else {
       isEggPhase = false;
     }
-    const elapsed = Math.floor((Date.now() - data.timestamp) / 60000); // 經過分鐘
-    gameAge = (data.gameAge || 0) + elapsed;
+    const elapsed = Math.floor((Date.now() - data.timestamp) / 60000); // 經過分鐘（用於飢餓度等計算）
+    // 年齡優先以固定的 birthTimestamp 計算（最精確），兼容舊存檔
+    if(data.birthTimestamp){
+      birthTimestamp = data.birthTimestamp;
+      gameAge = Math.floor((Date.now() - birthTimestamp) / 60000);
+    } else {
+      gameAge = (data.gameAge || 0) + elapsed;
+    }
     gameHunger = Math.min(10, Math.max(0, (data.gameHunger ?? 5) - Math.floor(elapsed / 30)));
     gameTrainingPoints = data.gameTrainingPoints ?? 12;
     gameAgeLastDay = data.gameAgeLastDay ?? 0;
