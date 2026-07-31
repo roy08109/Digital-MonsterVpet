@@ -1,4 +1,4 @@
-const CACHE_NAME = "digimon-vpet-v1";
+const CACHE_NAME = "digimon-vpet-v16";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => {
