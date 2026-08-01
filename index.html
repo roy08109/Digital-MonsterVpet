@@ -664,6 +664,31 @@ body{
 
 /* 圖鑑面板 */
 #digidexDisplay{ max-width:480px; overflow-y:auto; max-height:78vh; padding:14px; box-sizing:border-box; }
+.digidex-pages{
+  display:flex;
+  gap:6px;
+  margin-bottom:10px;
+  padding-bottom:8px;
+  border-bottom:1px solid #555;
+}
+.digidex-page-btn{
+  flex:1;
+  padding:6px 4px;
+  background:#2a2a2a;
+  color:#bbb;
+  border:1px solid #444;
+  border-radius:6px;
+  font-size:12px;
+  cursor:pointer;
+  transition:background .15s, color .15s;
+}
+.digidex-page-btn:hover{ background:#3a3a3a; color:#fff; }
+.digidex-page-btn.active{
+  background:#5a3a00;
+  color:#ffcc00;
+  border-color:#aa7700;
+  font-weight:700;
+}
 .digidex-stage{
   margin-bottom:12px;
 }
@@ -1061,11 +1086,14 @@ const DIGIDEX_STAGES = [
   { name: "成熟期",   rows: [4, 5, 6, 7, 8, 9, 10] },
   { name: "完全體",   rows: [11, 12, 13] },
 ];
-// 所有 sprite row 的名稱（0～13）
+// 究極體獨立頁面（僅對戰逆境進化可解鎖）
+const DIGIDEX_ULTIMATE_ROWS = [14, 15, 16];
+// 所有 sprite row 的名稱（0～16）
 const ALL_NAMES = [
   "黑球獸","滾球獸","亞古獸","貝塔獸",
   "暴龍獸","巨龍獸","惡魔獸","火焰獸","飛龍獸","海龍獸","鼻涕獸",
   "機械暴龍獸","豆豆獸","熊仔獸",
+  "電光暴龍獸","番長豆豆獸","惡魔熊仔獸",
 ];
 const TOTAL_DIGIMON = ALL_NAMES.length;
 
@@ -1075,14 +1103,14 @@ function getEvolutionRow(row) {
   if (row === 1) return (gameCareMistakes >= 1) ? 3 : 2; // 滾球獸：失誤≥1→貝塔獸(3)，無失誤→亞古獸(2)
   if (row >= 2 && row <= 3) return getChildEvoResult(row); // 成長期 → 條件進化至成熟期
   if (row >= 4 && row <= 10) return 11 + Math.floor(Math.random() * 3); // 成熟期 → 隨機完全體 (11~13)
-  return row;                                      // 完全體 → 不變
+  return row;                                      // 完全體/究極體 → 不變（究極體僅對戰逆境進化）
 }
 
 // 精靈圖路徑（獨立行圖片）
 const BG_NAMES = ["Noon", "dusk", "Night"];
 
 let rowImages = new Array(18); // row_00.png ~ row_17.png
-let attackRowImages = new Array(14); // Attack/00_at.png ~ 13_at.png（龍發射的火球圖）
+let attackRowImages = new Array(17); // Attack/00_at.png ~ 16_at.png（龍發射的火球圖）
 let meatImage = new Image();
 let bgImages = {};
 let currentBgName = "Noon";
@@ -4343,6 +4371,10 @@ const DIGIMON_STATS = {
   11:{name:"機械暴龍獸",   stage:"完全體",  attr:"virus",   hp:180, atk:28,  spd:4.0, critRate:0.16, dodgeRate:0.09, bondInitial:20, weight:200, minWeight:130},
   12:{name:"豆豆獸",       stage:"完全體",  attr:"data",    hp:165, atk:27,  spd:5.0, critRate:0.18, dodgeRate:0.16, bondInitial:20, weight:150, minWeight:100},
   13:{name:"熊仔獸",       stage:"完全體",  attr:"vaccine", hp:200, atk:30,  spd:3.7, critRate:0.17, dodgeRate:0.08, bondInitial:20, weight:180, minWeight:120},
+  // 究極體（僅在完全體對戰逆境進化時觸發，同屬性進化）
+  14:{name:"電光暴龍獸",   stage:"究極體",  attr:"virus",   hp:198, atk:31,  spd:4.4, critRate:0.18, dodgeRate:0.10, bondInitial:25, weight:220, minWeight:143},
+  15:{name:"番長豆豆獸",   stage:"究極體",  attr:"data",    hp:182, atk:30,  spd:5.5, critRate:0.20, dodgeRate:0.17, bondInitial:25, weight:165, minWeight:110},
+  16:{name:"惡魔熊仔獸",   stage:"究極體",  attr:"vaccine", hp:220, atk:33,  spd:4.1, critRate:0.19, dodgeRate:0.09, bondInitial:25, weight:198, minWeight:132},
 };
 
 // ========== 進化路線條件表（統一方向：row ← 來源row + 條件） ==========
@@ -4392,6 +4424,18 @@ const EVO_PATHS = {
   // 熊仔獸(13) ← 鼻涕獸(10)
   13: [
     { fromRow: 10, fromName: "鼻涕獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+  ],
+  // 究極病毒種(14) ← 機械暴龍獸(11) [逆境進化: 對戰血量<40%]
+  14: [
+    { fromRow: 11, fromName: "機械暴龍獸", conds: ["逆境進化", "血量<40%", "同屬性進化"] },
+  ],
+  // 究極資料種(15) ← 豆豆獸(12) [逆境進化: 對戰血量<40%]
+  15: [
+    { fromRow: 12, fromName: "豆豆獸", conds: ["逆境進化", "血量<40%", "同屬性進化"] },
+  ],
+  // 究極疫苗種(16) ← 熊仔獸(13) [逆境進化: 對戰血量<40%]
+  16: [
+    { fromRow: 13, fromName: "熊仔獸", conds: ["逆境進化", "血量<40%", "同屬性進化"] },
   ],
 };
 
@@ -4628,7 +4672,7 @@ function calcBattleDamage(attackerRow, defenderRow){
 // 逆境進化：根據 EVO_PATHS 返回當前數碼獸可進化的目標 row 列表
 function getAdversityEvoCandidates(fromRow){
   const candidates = [];
-  const stageOrder = ["幼年期","幼年期Ⅱ","成長期","成熟期","完全體"];
+  const stageOrder = ["幼年期","幼年期Ⅱ","成長期","成熟期","完全體","究極體"];
   const curStage = DIGIMON_STATS[fromRow].stage;
   const curIdx = stageOrder.indexOf(curStage);
   if(curIdx < 0 || curIdx >= stageOrder.length - 1) return candidates;
@@ -4700,6 +4744,7 @@ function runEvoAnim(){
       if(battleEvoStep >= 16){
         // 進化！訓練加成完整保留，基礎屬性替換為新形態
         currentRow = battleEvoNextRow;
+        cultivatedRows.add(currentRow); // 我方逆境進化解鎖圖鑑
         const s = DIGIMON_STATS[currentRow];
         stageStartDay = Math.floor(gameAge / 1440);
         stageTrainingPointsUsed = 0;
@@ -4776,6 +4821,7 @@ function runEnemyEvoAnim(){
         // 敵方進化！
         const oldRow = battleEnemyRow;
         battleEnemyRow = battleEnemyEvoNextRow;
+        // 敵方逆境進化不解鎖玩家圖鑑
         const s = DIGIMON_STATS[battleEnemyEvoNextRow];
         battleEnemyMaxHp = s.hp;
         battleEnemyHp = s.hp;
@@ -5035,11 +5081,11 @@ function startBattle(){
   // 隨機選擇對戰背景（5選1）
   battleBgIdx = Math.floor(Math.random() * BATTLE_BG_SOURCES.length);
 
-  // 選擇敵方：僅限同階級（成長期vs成長期、成熟期vs成熟期…）
+  // 選擇敵方：同階級隨機（允許相同數碼獸對戰）
   const playerStage = DIGIMON_STATS[currentRow].stage;
   const sameStageIndices = [];
   for(let i = 0; i < TOTAL_DIGIMON; i++){
-    if(DIGIMON_STATS[i].stage === playerStage && i !== currentRow){
+    if(DIGIMON_STATS[i].stage === playerStage){
       sameStageIndices.push(i);
     }
   }
@@ -5194,7 +5240,7 @@ function renderBattleScene(){
     const ratio = Math.max(0, battleEnemyHp / battleEnemyMaxHp);
     const barW = Math.floor(ratio * 130);
     if(ratio > 0){
-      if(battleEnemyHp > 40){
+      if(ratio > 0.4){
         ctx2.fillStyle = "#77dd77";
       } else {
         ctx2.fillStyle = blinkOn ? "#dd3333" : "#ffdd22";
@@ -5208,7 +5254,7 @@ function renderBattleScene(){
     const ratio = Math.max(0, battlePlayerHp / battlePlayerMaxHp);
     const barW = Math.floor(ratio * 130);
     if(ratio > 0){
-      if(battlePlayerHp > 40){
+      if(ratio > 0.4){
         ctx2.fillStyle = "#77dd77";
       } else {
         ctx2.fillStyle = blinkOn ? "#dd3333" : "#ffdd22";
@@ -5705,22 +5751,10 @@ function showUnknownConditions(row){
   });
 }
 
-function showDigidex(){
-  const panel = document.getElementById("digidexDisplay");
-  const statsPanel = document.getElementById("statsDisplay");
-  const foodPanel = document.getElementById("foodDisplay");
-  if(panel.style.display === "block"){ panel.style.display = "none"; return; }
-  statsPanel.style.display = "none";
-  foodPanel.style.display = "none";
-  document.getElementById("trainingDisplay").style.display = "none";
-  // 重置詳情視圖
-  document.getElementById("digidexContent").style.display = "";
-  document.getElementById("digidexDetail").style.display = "none";
-  document.getElementById("digidexUnknown").style.display = "none";
-
+function renderDigidexPage(stageList){
   const container = document.getElementById("digidexContent");
   container.innerHTML = "";
-  for(const stage of DIGIDEX_STAGES){
+  for(const stage of stageList){
     const stageDiv = document.createElement('div');
     stageDiv.className = 'digidex-stage';
 
@@ -5784,7 +5818,55 @@ function showDigidex(){
     stageDiv.appendChild(grid);
     container.appendChild(stageDiv);
   }
+}
 
+let currentDigidexPage = 0; // 0 = 一般圖鑑, 1 = 究極體頁
+
+function switchDigidexPage(pageIdx){
+  currentDigidexPage = pageIdx;
+  // 重置詳情視圖
+  document.getElementById("digidexContent").style.display = "";
+  document.getElementById("digidexDetail").style.display = "none";
+  document.getElementById("digidexUnknown").style.display = "none";
+  // 更新按鈕 active 狀態
+  document.querySelectorAll('.digidex-page-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === pageIdx);
+  });
+  // 根據頁面渲染對應內容
+  if(pageIdx === 0){
+    renderDigidexPage(DIGIDEX_STAGES);
+  } else {
+    // 究極體頁：單一分組
+    renderDigidexPage([{ name: "究極體（僅對戰逆境進化解鎖）", rows: DIGIDEX_ULTIMATE_ROWS }]);
+  }
+}
+
+function showDigidex(){
+  const panel = document.getElementById("digidexDisplay");
+  const statsPanel = document.getElementById("statsDisplay");
+  const foodPanel = document.getElementById("foodDisplay");
+  if(panel.style.display === "block"){ panel.style.display = "none"; return; }
+  statsPanel.style.display = "none";
+  foodPanel.style.display = "none";
+  document.getElementById("trainingDisplay").style.display = "none";
+  // 構建頁面切換 UI（只構建一次）
+  let pagesBar = panel.querySelector('.digidex-pages');
+  if(!pagesBar){
+    pagesBar = document.createElement('div');
+    pagesBar.className = 'digidex-pages';
+    pagesBar.innerHTML = `
+      <button class="digidex-page-btn" data-page="0">📖 一般圖鑑</button>
+      <button class="digidex-page-btn" data-page="1">⭐ 究極體</button>
+    `;
+    panel.insertBefore(pagesBar, document.getElementById("digidexContent"));
+    pagesBar.querySelectorAll('.digidex-page-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        switchDigidexPage(parseInt(btn.dataset.page));
+      });
+    });
+  }
+  // 預設顯示第一頁
+  switchDigidexPage(currentDigidexPage);
   panel.style.display = "block";
 }
 
@@ -6205,8 +6287,8 @@ for(let r = 0; r < 18; r++){
   rowImages[r] = img;
 }
 
-// 加載 14 張攻擊火球圖片 (00_at ~ 13_at，16×8 上半部)
-for(let r = 0; r < 14; r++){
+// 加載 17 張攻擊火球圖片 (00_at ~ 16_at，16×8 上半部)
+for(let r = 0; r < 17; r++){
   const img = new Image();
   const idx = String(r).padStart(2, '0');
   img.src = `sprites/Attack/${idx}_at.png`;
