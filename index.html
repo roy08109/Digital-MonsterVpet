@@ -896,7 +896,6 @@ body{
   <div class="sd-row"><span>親密度</span><span id="sdAffinity">0</span></div>
   <div class="sd-row"><span>訓練點</span><span id="sdTrainingPoints">12</span></div>
   <div class="sd-row"><span>育成失誤</span><span id="sdCareMistakes" style="color:#ff6666;">0</span></div>
-  <div class="sd-row"><span>對戰勝率</span><span id="sdWinRate">0%</span></div>
 </div>
 
 <!-- 食物面板（按鈕下方） -->
@@ -1031,6 +1030,9 @@ body{
       <button class="debug-evo-btn child" id="debugEvoChildBtn" style="background:#4CAF50;">🐣 一鍵成長期（亞古獸）</button>
       <button class="debug-evo-btn" id="debugEvoAdultBtn">🔥 成熟期進化（設為 1歲:23:59）</button>
       <button class="debug-evo-btn perfect" id="debugEvoPerfectBtn">💎 完全體進化（直接設為 6 歲）</button>
+    </div>
+    <div style="margin-top:14px;padding-top:10px;border-top:1px solid #333;">
+      <button class="debug-evo-btn" id="debugAdversityEvoBtn" style="background:#FF5722;">⚡ 逆境進化 100%（開關）</button>
     </div>
     <button class="debug-close" id="debugCloseBtn">關閉</button>
   </div>
@@ -1303,6 +1305,12 @@ function startEggPhase() {
   if(callBlinkTimer){ clearInterval(callBlinkTimer); callBlinkTimer = null; }
   resetAllBonuses();
   
+  // 重置生病狀態
+  isSick = false;
+  curingMode = false;
+  eightPoopsStartTime = 0;
+  eightPoopsMistakeRecorded = false;
+  
   // 重置遊戲狀態
   currentRow = 0;
   isSleeping = false;
@@ -1424,6 +1432,44 @@ function renderFrame(){
   // === 清潔沖水模式 ===
   if(flushingMode){
     renderFlushingFrame();
+    return;
+  }
+  // === 治療動畫（idle, angry, idle, angry） ===
+  if(curingMode){
+    ctx.clearRect(0,0,32,16);
+    if(poopsOnScreen > 0 && fecesImage.complete && fecesImage.naturalWidth > 0){
+      for(let i = 0; i < poopsOnScreen; i++){
+        const pos = POOP_POSITIONS[i];
+        ctx.drawImage(fecesImage, poopFrame * 8, 0, 8, 8, pos.x, pos.y, 8, 8);
+      }
+    }
+    const poopShift = getPoopOffset();
+    const drawX = 9 - poopShift;
+    const col = CURE_SEQ[curingStep % 4];
+    if(rowImages[currentRow] && rowImages[currentRow].complete){
+      ctx.drawImage(rowImages[currentRow], col * PITCH, 0, CELL_SIZE, CELL_SIZE, drawX, 0, CELL_SIZE, CELL_SIZE);
+    }
+    return;
+  }
+  // === 生病模式（龍居中，hurt 幀，不移動） ===
+  if(isSick){
+    ctx.clearRect(0,0,32,16);
+    if(poopsOnScreen > 0 && fecesImage.complete && fecesImage.naturalWidth > 0){
+      for(let i = 0; i < poopsOnScreen; i++){
+        const pos = POOP_POSITIONS[i];
+        ctx.drawImage(fecesImage, poopFrame * 8, 0, 8, 8, pos.x, pos.y, 8, 8);
+      }
+    }
+    const poopShift = getPoopOffset();
+    const drawX = 9 - poopShift;
+    if(rowImages[currentRow] && rowImages[currentRow].complete){
+      ctx.drawImage(rowImages[currentRow], 9 * PITCH, 0, CELL_SIZE, CELL_SIZE, drawX, 0, CELL_SIZE, CELL_SIZE);
+    }
+    // sick.png / sad.png 同位置交替閃爍
+    const icon = (autoAnimStep % 2 === 0) ? sickImage : sadImage;
+    if(icon.complete && icon.naturalWidth > 0){
+      ctx.drawImage(icon, drawX + 16, 0, 8, 8);
+    }
     return;
   }
   // === 誕生/進化慶祝動畫 ===
@@ -1616,6 +1662,12 @@ function stepAutoAnim(){
     renderFrame();
     return;
   }
+  // 生病模式：只播放 hurt 幀，不移動
+  if(isSick && !curingMode){
+    autoAnimStep++;
+    renderFrame();
+    return;
+  }
   // 進食模式
   if(gameMode === "eating"){
     gameModeStep++;
@@ -1763,6 +1815,9 @@ function startFlushing(){
   flushingPhase = 0;
   flushingStep = 0;
   flushingPushX = 0;
+  // 重置大便生病計時器
+  eightPoopsStartTime = 0;
+  eightPoopsMistakeRecorded = false;
   // 暫停 auto 計時器
   if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
   if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
@@ -1935,6 +1990,18 @@ let boomImage2 = new Image();     // 爆炸02
 let happyImage = new Image();    // 慶祝愛心
 let flushingImage = new Image(); // 清潔沖水 (16x16, 左右2格8x16)
 let sleepingZImage = new Image(); // ZZZ 睡覺圖 (16x16, 左右2格8x16)
+
+// === 生病系統 ===
+let isSick = false;                  // 是否生病
+let sickImage = new Image();         // BG/sick.png (8×8)
+let curingMode = false;              // 治療動畫進行中
+let curingStep = 0;                  // 治療動畫步數
+let curingTimer = null;              // 治療動畫計時器
+const CURE_SEQ = [0, 8, 0, 8];      // idle, angry, idle, angry
+
+// === 大便累積 8 個觸發生病 ===
+let eightPoopsStartTime = 0;         // poops≥8 的開始時間戳
+let eightPoopsMistakeRecorded = false; // 本輪是否已記錄失誤
 let sandbagState = "normal";     // "normal" | "boom" | "hit"
 let boomFrame = 0;               // 爆炸幀 (0=Boom01, 1=Boom02)
 let boomCycle = 0;               // 爆炸已播放的完整週期
@@ -2112,7 +2179,7 @@ let battleShowEnemySad = false;        // 顯示 Sad 圖（敵方）
 let battleShowEnemyHappy = false;      // 顯示 Happy 圖（敵方）
 // 新增常量
 const CRIT_MULT = 1.5;
-const ADVERSITY_EVO_MAX_TRIES = 3;
+const ADVERSITY_EVO_MAX_TRIES = 1; // 每場對戰僅1次逆境進化
 const ATTR_TYPE_MULT = {
   vaccine:  { vaccine: 1.0, virus: 1.2, data: 0.8, none: 1.0 },
   virus:    { vaccine: 0.8, virus: 1.0, data: 1.2, none: 1.0 },
@@ -3670,6 +3737,7 @@ function saveGameState(){
       isEggPhase,
       gameCareMistakes, callMistakeRecorded,
       gameTotalBattles, gameBattleWins,
+      isSick, eightPoopsStartTime, eightPoopsMistakeRecorded,
       eggStartTime: isEggPhase ? eggStartTime : undefined,
       birthTimestamp: birthTimestamp || undefined, // 出生時間戳，永不改變
       cultivatedRows: Array.from(cultivatedRows), // 已真正培育的 row
@@ -3781,6 +3849,15 @@ function loadGameState(){
       callMistakeRecorded = data.callMistakeRecorded ?? false;
       gameTotalBattles = data.gameTotalBattles ?? 0;
       gameBattleWins = data.gameBattleWins ?? 0;
+      isSick = data.isSick ?? false;
+      eightPoopsStartTime = data.eightPoopsStartTime ?? 0;
+      eightPoopsMistakeRecorded = data.eightPoopsMistakeRecorded ?? false;
+      // 離線期間大便生病檢查：存檔時已有≥8個大便且未記錄失誤 → 離線≥20分鐘則生病
+      if(!isSick && poopsOnScreen >= 8 && !eightPoopsMistakeRecorded && elapsed >= 20){
+        gameCareMistakes++;
+        eightPoopsMistakeRecorded = true;
+        isSick = true;
+      }
       // 離線育成失誤：存檔時飢餓=0且未記錄失誤，離線≥10分鐘則計1次
       if(data.gameHunger === 0 && !callMistakeRecorded && elapsed >= 10){
         gameCareMistakes++;
@@ -3815,6 +3892,7 @@ function loadGameState(){
       gameTrainingPoints = (currentRow <= 1) ? 0 : 12;
       poopsOnScreen = 0; poopCountdown = 0; babyHasPooped = false;
       gameTotalBattles = 0; gameBattleWins = 0;
+      isSick = false; eightPoopsStartTime = 0; eightPoopsMistakeRecorded = false;
     }
     // 離線期間的階段進化檢查（確保即時觸發）
     if(currentRow >= 2) checkStageEvolution();
@@ -3877,6 +3955,47 @@ const FLUSHING_PUSH_INTERVAL = 50;    // 推擠每步間隔 ms (40步=2秒)
 const FLUSHING_HAPPY_STEPS = 4;       // Happy階段總步數 (idle,happy,idle,happy)
 const FLUSHING_HAPPY_INTERVAL = 800;  // Happy每步間隔 ms
 const FLUSHING_HAPPY_SEQ = [0, 7, 0, 7]; // idle, happy, idle, happy 柱位
+
+// === 生病：進入生病模式 ===
+function enterSickMode(){
+  gameMode = "auto";
+  // 停止所有移動/動畫計時器
+  if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+  if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+  // 龍居中，不移動
+  autoX = 9; autoTargetX = null; autoAnimStep = 0;
+  // 只保留 idle 幀動畫切換 + 糞便計時
+  if(currentRow >= 1){
+    autoTimer = setInterval(stepAutoAnim, ANIM_IV);
+  }
+  updateCssBackground("auto");
+  renderFrame();
+  startPoopTimer();
+  saveGameState();
+}
+
+// === 治療功能 ===
+function curePet(){
+  if(!isSick || curingMode) return;
+  curingMode = true;
+  curingStep = 0;
+  if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+  if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+  renderFrame();
+  curingTimer = setInterval(() => {
+    curingStep++;
+    renderFrame();
+    if(curingStep >= 4){
+      clearInterval(curingTimer);
+      curingTimer = null;
+      curingMode = false;
+      isSick = false;
+      showToast("治療成功！數碼獸恢復健康 🎉");
+      startAutoPlay();
+      saveGameState();
+    }
+  }, 800);
+}
 
 // === 誕生 / 進化 慶祝動畫 ===
 let birthEvoCelebrate = false;          // 慶祝動畫進行中
@@ -4170,20 +4289,18 @@ function updateStatsDisplay(){
   if(sdTrainingPoints) sdTrainingPoints.textContent = gameTrainingPoints;
   const sdCareMistakes = document.getElementById("sdCareMistakes");
   if(sdCareMistakes) sdCareMistakes.textContent = gameCareMistakes;
-  const sdWinRate = document.getElementById("sdWinRate");
-  if(sdWinRate){
-    if(gameTotalBattles > 0){
-      sdWinRate.textContent = (gameBattleWins / gameTotalBattles * 100).toFixed(1) + "%";
-    } else {
-      sdWinRate.textContent = "0%";
-    }
-  }
   updateCallButton();
 }
 
 function updateCallButton(){
   const btn = document.getElementById("callBtn");
   if(!btn) return;
+  // 生病時不顯示 CALL
+  if(isSick){
+    if(callBlinkTimer){ clearInterval(callBlinkTimer); callBlinkTimer = null; }
+    btn.style.display = "none";
+    return;
+  }
   if(gameHunger === 0){
     if(callFirstShownTime === 0) callFirstShownTime = Date.now();
     // 閃爍：每秒 1 次（500ms 開/關切換）
@@ -4309,6 +4426,11 @@ function clickFunction(idx){
     showToast("請開灯 💡");
     return;
   }
+  // 生病時只允許：狀態(0)、清理(4)、關燈(5)、治療(6)、圖鑑(7)
+  if(isSick && !curingMode && idx !== 0 && idx !== 4 && idx !== 5 && idx !== 6 && idx !== 7){
+    showToast("數碼獸生病了，無法操作 💊");
+    return;
+  }
   // 進食中不能點其他按鈕
   if(gameMode === "eating") return;
   // 清潔動畫中不能操作其他按鈕
@@ -4330,6 +4452,7 @@ function clickFunction(idx){
   else if(idx === 3) startBattle(); // 對戰
   else if(idx === 4) cleanPoops(); // 清理糞便
   else if(idx === 5) toggleLights(); // 關燈/開燈
+  else if(idx === 6) curePet(); // 治療
   else if(idx === 7) showDigidex(); // 圖鑑
 }
 
@@ -4344,7 +4467,11 @@ function quickBattleCleanup(){
   battleResult = "";
   battleEnemyRow = -1;
   updateCssBackground("auto");
-  startAutoPlay();
+  if(isSick){
+    enterSickMode();
+  } else {
+    startAutoPlay();
+  }
 }
 
 function showStats(){
@@ -4399,7 +4526,7 @@ function showStats(){
   document.getElementById("sdStage").textContent = s.stage;
   document.getElementById("sdAttr").textContent = ATTR_CN[s.attr] || s.attr || "—";
   document.getElementById("sdAge").textContent = `${years}歲:${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-  document.getElementById("sdWeight").textContent = gameWeight + " / " + DIGIMON_STATS[currentRow].minWeight + " kg";
+  document.getElementById("sdWeight").textContent = gameWeight + " kg";
   document.getElementById("sdHunger").innerHTML = hearts;
   updateStatsDisplay();
   panel.style.display = "block";
@@ -4498,18 +4625,38 @@ function calcBattleDamage(attackerRow, defenderRow){
   return { dodged: false, dmg, msg, crit: isCrit, attrAdv: attrAdv, attrDis: attrDis };
 }
 
+// 逆境進化：根據 EVO_PATHS 返回當前數碼獸可進化的目標 row 列表
+function getAdversityEvoCandidates(fromRow){
+  const candidates = [];
+  const stageOrder = ["幼年期","幼年期Ⅱ","成長期","成熟期","完全體"];
+  const curStage = DIGIMON_STATS[fromRow].stage;
+  const curIdx = stageOrder.indexOf(curStage);
+  if(curIdx < 0 || curIdx >= stageOrder.length - 1) return candidates;
+  const nextStage = stageOrder[curIdx + 1];
+  // 遍歷 EVO_PATHS，找出 fromRow 可進化到的目標
+  for(const [targetKey, paths] of Object.entries(EVO_PATHS)){
+    const targetRow = parseInt(targetKey);
+    if(DIGIMON_STATS[targetRow].stage !== nextStage) continue;
+    for(const p of paths){
+      if(p.fromRow === fromRow){
+        candidates.push(targetRow);
+        break;
+      }
+    }
+  }
+  return candidates;
+}
+
 // 逆境進化判定：血量<40%且尚未用完次數，且必須有下一階段可進化
 function tryAdversityEvo(){
   if(battleAdversityTries >= ADVERSITY_EVO_MAX_TRIES) return false;
-  // 檢查是否有下一階段可進化（完全體為最高階段，不可再進化）
-  const curStage = DIGIMON_STATS[currentRow].stage;
-  const stageOrder = ["幼年期","幼年期Ⅱ","成長期","成熟期","完全體"];
-  const curIdx = stageOrder.indexOf(curStage);
-  if(curIdx < 0 || curIdx >= stageOrder.length - 1) return false;
-  // DEBUG: 強制觸發
-  if(window.forceAdversityEvo) return true;
+  // 檢查是否有合法進化目標（基於 EVO_PATHS）
+  const candidates = getAdversityEvoCandidates(currentRow);
+  if(candidates.length === 0) return false;
   const hpPct = battlePlayerHp / battlePlayerMaxHp;
   if(hpPct <= 0 || hpPct >= 0.4) return false;
+  // DEBUG: 強制觸發（血量已滿足<40%）
+  if(window.forceAdversityEvo) return true;
   const prob = 0.0542 + (getTotalAffinity() / 100) * (0.1060 - 0.0542);
   return Math.random() < prob;
 }
@@ -4517,22 +4664,9 @@ function tryAdversityEvo(){
 // 逆境進化執行：動畫 → 進化 → 攻擊
 function doAdversityEvo(nextAttacker, onDone){
   battleAdversityTries++;
-  const curStage = DIGIMON_STATS[currentRow].stage;
 
-  // 確定下一階段
-  const stageOrder = ["幼年期","幼年期Ⅱ","成長期","成熟期","完全體"];
-  const curIdx = stageOrder.indexOf(curStage);
-  if(curIdx < 0 || curIdx >= stageOrder.length - 1){ executeAttack(nextAttacker, onDone); return; }
-
-  const nextStage = stageOrder[curIdx + 1];
-
-  // 找到所有下一階段的數碼獸
-  const candidates = [];
-  for(let i = 0; i < TOTAL_DIGIMON; i++){
-    if(DIGIMON_STATS[i].stage === nextStage){
-      candidates.push(i);
-    }
-  }
+  // 只使用 EVO_PATHS 中的合法進化目標
+  const candidates = getAdversityEvoCandidates(currentRow);
   if(candidates.length === 0){ executeAttack(nextAttacker, onDone); return; }
 
   battleEvoNextRow = candidates[Math.floor(Math.random() * candidates.length)];
@@ -4608,19 +4742,9 @@ function runEvoAnimUp(){
 // ========== 敵方逆境進化 ==========
 function doEnemyAdversityEvo(nextAttacker, onDone){
   battleEnemyAdversityTries++;
-  const curStage = DIGIMON_STATS[battleEnemyRow].stage;
 
-  const stageOrder = ["幼年期","幼年期Ⅱ","成長期","成熟期","完全體"];
-  const curIdx = stageOrder.indexOf(curStage);
-  if(curIdx < 0 || curIdx >= stageOrder.length - 1){ executeAttack(nextAttacker, onDone); return; }
-
-  const nextStage = stageOrder[curIdx + 1];
-  const candidates = [];
-  for(let i = 0; i < TOTAL_DIGIMON; i++){
-    if(DIGIMON_STATS[i].stage === nextStage){
-      candidates.push(i);
-    }
-  }
+  // 只使用 EVO_PATHS 中的合法進化目標
+  const candidates = getAdversityEvoCandidates(battleEnemyRow);
   if(candidates.length === 0){ executeAttack(nextAttacker, onDone); return; }
 
   battleEnemyEvoNextRow = candidates[Math.floor(Math.random() * candidates.length)];
@@ -4705,11 +4829,9 @@ function executeAttack(who, onDone){
   // 敵方攻擊前逆境進化判定
   if(who === "enemy" && battleEnemyAdversityTries < ADVERSITY_EVO_MAX_TRIES){
     const eHpPct = battleEnemyHp / battleEnemyMaxHp;
-    if(window.forceAdversityEvo || (eHpPct > 0 && eHpPct < 0.4 && Math.random() < 0.0542)){
-      // 檢查敵方是否有下一階段可進化（完全體不可再進化）
-      const eStage = DIGIMON_STATS[battleEnemyRow].stage;
-      const eStageIdx = ["幼年期","幼年期Ⅱ","成長期","成熟期","完全體"].indexOf(eStage);
-      if(eStageIdx >= 0 && eStageIdx < 4){
+    if(eHpPct > 0 && eHpPct < 0.4 && (window.forceAdversityEvo || Math.random() < 0.0542)){
+      // 檢查敵方是否有合法進化目標（基於 EVO_PATHS，完全體不可再進化）
+      if(getAdversityEvoCandidates(battleEnemyRow).length > 0){
         doEnemyAdversityEvo(who, onDone);
         return;
       }
@@ -5081,7 +5203,7 @@ function renderBattleScene(){
     }
   }
 
-  // 我方血條（右側，從左到右填充，左邊固定 x=235，右邊隨血量變化，y=12, h=24）
+  // 我方血條（右側，從左到右填充，左邊固定 x=235，右邊隨血量變化。右邊底圖框線比左邊低2像素，故 h=26）
   {
     const ratio = Math.max(0, battlePlayerHp / battlePlayerMaxHp);
     const barW = Math.floor(ratio * 130);
@@ -5091,7 +5213,7 @@ function renderBattleScene(){
       } else {
         ctx2.fillStyle = blinkOn ? "#dd3333" : "#ffdd22";
       }
-      ctx2.fillRect(235, 12, barW, 24);
+      ctx2.fillRect(235, 12, barW, 26);
     }
   }
 
@@ -5444,6 +5566,21 @@ function showBattleResult(result){
     canvas.height = 16;
     canvas.style.width = "";
     canvas.style.height = "";
+
+    // 戰鬥生病判定
+    if(result === "win"){
+      if(Math.random() < 0.05) isSick = true;
+    } else if(result === "lose"){
+      if(Math.random() < 0.30) isSick = true;
+    }
+    if(isSick){
+      battleResult = "";
+      battleEnemyRow = -1;
+      enterSickMode();
+      showToast("數碼獸生病了！請治療 💊");
+      return;
+    }
+
     gameMode = "auto";
     battleResult = "";
     battleEnemyRow = -1;
@@ -5700,7 +5837,7 @@ function showDigidexDetail(row){
     <div class="detail-name">${name}</div>
     <div class="detail-row"><span>階段</span><span>${stageName}</span></div>
     <div class="detail-row"><span>屬性</span><span style="color:#ffcc00">${ATTR_CN[s.attr] || s.attr || "—"}</span></div>
-    <div class="detail-row"><span>體重範圍</span><span>${s.minWeight} ~ ${s.weight} kg</span></div>
+    <div class="detail-row"><span>初始體重</span><span>${s.weight} kg（最低 ${s.minWeight} kg）</span></div>
     <div class="detail-row"><span>生命值</span><span>${s.hp}</span></div>
     <div class="detail-row"><span>攻擊力</span><span>${s.atk}</span></div>
     <div class="detail-row"><span>速度</span><span>${s.spd}</span></div>
@@ -5741,7 +5878,7 @@ function feedDigimon(food){
       return;
     }
     gameHunger = Math.min(10, gameHunger + 1);
-    gameWeight = Math.max(1, gameWeight + 1);       // 吃東西增加體重
+    gameWeight = Math.min(99, Math.max(1, gameWeight + 1));       // 吃東西增加體重，最高99
     updateCallButton();
     // 進食：eat1/eat2 動畫，龍在右邊，食物從左到右
     gameMode = "eating";
@@ -5895,6 +6032,17 @@ document.getElementById("debugEvoPerfectBtn").onclick = () => {
   document.getElementById("debugOverlay").classList.remove("open");
   showToast("年齡已設為 6歲:00:00（完全體）");
   checkStageEvolution(); // daysInStage = 6-2 = 4 >= 4 → 成熟期→完全體立即進化動畫
+};
+// 逆境進化 100% 強制觸發開關
+document.getElementById("debugAdversityEvoBtn").onclick = () => {
+  if(window.forceAdversityEvo){
+    window.forceAdversityEvo = false;
+    showToast("逆境進化強制已關閉");
+  } else {
+    window.forceAdversityEvo = true;
+    showToast("逆境進化強制已開啟（100%觸發）");
+  }
+  document.getElementById("debugOverlay").classList.remove("open");
 };
 
 // 打開設定面板
@@ -6206,6 +6354,11 @@ battleSadImg.src = "BG/sad.png";
 battleSadImg.onload = onImageLoaded;
 battleSadImg.onerror = onImageError;
 
+// 加載生病圖標 (sick.png, 每秒與 sad.png 交替)
+sickImage.src = "BG/sick.png";
+sickImage.onload = onImageLoaded;
+sickImage.onerror = onImageError;
+
 BG_NAMES.forEach(name => {
   const img = new Image();
   img.src = `BG/${name}.png`;
@@ -6251,6 +6404,21 @@ setInterval(() => {
     if(Date.now() - callFirstShownTime >= 600000){
       gameCareMistakes++;
       callMistakeRecorded = true;
+    }
+  }
+  // 大便滿 8 個且超過 20 分鐘 → 生病 + 育成失誤 +1（不重複計算）
+  if(!isEggPhase && poopsOnScreen >= 8 && !eightPoopsMistakeRecorded){
+    if(eightPoopsStartTime === 0) eightPoopsStartTime = Date.now();
+    if(Date.now() - eightPoopsStartTime >= 1200000){ // 20分鐘
+      gameCareMistakes++;
+      eightPoopsMistakeRecorded = true;
+      if(!isSick){
+        isSick = true;
+        enterSickMode();
+        showToast("糞便堆積過久，數碼獸生病了！💩");
+      }
+      updateStatsDisplay();
+      saveGameState();
     }
   }
 }, 5000);
