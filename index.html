@@ -3755,7 +3755,7 @@ function saveGameState(){
       gameWeight,
       gameAffinity,
       gameTrainingPoints,
-      currentRow,
+      currentRow: (battleActive && battleAdversityEvoRow >= 0) ? battleOriginalRow : currentRow,
       gameHpBonus, gameAtkBonus, gameSpdBonus,
       gameCritBonus, gameDodgeBonus, gameAffBonus,
       totalTrainingCount, gameAgeLastDay,
@@ -3846,6 +3846,8 @@ function loadGameState(){
       gameAgeLastDay = offlineDay;
     }
     currentRow = data.currentRow ?? 2;
+    // 安全檢查：究極體（14-16）僅對戰中臨時存在，讀檔時退回對應完全體
+    if(currentRow >= 14 && currentRow <= 16) currentRow = currentRow - 3; // 14→11, 15→12, 16→13
     // 已培育集合：舊存檔無此欄位，遷移時將 0~currentRow 視為已培育
     if(Array.isArray(data.cultivatedRows)){
       cultivatedRows = new Set(data.cultivatedRows);
