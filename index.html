@@ -7114,14 +7114,19 @@ function renderDigidexPage(stageList){
       const neverOwned = !inCurrent && !ownedBefore;                      // 從未擁有過
 
       if(row === -1){
-        // 蛋：使用eggImage左邊16×16
+        // 蛋：使用對應版本蛋圖左邊 16×16
         entry.style.cursor = 'default';
+        let eggImg = eggImageV1;
+        if(currentVersion === "V2") eggImg = v2EggImage;
+        else if(currentVersion === "V3") eggImg = v3EggImage;
+        else if(currentVersion === "V4") eggImg = v4EggImage;
+        else if(currentVersion === "V5") eggImg = v5EggImage;
         const c = document.createElement('canvas');
         c.width = 16; c.height = 16;
         const cx = c.getContext('2d');
         cx.imageSmoothingEnabled = false;
-        if(eggImage && eggImage.complete && eggImage.naturalWidth > 0){
-          cx.drawImage(eggImage, 0, 0, 16, 16, 0, 0, 16, 16);
+        if(eggImg && eggImg.complete && eggImg.naturalWidth > 0){
+          cx.drawImage(eggImg, 0, 0, 16, 16, 0, 0, 16, 16);
         }
         c.style.width = '48px'; c.style.height = '48px';
         entry.appendChild(c);
