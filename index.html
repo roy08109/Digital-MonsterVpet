@@ -24,6 +24,10 @@ body{
   flex-direction:column;
 }
 .title{color:#fff;text-align:center;margin-bottom:16px;font-size:20px}
+.notif-area{
+  transition:opacity 0.5s ease;
+}
+.top-bar .notif-area.fading{ opacity:0; }
 
 /* 頂部導航欄 */
 .top-bar{
@@ -37,6 +41,14 @@ body{
   margin-bottom:0;
   flex:1;
 }
+
+/* 設定面板輸入框 */
+.setting-input{
+  background:#333;color:#fff;border:1px solid #555;border-radius:6px;
+  padding:6px 10px;font-size:14px;outline:none;width:140px;text-align:center;
+}
+.setting-input::placeholder{ color:#888; }
+.setting-input:focus{ border-color:#ffcc00; }
 .settings-btn{
   position:absolute;
   right:0;
@@ -754,12 +766,9 @@ body{
   position:absolute;
   top:2px;
   right:2px;
-  font-size:9px;
-  background:linear-gradient(135deg, #c8a000, #e6c300);
-  color:#1a1a1a;
-  padding:1px 4px;
-  border-radius:3px;
-  font-weight:bold;
+  font-size:14px;
+  color:#33cc33;
+  text-shadow:0 0 6px rgba(50,200,50,0.8);
   z-index:1;
   pointer-events:none;
 }
@@ -920,7 +929,7 @@ canvas {
 <body>
 <div class="top-bar">
   <button class="call-btn" id="callBtn" title="呼叫"><img src="BG/call.png" alt="呼叫"></button>
-  <h2 class="title">數碼暴龍一代</h2>
+  <div id="notifArea" class="title notif-area">數碼暴龍一代</div>
   <button class="debug-btn" id="debugBtn" title="測驗" style="display:none;">🧪</button>
   <button class="settings-btn" id="settingsBtn" title="設定">⚙</button>
 </div>
@@ -1086,6 +1095,15 @@ canvas {
         background:#333;color:#fff;border:1px solid #555;border-radius:6px;
         padding:6px 10px;font-size:14px;cursor:pointer;outline:none;
       "></select>
+    </div>
+
+    <!-- 暴龍訓練師 -->
+    <div class="settings-row">
+      <div>
+        <div class="setting-label">暴龍訓練師</div>
+        <div class="setting-desc">設定訓練師名稱，用於稱呼</div>
+      </div>
+      <input type="text" id="trainerNameInput" maxlength="12" placeholder="輸入名稱" class="setting-input" oninput="saveSetting('trainerName', this.value.trim().substring(0,12))">
     </div>
 
     <!-- 開發密碼解鎖 -->
@@ -1551,6 +1569,11 @@ function startBabyCareCycle(){
         babySleepPhase = 0;
         isSleeping = false;
         babySleepCountdown = BABY_AWAKE_SEC;
+        // 自動開燈
+        lightsOff = false;
+        const overlay = document.getElementById("darkOverlay");
+        if(overlay) overlay.classList.remove("on");
+        saveSettings();
         if(gameMode === "auto" && !autoMoveTimer){
           autoMoveTimer = setInterval(stepAutoMove, MOVE_IV);
         }
@@ -4262,6 +4285,7 @@ function loadGameState(){
         if(offlineDay > 0){
           gameTrainingPoints += offlineDay * 12;
           gameAgeLastDay = offlineDay;
+          updateNotifArea(true);
         }
         // 離線進化捕捉
     if(currentRow === 0 && gameAge >= 5) { evoAnimPending = true; markDigidexObtained(1); }
@@ -4301,6 +4325,7 @@ function loadGameState(){
     if(offlineDay > lastDay){
       gameTrainingPoints += (offlineDay - lastDay) * 12;
       gameAgeLastDay = offlineDay;
+      updateNotifArea(true);
     }
     currentRow = data.currentRow ?? 2;
     // 安全檢查：究極體（14-16）僅對戰中臨時存在，讀檔時退回對應完全體
@@ -4454,6 +4479,7 @@ const FLUSHING_HAPPY_SEQ = [0, 7, 0, 7]; // idle, happy, idle, happy 柱位
 
 // === 生病：進入生病模式 ===
 function enterSickMode(){
+  updateNotifArea(true);
   gameMode = "auto";
   // 停止所有移動/動畫計時器
   if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
@@ -4486,6 +4512,7 @@ function curePet(){
       curingTimer = null;
       curingMode = false;
       isSick = false;
+      updateNotifArea(true);
       showToast("治療成功！數碼獸恢復健康 🎉");
       startAutoPlay();
       saveGameState();
@@ -4550,7 +4577,7 @@ function tryTrainingSuccess(type){
   if(!babyStage && gameTrainingPoints <= 0) return {success:false,reason:"no_points"};
   const sMax = getStageMaxPoints();
   if(!babyStage && sMax > 0 && stageTrainingPointsUsed >= sMax) return {success:false,reason:"stage_cap"};
-  if(!babyStage){ gameTrainingPoints--; stageTrainingPointsUsed++; }
+  if(!babyStage){ gameTrainingPoints--; stageTrainingPointsUsed++; updateNotifArea(true); }
   // 幼年期訓練不累積加成（純動畫，不長屬性不計數）
   if(!babyStage){
     totalTrainingCount++;
@@ -4659,7 +4686,7 @@ function startNaturalEvoAnim(nextRow){
         stageStartDay = Math.floor(gameAge / 1440);
         stageTrainingPointsUsed = 0;
         // 進化到成長期，增加 12 訓練點
-        if(currentRow >= 2 && currentRow <= 3) gameTrainingPoints += 12;
+        if(currentRow >= 2 && currentRow <= 3){ gameTrainingPoints += 12; updateNotifArea(true); }
         battlePlayerMaxHp = getTotalHp();
         battlePlayerHp = getTotalHp();
         updateStatsDisplay();
@@ -6476,12 +6503,12 @@ function renderDigidexPage(stageList){
         const sprite = createMiniSprite(row, 48);
         entry.appendChild(sprite);
       } else if(ownedBefore){
-        // 曾擁有：淡色顯示 + 金色徽章
+        // 曾擁有：淡色顯示 + 綠色星號
         entry.style.cursor = 'pointer';
         entry.classList.add('digidex-entry-prior');
         const badge = document.createElement('div');
         badge.className = 'digidex-badge';
-        badge.textContent = '★ 曾擁有';
+        badge.textContent = '★';
         entry.appendChild(badge);
         const sprite = createMiniSprite(row, 48);
         sprite.style.opacity = '0.6';
@@ -6665,6 +6692,7 @@ function feedDigimon(food){
       return;
     }
     gameHunger = Math.min(10, gameHunger + 1);
+    updateNotifArea(true);
     gameWeight = Math.min(99, Math.max(1, gameWeight + 1));       // 吃東西增加體重，最高99
     updateCallButton();
     // 進食：eat1/eat2 動畫，龍在右邊，食物從左到右
@@ -7000,7 +7028,8 @@ function initSleepHourSelect(){
 
 // 儲存設定
 function saveSettings(){
-  localStorage.setItem("digivpet_settings", JSON.stringify({ soundEnabled, sleepHour, lightsOff }));
+  const trainerName = document.getElementById("trainerNameInput")?.value?.trim() || "";
+  localStorage.setItem("digivpet_settings", JSON.stringify({ soundEnabled, sleepHour, lightsOff, trainerName }));
 }
 function loadSettings(){
   const raw = localStorage.getItem("digivpet_settings");
@@ -7010,6 +7039,9 @@ function loadSettings(){
       soundEnabled = s.soundEnabled ?? true;
       sleepHour = s.sleepHour ?? 22;
       lightsOff = s.lightsOff ?? false;
+      const tn = s.trainerName || "";
+      const inp = document.getElementById("trainerNameInput");
+      if(inp) inp.value = tn;
     } catch(e){}
   }
   const tgl = document.getElementById("toggleSound");
@@ -7025,6 +7057,89 @@ function loadSettings(){
   }
 }
 loadSettings();
+
+// 輔助：儲存單個設定
+function saveSetting(key, value){
+  const raw = localStorage.getItem("digivpet_settings");
+  let s = {};
+  if(raw){
+    try { s = JSON.parse(raw); } catch(e){}
+  }
+  s[key] = value;
+  localStorage.setItem("digivpet_settings", JSON.stringify(s));
+  // 如果訓練師名變更，刷新通知區
+  if(key === "trainerName") updateNotifArea(false);
+}
+
+// ========== 通知區域系統 ==========
+let notifTimer = null;           // 30秒消失計時器
+let currentNotifPriority = 0;    // 當前通知優先級 (0=無/問候語, 1=生病, 2=飢餓, 3=訓練點)
+
+function getTrainerName(){
+  const inp = document.getElementById("trainerNameInput");
+  const name = (inp?.value?.trim() || "").substring(0,12);
+  return name || "訓練師";
+}
+
+function getTimeGreeting(){
+  const hour = new Date().getHours();
+  const name = getTrainerName();
+  if(hour >= 6 && hour < 12)      return name + "早上好";
+  else if(hour >= 12 && hour < 18) return name + "中午好";
+  else                             return name + "晚上好";
+}
+
+function updateNotifArea(isCheck){
+  const el = document.getElementById("notifArea");
+  if(!el) return;
+
+  // 計算優先級
+  let prio = 0, text = "";
+
+  if(typeof isSick !== "undefined" && isSick){
+    prio = 1; text = "暴龍生病了";
+  } else if(typeof gameHunger !== "undefined" && gameHunger === 0 && typeof isEggPhase !== "undefined" && !isEggPhase){
+    prio = 2; text = "暴龍肚餓了";
+  } else if(typeof gameTrainingPoints !== "undefined" && gameTrainingPoints > 0 && typeof currentRow !== "undefined" && currentRow >= 2){
+    prio = 3; text = "訓練點未用";
+  }
+
+  if(prio > 0){
+    // 有通知要顯示
+    clearNotifTimer();
+    el.textContent = text;
+    el.classList.remove("fading");
+    currentNotifPriority = prio;
+    notifTimer = setTimeout(() => {
+      notifTimer = null;
+      currentNotifPriority = 0;
+      updateNotifArea(false);
+    }, 30000);
+  } else if(currentNotifPriority > 0 && !isCheck){
+    // 條件消除，淡出恢復問候語
+    clearNotifTimer();
+    currentNotifPriority = 0;
+    el.classList.add("fading");
+    setTimeout(() => {
+      el.textContent = getTimeGreeting();
+      el.classList.remove("fading");
+    }, 500);
+  } else {
+    // 顯示預設問候語
+    clearNotifTimer();
+    currentNotifPriority = 0;
+    const greeting = getTimeGreeting();
+    if(el.textContent !== greeting){
+      el.textContent = greeting;
+    }
+    el.classList.remove("fading");
+  }
+}
+
+function clearNotifTimer(){
+  if(notifTimer){ clearTimeout(notifTimer); notifTimer = null; }
+}
+
 initSleepHourSelect();
 
 // 檢查開發模式是否已解鎖
@@ -7055,6 +7170,7 @@ window.addEventListener("beforeinstallprompt", (e) => {
 buildFunctionButtons();
 loadGameState(); // 讀取存檔
 updateSleepByTime(); // 根據存檔時間同步睡眠狀態
+updateNotifArea(true); // 初始化通知區域
 // 首次啟動時顯示版本選擇，不直接進入蛋時期
 const savedData = localStorage.getItem(SAVE_KEY);
 if(!savedData){
@@ -7349,9 +7465,10 @@ setInterval(() => {
       checkStageEvolution();
     }
   }
+  updateNotifArea(true);
 }, 60000);
 // 飢餓：每 30 分鐘 -1 個心（10個心共 5 小時耗盡）
-setInterval(() => { if(!isEggPhase){ gameHunger = Math.max(0, gameHunger - 1); updateCallButton(); } }, 1800000);
+setInterval(() => { if(!isEggPhase){ gameHunger = Math.max(0, gameHunger - 1); updateCallButton(); updateNotifArea(true); } }, 1800000);
 // 育成失誤檢查：CALL 出現超過 10 分鐘計 1 次，同個飢餓周期不重複計算
 setInterval(() => {
   if(!isEggPhase && callFirstShownTime > 0 && !callMistakeRecorded && gameHunger === 0){
@@ -7369,6 +7486,7 @@ setInterval(() => {
       if(!isSick){
         isSick = true;
         enterSickMode();
+        updateNotifArea(true);
         showToast("糞便堆積過久，數碼獸生病了！💩");
       }
       updateStatsDisplay();
