@@ -1996,8 +1996,8 @@ function renderFrame(){
     if(eggImage.complete && eggImage.naturalWidth > 0){
       // 蛋 16×16 在 32×16 畫面居中: x = (32-16)/2 = 8，加上晃動偏移
       const wobbleX = getEggWobbleOffset();
-      // V3 蛋圖只用左邊 0-16 像素（單幀，無左右動畫）
-      const eggSrcX = (currentVersion === "V3") ? 0 : eggFrame * 16;
+      // 蛋圖按 getEggFrame() 輪播幀：等待期 0/1 輪播、晃動期固定 0、破殼期 2
+      const eggSrcX = eggFrame * 16;
       ctx.drawImage(eggImage, eggSrcX, 0, 16, 16, 8 + wobbleX, 0, 16, 16);
     }
     return;
