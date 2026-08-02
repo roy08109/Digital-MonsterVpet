@@ -1480,7 +1480,7 @@ canvas.addEventListener('click', (e) => {
   const cx = (e.clientX - rect.left) * scaleX;
   const cy = (e.clientY - rect.top) * scaleY;
   
-  // 左箭頭：x 4~26, y 85~107（V2→V1、V3→V2，不可從V1回繞到V3）
+  // 左箭頭：x 4~26, y 85~107（V2→V1...V5→V4，不可從V1回繞）
   if(cx >= 4 && cx <= 26 && cy >= 85 && cy <= 107){
     if(versionSelectIndex > 0){
       versionSelectIndex--;
@@ -1489,9 +1489,9 @@ canvas.addEventListener('click', (e) => {
     return;
   }
   
-  // 右箭頭：x 102~124, y 85~107（V1→V2、V2→V3，不可從V3回繞到V1）
+  // 右箭頭：x 102~124, y 85~107（V1→V2...V4→V5，不可從V5回繞）
   if(cx >= 102 && cx <= 124 && cy >= 85 && cy <= 107){
-    if(versionSelectIndex < 2){
+    if(versionSelectIndex < 4){
       versionSelectIndex++;
       renderFrame();
     }
@@ -1500,7 +1500,7 @@ canvas.addEventListener('click', (e) => {
   
   // 確定按鈕：x 28~100, y 150~182
   if(cx >= 28 && cx <= 100 && cy >= 150 && cy <= 182){
-    const versions = ["V1", "V2", "V3"];
+    const versions = ["V1", "V2", "V3", "V4", "V5"];
     const version = versions[versionSelectIndex];
     versionSelectMode = false;
     versionSelectIndex = 0;
@@ -1534,8 +1534,11 @@ const DIGIDEX_STAGES = [
   { name: "成熟期",   rows: [4, 5, 6, 7, 8, 9, 10] },
   { name: "完全體",   rows: [11, 12, 13] },
 ];
-// 究極體獨立頁面（僅對戰逆境進化可解鎖）
-const DIGIDEX_ULTIMATE_ROWS = [14, 15, 16];
+// 究極體獨立頁面（僅對戰逆境進化可解鎖，V5 跳過 row 15）
+function getDigidexUltimateRows() {
+  if(currentVersion === "V5") return [14, 16, 17];
+  return [14, 15, 16];
+}
 // 所有 sprite row 的名稱（0～16）
 const ALL_NAMES_V1 = [
   "黑球獸","滾球獸","亞古獸","貝塔獸",
@@ -1557,6 +1560,20 @@ const ALL_NAMES_V3 = [
   "安杜路獸","炮彈獸","悟空獸",
   "高級安杜路獸","獄門獸","番長獅子獸",
 ];
+const ALL_NAMES_V4 = [
+  "浮球獸","種子獸","比丘獸","巴魯獸",
+  "角龍獸","巨雞獸","獅子獸","古加獸",
+  "西拉獸","毛人獸","亞伯獸",
+  "機械飛龍獸","妖精獸","蛋蛋獸",
+  "暗龍獸","布魯姆洛德蒙獸","顽固兽",
+];
+const ALL_NAMES_V5 = [
+  "狡猾獸","柏古獸","加支獸","基刹獸",
+  "黑暗巨龍獸","獨眼龍獸","邪龍獸","大角獸",
+  "黃蜂獸","三頭龍獸","爛泥獸",
+  "鋼鐵巨龍獸","分子獸","EX 巨龍獸",
+  "機械邪龍獸",,"蓋亞獸","混沌龍獸",
+];
 const ALL_NAMES = [...ALL_NAMES_V1]; // 运行时可动态切换
 const TOTAL_DIGIMON = ALL_NAMES.length;
 
@@ -1570,6 +1587,8 @@ let versionSelectAnimTimer = null; // 版本选择画面动画循环
 function getEvolutionRow(row) {
   if(currentVersion === "V2") return getEvolutionRowV2(row);
   if(currentVersion === "V3") return getEvolutionRowV3(row);
+  if(currentVersion === "V4") return getEvolutionRowV4(row);
+  if(currentVersion === "V5") return getEvolutionRowV5(row);
   if (row === 0) return 1;                         // 黑球獸 → 滾球獸
   if (row === 1) return (gameCareMistakes >= 1) ? 3 : 2; // 滾球獸：失誤≥1→貝塔獸(3)，無失誤→亞古獸(2)
   if (row >= 2 && row <= 3) return getChildEvoResult(row); // 成長期 → 條件進化至成熟期
@@ -1584,6 +1603,24 @@ function getEvolutionRowV3(row){
   if(row >= 2 && row <= 3) return getChildEvoResult(row); // 成長期→成熟期（复用 V1 逻辑）
   if(row >= 4 && row <= 10) return 11 + Math.floor(Math.random() * 3); // 成熟期→隨機完全體(11~13)
   return row; // 完全體/究極體→不變
+}
+
+// V4 进化路线（复用 V1 逻辑，含究極體）
+function getEvolutionRowV4(row){
+  if(row === 0) return 1;               // 浮球獸 → 種子獸
+  if(row === 1) return (gameCareMistakes >= 1) ? 3 : 2; // 種子獸：失誤≥1→巴魯獸(3)，無失誤→比丘獸(2)
+  if(row >= 2 && row <= 3) return getChildEvoResult(row); // 成長期→成熟期（复用 V1 逻辑）
+  if(row >= 4 && row <= 10) return 11 + Math.floor(Math.random() * 3); // 成熟期→隨機完全體(11~13)
+  return row; // 完全體/究極體→不變（究極體僅對戰逆境進化觸發）
+}
+
+// V5 进化路线（复用 V1 逻辑，含究極體）
+function getEvolutionRowV5(row){
+  if(row === 0) return 1;               // 狡猾獸 → 柏古獸
+  if(row === 1) return (gameCareMistakes >= 1) ? 3 : 2; // 柏古獸：失誤≥1→基刹獸(3)，無失誤→加支獸(2)
+  if(row >= 2 && row <= 3) return getChildEvoResult(row); // 成長期→成熟期（复用 V1 逻辑）
+  if(row >= 4 && row <= 10) return 11 + Math.floor(Math.random() * 3); // 成熟期→隨機完全體(11~13)
+  return row; // 完全體/究極體→不變（究極體僅對戰逆境進化觸發）
 }
 
 // V2 进化路线
@@ -1654,9 +1691,13 @@ let rowImages = new Array(18); // V1/V1_00.png ~ V1/V1_17.png (默认V1)
 let rowImagesV1 = new Array(18); // V1 精灵图备份
 let rowImagesV2 = new Array(17); // V2/V2_00.png ~ V2/V2_16.png
 let rowImagesV3 = new Array(17); // V3/V3_00.png ~ V3/V3_17.png（跳過 V3_14.png）
+let rowImagesV4 = new Array(17); // V4/V4_00.png ~ V4/V4_16.png（含究極體）
+let rowImagesV5 = new Array(18); // V5/V5_00.png ~ V5/V5_17.png（含究極體，跳過15）
 let attackRowImages = new Array(17); // V1 Attack/00_at.png ~ 16_at.png（V1龍發射的火球圖）
 let attackRowImagesV2 = new Array(17); // V2_Attack/V2_00_at.png ~ V2_16_at.png（V2龍發射的火球圖）
 let attackRowImagesV3 = new Array(17); // V3 復用 V1 火球圖（不單獨加載）
+let attackRowImagesV4 = new Array(17); // V4_Attack/V4_00_at.png ~ V4_16_at.png
+let attackRowImagesV5 = new Array(18); // V5_Attack/V5_00_at.png ~ V5_17_at.png
 let meatImage = new Image();
 let bgImages = {};
 let currentBgName = "Noon";
@@ -1806,6 +1847,8 @@ let eggImage = new Image();  // 當前版本蛋精靈圖 (48×16, 3幀各16×16)
 let eggImageV1 = new Image(); // V1蛋
 let v2EggImage = new Image(); // V2蛋
 let v3EggImage = new Image(); // V3蛋
+let v4EggImage = new Image(); // V4蛋
+let v5EggImage = new Image(); // V5蛋
 
 function updateSleepByTime(){
   if(isEggPhase) { isSleeping = false; lightsOff = false; return; } // 蛋時期不睡眠
@@ -1934,12 +1977,38 @@ function startEggPhase(version = "V1") {
     if(typeof rowImagesV3 !== "undefined" && rowImagesV3.length > 0){
       rowImages = rowImagesV3;
     }
-    // V3 火球圖復用 V1
-    for(let r = 0; r < 17; r++){
-      attackRowImagesV3[r] = attackRowImages[r];
-    }
     if(typeof v3EggImage !== "undefined"){
       eggImage = v3EggImage;
+    }
+  } else if(version === "V4"){
+    // V4
+    ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V4);
+    Object.assign(DIGIMON_STATS, DIGIMON_STATS_V4);
+    Object.assign(EVO_PATHS, EVO_PATHS_V4);
+    if(typeof rowImagesV4 !== "undefined" && rowImagesV4.length > 0){
+      rowImages = rowImagesV4;
+    }
+    if(typeof v4EggImage !== "undefined"){
+      eggImage = v4EggImage;
+    }
+    // V4 火球圖復用 V1
+    for(let r = 0; r < 17; r++){
+      attackRowImagesV4[r] = attackRowImages[r];
+    }
+  } else if(version === "V5"){
+    // V5
+    ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V5);
+    Object.assign(DIGIMON_STATS, DIGIMON_STATS_V5);
+    Object.assign(EVO_PATHS, EVO_PATHS_V5);
+    if(typeof rowImagesV5 !== "undefined" && rowImagesV5.length > 0){
+      rowImages = rowImagesV5;
+    }
+    if(typeof v5EggImage !== "undefined"){
+      eggImage = v5EggImage;
+    }
+    // V5 火球圖復用 V1
+    for(let r = 0; r < 18; r++){
+      attackRowImagesV5[r] = attackRowImages[r];
     }
   } else {
     // V1
@@ -2085,7 +2154,7 @@ function getColForAuto(){
   return MID_SEQ[autoAnimStep % 4];
 }
 
-// ========== 版本選擇畫面（三版本輪播切換：V1藍 / V2紅 / V3綠）==========
+// ========== 版本選擇畫面（五版本輪播切換：V1藍 / V2紅 / V3綠 / V4橙 / V5紫）==========
 function renderVersionSelect(){
   canvas.width = 128;
   canvas.height = 192;
@@ -2096,10 +2165,10 @@ function renderVersionSelect(){
   ctx.imageSmoothingEnabled = false;
   
   const now = Date.now();
-  const idx = versionSelectIndex; // 0=V1, 1=V2, 2=V3
-  const versionNames = ["V1", "V2", "V3"];
-  const accentColors = ["#4a90d9", "#e74c3c", "#2ecc71"]; // 藍/紅/綠
-  const eggImages = [eggImageV1, v2EggImage, v3EggImage];
+  const idx = versionSelectIndex; // 0=V1, 1=V2, 2=V3, 3=V4, 4=V5
+  const versionNames = ["V1", "V2", "V3", "V4", "V5"];
+  const accentColors = ["#4a90d9", "#e74c3c", "#2ecc71", "#f39c12", "#9b59b6"]; // 藍/紅/綠/橙/紫
+  const eggImages = [eggImageV1, v2EggImage, v3EggImage, v4EggImage, v5EggImage];
   
   const versionName = versionNames[idx];
   const accentColor = accentColors[idx];
@@ -2140,9 +2209,9 @@ function renderVersionSelect(){
   ctx.textAlign = "center";
   ctx.fillText("◀", leftX + arrW/2, arrY + 16);
   
-  // === 右箭頭按鈕（idx=2時灰色禁用） ===
+  // === 右箭頭按鈕（idx=4時灰色禁用） ===
   const rightX = 102;
-  const rightDisabled = (idx === 2);
+  const rightDisabled = (idx === 4);
   
   ctx.fillStyle = rightDisabled ? "#1a1a1a" : "#301a1a";
   roundRect(ctx, rightX, arrY, arrW, arrH, 5, false, true);
@@ -2771,6 +2840,8 @@ let trainingProjectileTimer = null;
 let powerImage = new Image();
 let attackProjImage = new Image();
 let attackProjImageV2 = new Image(); // V2 火球參考圖
+let attackProjImageV4 = new Image(); // V4 火球參考圖
+let attackProjImageV5 = new Image(); // V5 火球參考圖
 let unknownImage = new Image();  // 圖鑑未發現的「?」圖示（紅色）
 let evadeMissileImage = new Image();  // 閃避訓練飛彈
 let abGuideImage = new Image();      // 攻速訓練 AB 指引圖
@@ -4244,7 +4315,11 @@ function renderTrainingCanvas(){
           ? ((currentRow < attackRowImagesV2.length) ? attackRowImagesV2[currentRow] : attackRowImagesV2[0])
           : (currentVersion === "V3")
             ? ((currentRow < attackRowImagesV3.length) ? attackRowImagesV3[currentRow] : attackRowImagesV3[0])
-            : ((currentRow < 14) ? attackRowImages[currentRow] : attackRowImages[0]);
+            : (currentVersion === "V4")
+              ? ((currentRow < attackRowImagesV4.length) ? attackRowImagesV4[currentRow] : attackRowImagesV4[0])
+              : (currentVersion === "V5")
+                ? ((currentRow < attackRowImagesV5.length) ? attackRowImagesV5[currentRow] : attackRowImagesV5[0])
+                : ((currentRow < 14) ? attackRowImages[currentRow] : attackRowImages[0]);
         if(fireImg && fireImg.complete){
           ctx.drawImage(fireImg, 0, 0, 16, 8, criticalAttackStep, 0, 16, 8);
           ctx.drawImage(fireImg, 0, 0, 16, 8, criticalAttackStep, 8, 16, 8);
@@ -4513,7 +4588,11 @@ function renderTrainingCanvas(){
       ? ((currentRow < attackRowImagesV2.length) ? attackRowImagesV2[currentRow] : attackRowImagesV2[0])
       : (currentVersion === "V3")
         ? ((currentRow < attackRowImagesV3.length) ? attackRowImagesV3[currentRow] : attackRowImagesV3[0])
-        : ((currentRow < 14) ? attackRowImages[currentRow] : attackRowImages[0]);
+        : (currentVersion === "V4")
+          ? ((currentRow < attackRowImagesV4.length) ? attackRowImagesV4[currentRow] : attackRowImagesV4[0])
+          : (currentVersion === "V5")
+            ? ((currentRow < attackRowImagesV5.length) ? attackRowImagesV5[currentRow] : attackRowImagesV5[0])
+            : ((currentRow < 14) ? attackRowImages[currentRow] : attackRowImages[0]);
     if(fireImg && fireImg.complete){
       ctx.drawImage(fireImg, 0, 0, 16, 8, trainingProjectileX, 0, 16, 8);
     }
@@ -4577,10 +4656,27 @@ function loadGameState(){
       Object.assign(EVO_PATHS, EVO_PATHS_V3);
       if(typeof rowImagesV3 !== "undefined" && rowImagesV3.length > 0) rowImages = rowImagesV3;
       if(typeof v3EggImage !== "undefined") eggImage = v3EggImage;
-      for(let r = 0; r < 17; r++){
-        attackRowImagesV3[r] = attackRowImages[r];
-      }
       currentVersion = "V3";
+    } else if(saveVersion === "V4" && currentVersion !== "V4"){
+      ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V4);
+      Object.assign(DIGIMON_STATS, DIGIMON_STATS_V4);
+      Object.assign(EVO_PATHS, EVO_PATHS_V4);
+      if(typeof rowImagesV4 !== "undefined" && rowImagesV4.length > 0) rowImages = rowImagesV4;
+      if(typeof v4EggImage !== "undefined") eggImage = v4EggImage;
+      for(let r = 0; r < 17; r++){
+        attackRowImagesV4[r] = attackRowImages[r];
+      }
+      currentVersion = "V4";
+    } else if(saveVersion === "V5" && currentVersion !== "V5"){
+      ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V5);
+      Object.assign(DIGIMON_STATS, DIGIMON_STATS_V5);
+      Object.assign(EVO_PATHS, EVO_PATHS_V5);
+      if(typeof rowImagesV5 !== "undefined" && rowImagesV5.length > 0) rowImages = rowImagesV5;
+      if(typeof v5EggImage !== "undefined") eggImage = v5EggImage;
+      for(let r = 0; r < 18; r++){
+        attackRowImagesV5[r] = attackRowImages[r];
+      }
+      currentVersion = "V5";
     }
     // === 蛋時期狀態處理 ===
     if(data.isEggPhase && data.eggStartTime){
@@ -4652,8 +4748,19 @@ function loadGameState(){
       updateNotifArea(true);
     }
     currentRow = data.currentRow ?? 2;
-    // 安全檢查：究極體（14-16）僅對戰中臨時存在，讀檔時退回對應完全體
-    if(currentRow >= 14 && currentRow <= 16) currentRow = currentRow - 3; // 14→11, 15→12, 16→13
+    // 安全檢查：究極體（14-17）僅對戰中臨時存在，讀檔時退回對應完全體
+    // V1/V2/V3: 14→11, 15→12, 16→13 (直接 -3)
+    // V4: 14→11(v), 15→13(vc), 16→12(d) (屬性配對)
+    // V5: 14→11(v), 16→13(vc), 17→12(d) (跳過 15)
+    if(currentVersion === "V4"){
+      const v4Rollback = {14:11, 15:13, 16:12};
+      if(v4Rollback[currentRow] !== undefined) currentRow = v4Rollback[currentRow];
+    } else if(currentVersion === "V5"){
+      const v5Rollback = {14:11, 16:13, 17:12};
+      if(v5Rollback[currentRow] !== undefined) currentRow = v5Rollback[currentRow];
+    } else {
+      if(currentRow >= 14 && currentRow <= 16) currentRow = currentRow - 3;
+    }
     // 已培育集合：舊存檔無此欄位，遷移時將 0~currentRow 視為已培育
     if(Array.isArray(data.cultivatedRows)){
       cultivatedRows = new Set(data.cultivatedRows);
@@ -4948,6 +5055,8 @@ function triggerNaturalEvo(){
         battleOk = gameBattleWins >= 15; // V2：戰鬥勝利≥15
       } else if(currentVersion === "V3"){
         battleOk = gameTotalBattles > 15 && (gameBattleWins / gameTotalBattles) > 0.8; // V3：复用 V1 條件
+      } else if(currentVersion === "V4" || currentVersion === "V5"){
+        battleOk = gameTotalBattles > 15 && (gameBattleWins / gameTotalBattles) > 0.8; // V4/V5：复用 V1 條件
       } else {
         battleOk = gameTotalBattles > 15 && (gameBattleWins / gameTotalBattles) > 0.8; // V1
       }
@@ -5266,6 +5375,50 @@ const DIGIMON_STATS_V3 = {
   15:{name:"獄門獸",       stage:"究極體",   attr:"virus",    hp:192, atk:33,  spd:5.8, critRate:0.21, dodgeRate:0.18, bondInitial:25, weight:170, minWeight:115},
   16:{name:"番長獅子獸",   stage:"究極體",   attr:"data",     hp:230, atk:36,  spd:4.3, critRate:0.20, dodgeRate:0.10, bondInitial:25, weight:205, minWeight:138},
 };
+
+// V4 数码兽数值（沿用 V1 数据，含究极体 14~16 行）
+const DIGIMON_STATS_V4 = {
+  0: {name:"浮球獸",       stage:"幼年期",  attr:"",       hp: 30, atk: 3,  spd:3.0, critRate:0.00, dodgeRate:0.01, bondInitial:10, weight:5,   minWeight:3},
+  1: {name:"種子獸",       stage:"幼年期Ⅱ", attr:"",       hp: 50, atk: 5,  spd:3.5, critRate:0.03, dodgeRate:0.03, bondInitial:15, weight:8,   minWeight:5},
+  2: {name:"比丘獸",       stage:"成長期",  attr:"vaccine", hp: 95, atk:14,  spd:4.2, critRate:0.11, dodgeRate:0.08, bondInitial:10, weight:20,  minWeight:15},
+  3: {name:"巴魯獸",       stage:"成長期",  attr:"virus",   hp: 90, atk:13,  spd:4.4, critRate:0.10, dodgeRate:0.11, bondInitial:10, weight:30,  minWeight:22},
+  4: {name:"角龍獸",       stage:"成熟期",  attr:"vaccine", hp:130, atk:20,  spd:3.8, critRate:0.13, dodgeRate:0.07, bondInitial:15, weight:80,  minWeight:55},
+  5: {name:"巨雞獸",       stage:"成熟期",  attr:"data",    hp:135, atk:21,  spd:3.6, critRate:0.14, dodgeRate:0.06, bondInitial:15, weight:120, minWeight:85},
+  6: {name:"獅子獸",       stage:"成熟期",  attr:"virus",   hp:120, atk:18,  spd:4.5, critRate:0.15, dodgeRate:0.12, bondInitial:15, weight:100, minWeight:70},
+  7: {name:"古加獸",       stage:"成熟期",  attr:"data",    hp:125, atk:19,  spd:4.0, critRate:0.12, dodgeRate:0.09, bondInitial:15, weight:90,  minWeight:60},
+  8: {name:"西拉獸",       stage:"成熟期",  attr:"data",    hp:122, atk:18,  spd:4.3, critRate:0.11, dodgeRate:0.10, bondInitial:15, weight:130, minWeight:90},
+  9: {name:"毛人獸",       stage:"成熟期",  attr:"vaccine", hp:115, atk:17,  spd:4.8, critRate:0.10, dodgeRate:0.14, bondInitial:15, weight:110, minWeight:75},
+  10:{name:"亞伯獸",       stage:"成熟期",  attr:"virus",   hp:100, atk:16,  spd:3.4, critRate:0.07, dodgeRate:0.05, bondInitial:15, weight:60,  minWeight:40},
+  11:{name:"機械飛龍獸",   stage:"完全體",  attr:"virus",   hp:180, atk:28,  spd:4.0, critRate:0.16, dodgeRate:0.09, bondInitial:20, weight:200, minWeight:130},
+  12:{name:"妖精獸",       stage:"完全體",  attr:"data",    hp:165, atk:27,  spd:5.0, critRate:0.18, dodgeRate:0.16, bondInitial:20, weight:150, minWeight:100},
+  13:{name:"蛋蛋獸",       stage:"完全體",  attr:"vaccine", hp:200, atk:30,  spd:3.7, critRate:0.17, dodgeRate:0.08, bondInitial:20, weight:180, minWeight:120},
+  // 究極體（僅在完全體對戰逆境進化時觸發，同屬性進化）
+  14:{name:"暗龍獸",       stage:"究極體",  attr:"virus",   hp:198, atk:31,  spd:4.4, critRate:0.18, dodgeRate:0.10, bondInitial:25, weight:220, minWeight:143},
+  15:{name:"布魯姆洛德蒙獸",stage:"究極體",  attr:"vaccine", hp:220, atk:33,  spd:4.1, critRate:0.19, dodgeRate:0.09, bondInitial:25, weight:198, minWeight:132},
+  16:{name:"顽固兽",       stage:"究極體",  attr:"data",    hp:182, atk:30,  spd:5.5, critRate:0.20, dodgeRate:0.17, bondInitial:25, weight:165, minWeight:110},
+};
+
+// V5 数码兽数值（沿用 V1 数据，含究极体 14/16/17 行）
+const DIGIMON_STATS_V5 = {
+  0: {name:"狡猾獸",       stage:"幼年期",  attr:"",       hp: 30, atk: 3,  spd:3.0, critRate:0.00, dodgeRate:0.01, bondInitial:10, weight:5,   minWeight:3},
+  1: {name:"柏古獸",       stage:"幼年期Ⅱ", attr:"",       hp: 50, atk: 5,  spd:3.5, critRate:0.03, dodgeRate:0.03, bondInitial:15, weight:8,   minWeight:5},
+  2: {name:"加支獸",       stage:"成長期",  attr:"vaccine", hp: 95, atk:14,  spd:4.2, critRate:0.11, dodgeRate:0.08, bondInitial:10, weight:20,  minWeight:15},
+  3: {name:"基刹獸",       stage:"成長期",  attr:"virus",   hp: 90, atk:13,  spd:4.4, critRate:0.10, dodgeRate:0.11, bondInitial:10, weight:30,  minWeight:22},
+  4: {name:"黑暗巨龍獸",   stage:"成熟期",  attr:"vaccine", hp:130, atk:20,  spd:3.8, critRate:0.13, dodgeRate:0.07, bondInitial:15, weight:80,  minWeight:55},
+  5: {name:"獨眼龍獸",     stage:"成熟期",  attr:"data",    hp:135, atk:21,  spd:3.6, critRate:0.14, dodgeRate:0.06, bondInitial:15, weight:120, minWeight:85},
+  6: {name:"邪龍獸",       stage:"成熟期",  attr:"virus",   hp:120, atk:18,  spd:4.5, critRate:0.15, dodgeRate:0.12, bondInitial:15, weight:100, minWeight:70},
+  7: {name:"大角獸",       stage:"成熟期",  attr:"data",    hp:125, atk:19,  spd:4.0, critRate:0.12, dodgeRate:0.09, bondInitial:15, weight:90,  minWeight:60},
+  8: {name:"黃蜂獸",       stage:"成熟期",  attr:"data",    hp:122, atk:18,  spd:4.3, critRate:0.11, dodgeRate:0.10, bondInitial:15, weight:130, minWeight:90},
+  9: {name:"三頭龍獸",     stage:"成熟期",  attr:"vaccine", hp:115, atk:17,  spd:4.8, critRate:0.10, dodgeRate:0.14, bondInitial:15, weight:110, minWeight:75},
+  10:{name:"爛泥獸",       stage:"成熟期",  attr:"virus",   hp:100, atk:16,  spd:3.4, critRate:0.07, dodgeRate:0.05, bondInitial:15, weight:60,  minWeight:40},
+  11:{name:"鋼鐵巨龍獸",   stage:"完全體",  attr:"virus",   hp:180, atk:28,  spd:4.0, critRate:0.16, dodgeRate:0.09, bondInitial:20, weight:200, minWeight:130},
+  12:{name:"分子獸",       stage:"完全體",  attr:"data",    hp:165, atk:27,  spd:5.0, critRate:0.18, dodgeRate:0.16, bondInitial:20, weight:150, minWeight:100},
+  13:{name:"EX 巨龍獸",    stage:"完全體",  attr:"vaccine", hp:200, atk:30,  spd:3.7, critRate:0.17, dodgeRate:0.08, bondInitial:20, weight:180, minWeight:120},
+  // 究極體（僅在完全體對戰逆境進化時觸發，同屬性進化）
+  14:{name:"機械邪龍獸",   stage:"究極體",  attr:"virus",   hp:198, atk:31,  spd:4.4, critRate:0.18, dodgeRate:0.10, bondInitial:25, weight:220, minWeight:143},
+  16:{name:"蓋亞獸",       stage:"究極體",  attr:"vaccine", hp:220, atk:33,  spd:4.1, critRate:0.19, dodgeRate:0.09, bondInitial:25, weight:198, minWeight:132},
+  17:{name:"混沌龍獸",     stage:"究極體",  attr:"data",    hp:182, atk:30,  spd:5.5, critRate:0.20, dodgeRate:0.17, bondInitial:25, weight:165, minWeight:110},
+};
 let DIGIMON_STATS = { ...DIGIMON_STATS_V1 }; // 运行时可动态切换
 
 // ========== 進化路線條件表（統一方向：row ← 來源row + 條件） ==========
@@ -5440,6 +5593,76 @@ const EVO_PATHS_V3 = {
   16: [
     { fromRow: 13, fromName: "悟空獸", conds: ["逆境進化", "血量<40%", "同屬性進化"] },
   ],
+};
+// V4 进化路线（追随 V1 路线，含究极体 14~16 行）
+const EVO_PATHS_V4 = {
+  1: [{ fromRow: 0, fromName: "浮球獸", conds: ["5分鐘後自動"] }],
+  2: [{ fromRow: 1, fromName: "種子獸", conds: ["失誤=0"] }],
+  3: [{ fromRow: 1, fromName: "種子獸", conds: ["失誤≥1"] }],
+  4: [{ fromRow: 2, fromName: "比丘獸", conds: ["訓練≥8次", "失誤=0"] }],
+  5: [{ fromRow: 2, fromName: "比丘獸", conds: ["訓練≥8次", "失誤≤1"] }],
+  6: [{ fromRow: 2, fromName: "比丘獸", conds: ["失誤≥3 或", "攻擊加成≥12"] }],
+  7: [{ fromRow: 3, fromName: "巴魯獸", conds: ["訓練≥8次", "失誤=0"] }],
+  8: [{ fromRow: 3, fromName: "巴魯獸", conds: ["訓練≥8次", "失誤≤1"] }],
+  9: [{ fromRow: 3, fromName: "巴魯獸", conds: ["無訓練", "失誤≤1"] }],
+  10: [
+    { fromRow: 2, fromName: "比丘獸", conds: ["失誤≥4 或 無訓練"] },
+    { fromRow: 3, fromName: "巴魯獸", conds: ["失誤≥4 或 無訓練"] },
+  ],
+  11: [
+    { fromRow: 4, fromName: "角龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 6, fromName: "獅子獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 9, fromName: "毛人獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+  ],
+  12: [
+    { fromRow: 5, fromName: "巨雞獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 7, fromName: "古加獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 8, fromName: "西拉獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+  ],
+  13: [
+    { fromRow: 10, fromName: "亞伯獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+  ],
+  // 暗龍獸(14) ← 機械飛龍獸(11) [逆境進化]
+  14: [{ fromRow: 11, fromName: "機械飛龍獸", conds: ["逆境進化", "血量<40%", "同屬性進化"] }],
+  // 布魯姆洛德蒙獸(15) ← 蛋蛋獸(13) [逆境進化]
+  15: [{ fromRow: 13, fromName: "蛋蛋獸", conds: ["逆境進化", "血量<40%", "同屬性進化"] }],
+  // 顽固兽(16) ← 妖精獸(12) [逆境進化]
+  16: [{ fromRow: 12, fromName: "妖精獸", conds: ["逆境進化", "血量<40%", "同屬性進化"] }],
+};
+// V5 进化路线（追随 V1 路线，含究极体 14/16/17 行）
+const EVO_PATHS_V5 = {
+  1: [{ fromRow: 0, fromName: "狡猾獸", conds: ["5分鐘後自動"] }],
+  2: [{ fromRow: 1, fromName: "柏古獸", conds: ["失誤=0"] }],
+  3: [{ fromRow: 1, fromName: "柏古獸", conds: ["失誤≥1"] }],
+  4: [{ fromRow: 2, fromName: "加支獸", conds: ["訓練≥8次", "失誤=0"] }],
+  5: [{ fromRow: 2, fromName: "加支獸", conds: ["訓練≥8次", "失誤≤1"] }],
+  6: [{ fromRow: 2, fromName: "加支獸", conds: ["失誤≥3 或", "攻擊加成≥12"] }],
+  7: [{ fromRow: 3, fromName: "基刹獸", conds: ["訓練≥8次", "失誤=0"] }],
+  8: [{ fromRow: 3, fromName: "基刹獸", conds: ["訓練≥8次", "失誤≤1"] }],
+  9: [{ fromRow: 3, fromName: "基刹獸", conds: ["無訓練", "失誤≤1"] }],
+  10: [
+    { fromRow: 2, fromName: "加支獸", conds: ["失誤≥4 或 無訓練"] },
+    { fromRow: 3, fromName: "基刹獸", conds: ["失誤≥4 或 無訓練"] },
+  ],
+  11: [
+    { fromRow: 4, fromName: "黑暗巨龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 6, fromName: "邪龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 9, fromName: "三頭龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+  ],
+  12: [
+    { fromRow: 5, fromName: "獨眼龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 7, fromName: "大角獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 8, fromName: "黃蜂獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+  ],
+  13: [
+    { fromRow: 10, fromName: "爛泥獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+  ],
+  // 機械邪龍獸(14) ← 鋼鐵巨龍獸(11) [逆境進化]
+  14: [{ fromRow: 11, fromName: "鋼鐵巨龍獸", conds: ["逆境進化", "血量<40%", "同屬性進化"] }],
+  // 蓋亞獸(16) ← EX 巨龍獸(13) [逆境進化]
+  16: [{ fromRow: 13, fromName: "EX 巨龍獸", conds: ["逆境進化", "血量<40%", "同屬性進化"] }],
+  // 混沌龍獸(17) ← 分子獸(12) [逆境進化]
+  17: [{ fromRow: 12, fromName: "分子獸", conds: ["逆境進化", "血量<40%", "同屬性進化"] }],
 };
 let EVO_PATHS = { ...EVO_PATHS_V1 }; // 运行时可动态切换
 
@@ -5697,22 +5920,30 @@ function calcBattleDamage(attackerRow, defenderRow){
 function getEnemyStats(row){
   if(battleEnemyVersion === "V2") return DIGIMON_STATS_V2[row];
   if(battleEnemyVersion === "V3") return DIGIMON_STATS_V3[row];
+  if(battleEnemyVersion === "V4") return DIGIMON_STATS_V4[row];
+  if(battleEnemyVersion === "V5") return DIGIMON_STATS_V5[row];
   return DIGIMON_STATS_V1[row];
 }
 function getEnemyEvoPaths(){
   if(battleEnemyVersion === "V2") return EVO_PATHS_V2;
   if(battleEnemyVersion === "V3") return EVO_PATHS_V3;
+  if(battleEnemyVersion === "V4") return EVO_PATHS_V4;
+  if(battleEnemyVersion === "V5") return EVO_PATHS_V5;
   return EVO_PATHS_V1;
 }
 function getEnemyRowImages(){
   if(battleEnemyVersion === "V2") return rowImagesV2;
   if(battleEnemyVersion === "V3") return rowImagesV3;
+  if(battleEnemyVersion === "V4") return rowImagesV4;
+  if(battleEnemyVersion === "V5") return rowImagesV5;
   return rowImagesV1;
 }
 function getEnemyTotalCount(ver){
   const v = (ver !== undefined) ? ver : battleEnemyVersion;
   if(v === "V2") return ALL_NAMES_V2.length;
   if(v === "V3") return ALL_NAMES_V3.length;
+  if(v === "V4") return ALL_NAMES_V4.length;
+  if(v === "V5") return ALL_NAMES_V5.length;
   return ALL_NAMES_V1.length;
 }
 
@@ -6135,8 +6366,19 @@ function startBattle(){
   // 隨機選擇對戰背景（5選1）
   battleBgIdx = Math.floor(Math.random() * BATTLE_BG_SOURCES.length);
 
-  // 跨版本對戰：V1↔V2，V3 隨機選 V1 或 V2
-  battleEnemyVersion = (currentVersion === "V3") ? (Math.random() < 0.5 ? "V1" : "V2") : (currentVersion === "V1" ? "V2" : "V1");
+  // 跨版本對戰：隨機選擇敵方版本
+  if(currentVersion === "V3"){
+    battleEnemyVersion = (Math.random() < 0.5 ? "V1" : "V2");
+  } else if(currentVersion === "V4"){
+    const v4pool = ["V1","V2","V3"];
+    battleEnemyVersion = v4pool[Math.floor(Math.random() * v4pool.length)];
+  } else if(currentVersion === "V5"){
+    const v5pool = ["V1","V2","V3","V4"];
+    battleEnemyVersion = v5pool[Math.floor(Math.random() * v5pool.length)];
+  } else {
+    // V1 ↔ V2
+    battleEnemyVersion = (currentVersion === "V1") ? "V2" : "V1";
+  }
   const playerStage = DIGIMON_STATS[currentRow].stage;
   const sameStageIndices = [];
   const enemyTotal = getEnemyTotalCount();
@@ -6391,7 +6633,7 @@ function renderBattleScene(){
   if(battleProjectileActive){
     const atkrRow = (battleProjectileDir === 1) ? currentRow : battleEnemyRow;
     const atkrVersion = (battleProjectileDir === 1) ? currentVersion : battleEnemyVersion;
-    const atkrImages = (atkrVersion === "V2") ? attackRowImagesV2 : (atkrVersion === "V3") ? attackRowImagesV3 : attackRowImages;
+    const atkrImages = (atkrVersion === "V2") ? attackRowImagesV2 : (atkrVersion === "V3") ? attackRowImagesV3 : (atkrVersion === "V4") ? attackRowImagesV4 : (atkrVersion === "V5") ? attackRowImagesV5 : attackRowImages;
     let fireImg = (atkrRow < atkrImages.length) ? atkrImages[atkrRow] : null;
     if(!fireImg || !fireImg.complete) fireImg = atkrImages[0];
     if(fireImg && fireImg.complete){
@@ -6952,7 +7194,7 @@ function switchDigidexPage(pageIdx){
     renderDigidexPage(DIGIDEX_STAGES);
   } else {
     // 究極體頁：單一分組
-    renderDigidexPage([{ name: "究極體", rows: DIGIDEX_ULTIMATE_ROWS }]);
+    renderDigidexPage([{ name: "究極體", rows: getDigidexUltimateRows() }]);
   }
 }
 
@@ -7581,7 +7823,7 @@ if(!savedData){
 }
 
 let loadedCount = 0;
-const TOTAL_IMAGES = 18 + 17 + 17 + BG_NAMES.length + 1 + 15 + 1 + 17 + 1 + 3 + 3 + 4 + 1 + 1 + 2 + 1 + 17 + 1; // 18 V1 row + 17 V2 row + 17 V3 row + bg + meat + train + evo + 17 V1 atk + proj + 3 evo icons + battle scenes + hp + feces + flushing + 3 eggs + 17 V2 atk + V2 proj
+const TOTAL_IMAGES = 18 + 17 + 17 + BG_NAMES.length + 1 + 15 + 1 + 17 + 1 + 3 + 3 + 4 + 1 + 1 + 2 + 1 + 17 + 1 + 17 + 17 + 17 + 17 + 17 + 1 + 1 + 1 + 1; // +V4/V5 rows(17+17) + V3/V4/V5 atk(17+17+17) + V4/V5 proj(1+1) + V4/V5 eggs(1+1)
 function onImageLoaded(){
   loadedCount++;
   if(loadedCount >= TOTAL_IMAGES) {
@@ -7639,9 +7881,35 @@ for(let r = 0; r < 17; r++){
   rowImagesV3[r] = img;
 }
 
-// V3 火球圖復用 V1（attackRowImagesV3 在版本切換時指向 attackRowImages）
+// 加載 17 張 V3 攻擊火球圖片 (V2_00_at ~ V2_16_at，16×8 上半部)
 for(let r = 0; r < 17; r++){
-  attackRowImagesV3[r] = null; // 占位，實際使用時切換到 attackRowImages
+  const img = new Image();
+  const idx = String(r).padStart(2, '0');
+  img.src = `sprites/V3_Attack/V3_${idx}_at.png`;
+  img.onload = onImageLoaded;
+  img.onerror = onImageError;
+  attackRowImagesV3[r] = img;
+}
+
+// 加載 17 張 V4 獨立行圖片（含究極體 14~16）
+for(let r = 0; r < 17; r++){
+  const img = new Image();
+  const idx = String(r).padStart(2, '0');
+  img.src = `sprites/V4/V4_${idx}.png`;
+  img.onload = onImageLoaded;
+  img.onerror = onImageError;
+  rowImagesV4[r] = img;
+}
+
+// 加載 18 張 V5 獨立行圖片（含究極體 14/16/17，跳過 15）
+for(let r = 0; r < 18; r++){
+  if(r === 15) continue; // V5 無 row 15
+  const img = new Image();
+  const idx = String(r).padStart(2, '0');
+  img.src = `sprites/V5/V5_${idx}.png`;
+  img.onload = onImageLoaded;
+  img.onerror = onImageError;
+  rowImagesV5[r] = img;
 }
 
 
@@ -7665,6 +7933,27 @@ for(let r = 0; r < 17; r++){
   attackRowImagesV2[r] = img;
 }
 
+// 加載 17 張 V4 攻擊火球圖片 (V4_00_at ~ V4_16_at，16×8 上半部)
+for(let r = 0; r < 17; r++){
+  const img = new Image();
+  const idx = String(r).padStart(2, '0');
+  img.src = `sprites/V4_Attack/V4_${idx}_at.png`;
+  img.onload = onImageLoaded;
+  img.onerror = onImageError;
+  attackRowImagesV4[r] = img;
+}
+
+// 加載 18 張 V5 攻擊火球圖片 (V5_00_at ~ V5_17_at，跳過 15，16×8 上半部)
+for(let r = 0; r < 18; r++){
+  if(r === 15) continue; // V5 無 row 15
+  const img = new Image();
+  const idx = String(r).padStart(2, '0');
+  img.src = `sprites/V5_Attack/V5_${idx}_at.png`;
+  img.onload = onImageLoaded;
+  img.onerror = onImageError;
+  attackRowImagesV5[r] = img;
+}
+
 meatImage.src = "Food/meat.png";
 meatImage.onload = onImageLoaded;
 meatImage.onerror = onImageError;
@@ -7682,6 +7971,12 @@ attackProjImage.onerror = onImageError;
 attackProjImageV2.src = "sprites/V2_Attack/V2_02_at.png";
 attackProjImageV2.onload = onImageLoaded;
 attackProjImageV2.onerror = onImageError;
+attackProjImageV4.src = "sprites/V4_Attack/V4_02_at.png";
+attackProjImageV4.onload = onImageLoaded;
+attackProjImageV4.onerror = onImageError;
+attackProjImageV5.src = "sprites/V5_Attack/V5_02_at.png";
+attackProjImageV5.onload = onImageLoaded;
+attackProjImageV5.onerror = onImageError;
 evadeMissileImage.src = "BG/missile.png";
 evadeMissileImage.onload = onImageLoaded;
 evadeMissileImage.onerror = onImageError;
@@ -7769,6 +8064,14 @@ v2EggImage.onerror = onImageError;
 v3EggImage.src = "sprites/V3/V3_egg.png";
 v3EggImage.onload = onImageLoaded;
 v3EggImage.onerror = onImageError;
+
+v4EggImage.src = "sprites/V4/V4_egg.png";
+v4EggImage.onload = onImageLoaded;
+v4EggImage.onerror = onImageError;
+
+v5EggImage.src = "sprites/V5/V5_egg.png";
+v5EggImage.onload = onImageLoaded;
+v5EggImage.onerror = onImageError;
 
 eggImage = eggImageV1; // 默认V1蛋
 
@@ -7952,11 +8255,11 @@ let pveCurrentEnemyVersion = null;
 let pveCurrentEnemyName = null;
 
 function pveGetEnemyName(row, version) {
-  if (version === "V3") {
-    const stats = (typeof DIGIMON_STATS_V3 !== "undefined" && DIGIMON_STATS_V3) ? DIGIMON_STATS_V3.find(s => s.row === row) : null;
-    return stats ? stats.name : ("V3-"+row);
-  }
-  const stats = DIGIMON_STATS.find(s => s.row === row);
+  let stats;
+  if (version === "V2") stats = DIGIMON_STATS_V2[row];
+  else if (version === "V3") stats = DIGIMON_STATS_V3[row];
+  else if (version === "V4") stats = DIGIMON_STATS_V4[row];
+  else if (version === "V5") stats = DIGIMON_STATS_V5[row];
   return stats ? stats.name : (version + "-" + row);
 }
 
@@ -8062,8 +8365,8 @@ function toggleMapRow(mapId) {
   do {
     enemyRow = Math.floor(Math.random() * tot);
     attempts++;
-    if (attempts > 100) break;
-  } while (enemyRow <= 1);
+    if (attempts > 200) break;
+  } while (enemyRow <= 1 || (enemyVersion === "V5" && enemyRow === 15));
 
   const enemyName = pveGetEnemyName(enemyRow, enemyVersion);
 
@@ -8226,8 +8529,8 @@ function pveEnterMap(mapId) {
   do {
     enemyRow = Math.floor(Math.random() * enemyTotal);
     attempts++;
-    if (attempts > 100) break;
-  } while (enemyRow <= 1);
+    if (attempts > 200) break;
+  } while (enemyRow <= 1 || (battleEnemyVersion === "V5" && enemyRow === 15));
   pveCurrentEnemyRow = enemyRow;
   pveCurrentEnemyName = pveGetEnemyName(enemyRow, enemyVersion);
 
