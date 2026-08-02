@@ -566,6 +566,23 @@ body{
   background:#333;
   cursor:not-allowed;
 }
+.battle-refresh-btn{
+  padding:8px 8px;
+  background:#2266aa;
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+  flex:0 0 72px;
+}
+.battle-refresh-btn:hover{ background:#3399dd; }
+.battle-refresh-btn:active{ background:#1a4488; }
+.battle-refresh-btn:disabled{
+  background:#333;
+  cursor:not-allowed;
+}
 .adversity-evo-banner{
   display:none;
   text-align:center;
@@ -1169,6 +1186,7 @@ canvas {
   <div class="battle-log" id="battleLog"></div>
   <div class="adversity-evo-banner" id="adversityEvoBanner">逆境進化!</div>
   <div class="battle-btns" id="battleBtns">
+    <button class="battle-refresh-btn" id="battleRefreshBtn">🔄</button>
     <button class="battle-atk-btn" id="battleAttackBtn">攻擊</button>
     <button class="battle-run-btn" id="battleRunBtn">退出</button>
   </div>
@@ -1958,8 +1976,10 @@ function startEggPhase(version = "V1") {
     // 替换 ALL_NAMES 内容
     ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V2);
     // 替换 DIGIMON_STATS 内容
+    for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
     Object.assign(DIGIMON_STATS, DIGIMON_STATS_V2);
     // 替换 EVO_PATHS 内容
+    for(const k in EVO_PATHS) delete EVO_PATHS[k];
     Object.assign(EVO_PATHS, EVO_PATHS_V2);
     // 切换 rowImages 到 V2
     if(typeof rowImagesV2 !== "undefined" && rowImagesV2.length > 0){
@@ -1972,7 +1992,9 @@ function startEggPhase(version = "V1") {
   } else if(version === "V3"){
     // V3
     ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V3);
+    for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
     Object.assign(DIGIMON_STATS, DIGIMON_STATS_V3);
+    for(const k in EVO_PATHS) delete EVO_PATHS[k];
     Object.assign(EVO_PATHS, EVO_PATHS_V3);
     if(typeof rowImagesV3 !== "undefined" && rowImagesV3.length > 0){
       rowImages = rowImagesV3;
@@ -1983,7 +2005,9 @@ function startEggPhase(version = "V1") {
   } else if(version === "V4"){
     // V4
     ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V4);
+    for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
     Object.assign(DIGIMON_STATS, DIGIMON_STATS_V4);
+    for(const k in EVO_PATHS) delete EVO_PATHS[k];
     Object.assign(EVO_PATHS, EVO_PATHS_V4);
     if(typeof rowImagesV4 !== "undefined" && rowImagesV4.length > 0){
       rowImages = rowImagesV4;
@@ -1991,24 +2015,18 @@ function startEggPhase(version = "V1") {
     if(typeof v4EggImage !== "undefined"){
       eggImage = v4EggImage;
     }
-    // V4 火球圖復用 V1
-    for(let r = 0; r < 17; r++){
-      attackRowImagesV4[r] = attackRowImages[r];
-    }
   } else if(version === "V5"){
     // V5
     ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V5);
+    for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
     Object.assign(DIGIMON_STATS, DIGIMON_STATS_V5);
+    for(const k in EVO_PATHS) delete EVO_PATHS[k];
     Object.assign(EVO_PATHS, EVO_PATHS_V5);
     if(typeof rowImagesV5 !== "undefined" && rowImagesV5.length > 0){
       rowImages = rowImagesV5;
     }
     if(typeof v5EggImage !== "undefined"){
       eggImage = v5EggImage;
-    }
-    // V5 火球圖復用 V1
-    for(let r = 0; r < 18; r++){
-      attackRowImagesV5[r] = attackRowImages[r];
     }
   } else {
     // V1
@@ -4645,37 +4663,39 @@ function loadGameState(){
     const saveVersion = data.currentVersion || "V1";
     if(saveVersion === "V2" && currentVersion !== "V2"){
       ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V2);
+      for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
       Object.assign(DIGIMON_STATS, DIGIMON_STATS_V2);
+      for(const k in EVO_PATHS) delete EVO_PATHS[k];
       Object.assign(EVO_PATHS, EVO_PATHS_V2);
       if(typeof rowImagesV2 !== "undefined" && rowImagesV2.length > 0) rowImages = rowImagesV2;
       if(typeof v2EggImage !== "undefined") eggImage = v2EggImage;
       currentVersion = "V2";
     } else if(saveVersion === "V3" && currentVersion !== "V3"){
       ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V3);
+      for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
       Object.assign(DIGIMON_STATS, DIGIMON_STATS_V3);
+      for(const k in EVO_PATHS) delete EVO_PATHS[k];
       Object.assign(EVO_PATHS, EVO_PATHS_V3);
       if(typeof rowImagesV3 !== "undefined" && rowImagesV3.length > 0) rowImages = rowImagesV3;
       if(typeof v3EggImage !== "undefined") eggImage = v3EggImage;
       currentVersion = "V3";
     } else if(saveVersion === "V4" && currentVersion !== "V4"){
       ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V4);
+      for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
       Object.assign(DIGIMON_STATS, DIGIMON_STATS_V4);
+      for(const k in EVO_PATHS) delete EVO_PATHS[k];
       Object.assign(EVO_PATHS, EVO_PATHS_V4);
       if(typeof rowImagesV4 !== "undefined" && rowImagesV4.length > 0) rowImages = rowImagesV4;
       if(typeof v4EggImage !== "undefined") eggImage = v4EggImage;
-      for(let r = 0; r < 17; r++){
-        attackRowImagesV4[r] = attackRowImages[r];
-      }
       currentVersion = "V4";
     } else if(saveVersion === "V5" && currentVersion !== "V5"){
       ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V5);
+      for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
       Object.assign(DIGIMON_STATS, DIGIMON_STATS_V5);
+      for(const k in EVO_PATHS) delete EVO_PATHS[k];
       Object.assign(EVO_PATHS, EVO_PATHS_V5);
       if(typeof rowImagesV5 !== "undefined" && rowImagesV5.length > 0) rowImages = rowImagesV5;
       if(typeof v5EggImage !== "undefined") eggImage = v5EggImage;
-      for(let r = 0; r < 18; r++){
-        attackRowImagesV5[r] = attackRowImages[r];
-      }
       currentVersion = "V5";
     }
     // === 蛋時期狀態處理 ===
@@ -6366,14 +6386,15 @@ function startBattle(){
   // 隨機選擇對戰背景（5選1）
   battleBgIdx = Math.floor(Math.random() * BATTLE_BG_SOURCES.length);
 
-  // 跨版本對戰：隨機選擇敵方版本
+  // 跨版本對戰：隨機選擇敵方版本（敵人可選當前及以下版本）
   if(currentVersion === "V3"){
-    battleEnemyVersion = (Math.random() < 0.5 ? "V1" : "V2");
+    const v3pool = ["V1","V2","V3"];
+    battleEnemyVersion = v3pool[Math.floor(Math.random() * v3pool.length)];
   } else if(currentVersion === "V4"){
-    const v4pool = ["V1","V2","V3"];
+    const v4pool = ["V1","V2","V3","V4"];
     battleEnemyVersion = v4pool[Math.floor(Math.random() * v4pool.length)];
   } else if(currentVersion === "V5"){
-    const v5pool = ["V1","V2","V3","V4"];
+    const v5pool = ["V1","V2","V3","V4","V5"];
     battleEnemyVersion = v5pool[Math.floor(Math.random() * v5pool.length)];
   } else {
     // V1 ↔ V2
@@ -6450,6 +6471,72 @@ function startBattle(){
   canvas.style.height = CANVAS_BATTLE_H + "px";
   gameMode = "battle";
   updateCssBackground("battle");
+  battlePlayerFrame = 0;
+  battleEnemyFrame = 0;
+  renderBattleScene();
+}
+
+function refreshBattleEnemy(){
+  // 對戰進行中才可刷新；攻擊/動畫/結果階段不可刷新
+  if(!battleActive || battleIntro || battleResult || battleProjectileActive || battleBoomActive ||
+     battleEvoState !== "none" || battleEnemyEvoState !== "none") return;
+  // 清除進化狀態（刷新後舊進化觸發失效）
+  battleAdversityTries = 0;
+  battleAdversityEvoRow = -1;
+  battleEnemyAdversityTries = 0;
+  battleEnemyAdversityEvoRow = -1;
+  battleEnemyOriginalRow = -1;
+  // 關閉 intro
+  battleIntro = false; battleIntroStep = 0;
+
+  // 重新選擇敵方版本（敵人可選當前及以下版本）
+  if(currentVersion === "V3"){
+    const v3pool = ["V1","V2","V3"];
+    battleEnemyVersion = v3pool[Math.floor(Math.random() * v3pool.length)];
+  } else if(currentVersion === "V4"){
+    const v4pool = ["V1","V2","V3","V4"];
+    battleEnemyVersion = v4pool[Math.floor(Math.random() * v4pool.length)];
+  } else if(currentVersion === "V5"){
+    const v5pool = ["V1","V2","V3","V4","V5"];
+    battleEnemyVersion = v5pool[Math.floor(Math.random() * v5pool.length)];
+  } else {
+    battleEnemyVersion = (currentVersion === "V1") ? "V2" : "V1";
+  }
+
+  // 重新選擇同階段敵方
+  const playerStage = DIGIMON_STATS[currentRow].stage;
+  const sameStageIndices = [];
+  const enemyTotal = getEnemyTotalCount();
+  for(let i = 0; i < enemyTotal; i++){
+    const stats = getEnemyStats(i);
+    if(stats && stats.stage === playerStage){
+      sameStageIndices.push(i);
+    }
+  }
+  battleEnemyRow = sameStageIndices[Math.floor(Math.random() * sameStageIndices.length)];
+
+  const ps = DIGIMON_STATS[currentRow];
+  const es = getEnemyStats(battleEnemyRow);
+  battleEnemyMaxHp = es.hp;
+  battleEnemyHp = es.hp;
+  // 重置敵方逆境
+  battleEnemyOriginalRow = battleEnemyRow;
+  battleEnemyAdversityEvoRow = -1;
+  battleEnemyAdversityTries = 0;
+  battleEnemyEvoState = "none";
+  battleEnemyEvoStep = 0;
+  battleEnemyEvoNextRow = -1;
+  battleEnemyEvoCallback = null;
+
+  // 重設UI
+  const pAttrColor = getAttrColor(ps.attr, es.attr);
+  const eAttrColor = getAttrColor(es.attr, ps.attr);
+  document.getElementById("battlePlayerName").innerHTML = ps.name + '(<span style="color:' + pAttrColor + '">' + (ATTR_CN[ps.attr] || ps.attr || "—") + '</span>)';
+  document.getElementById("battleEnemyName").innerHTML = '<span style="font-size:9px;background:#333;color:#aaa;border-radius:3px;padding:0 3px;margin-right:2px;">' + battleEnemyVersion + '</span>' + es.name + '(<span style="color:' + eAttrColor + '">' + (ATTR_CN[es.attr] || es.attr || "—") + '</span>)';
+  updateBattleHpDisplay();
+  document.getElementById("battleMsg").textContent = "敵人已刷新！點擊攻擊開始對戰！";
+  document.getElementById("battleAttackBtn").disabled = false;
+  document.getElementById("battleRunBtn").disabled = false;
   battlePlayerFrame = 0;
   battleEnemyFrame = 0;
   renderBattleScene();
@@ -8243,6 +8330,7 @@ document.getElementById("battleRunBtn").onclick = () => {
   if(battleProjectileActive || battleBoomActive || battleIntro || battleResult || battleEvoState !== "none" || battleEnemyEvoState !== "none") return;
   endBattle("run");
 };
+document.getElementById("battleRefreshBtn").onclick = refreshBattleEnemy;
 
 // ============ PVE 冒險系統 ============
 
