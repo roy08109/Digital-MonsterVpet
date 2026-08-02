@@ -13,6 +13,7 @@
 <link rel="icon" type="image/png" sizes="512x512" href="Logo-512.png">
 <link rel="apple-touch-icon" sizes="192x192" href="Logo-192.png">
 <link rel="apple-touch-icon" sizes="512x512" href="Logo-512.png">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
 body{
@@ -860,6 +861,11 @@ body{
   border-top: 1px dashed #664400;
 }
 
+/* Canvas 像素字体 */
+canvas {
+  font-family: 'Press Start 2P', monospace;
+}
+
 </style>
 </head>
 <body>
@@ -949,11 +955,11 @@ body{
         <span class="help-icon" data-mode="life">!</span>
       </div>
       <div class="training-mode-btn" id="trainingModeCritical" data-mode="critical">
-        <span>3. 暴擊訓練 +0.004</span>
+        <span>3. 暴擊訓練 +0.001</span>
         <span class="help-icon" data-mode="critical">!</span>
       </div>
       <div class="training-mode-btn" id="trainingModeEvade" data-mode="evade">
-        <span>4. 閃避訓練 +0.004</span>
+        <span>4. 閃避訓練 +0.001</span>
         <span class="help-icon" data-mode="evade">!</span>
       </div>
       <div class="training-mode-btn" id="trainingModeSpeed" data-mode="speed">
@@ -1230,7 +1236,8 @@ const BG_NAMES = ["Noon", "dusk", "Night"];
 let rowImages = new Array(18); // V1/V1_00.png ~ V1/V1_17.png (默认V1)
 let rowImagesV1 = new Array(18); // V1 精灵图备份
 let rowImagesV2 = new Array(17); // V2/V2_00.png ~ V2/V2_16.png
-let attackRowImages = new Array(17); // Attack/00_at.png ~ 16_at.png（龍發射的火球圖）
+let attackRowImages = new Array(17); // V1 Attack/00_at.png ~ 16_at.png（V1龍發射的火球圖）
+let attackRowImagesV2 = new Array(17); // V2_Attack/V2_00_at.png ~ V2_16_at.png（V2龍發射的火球圖）
 let meatImage = new Image();
 let bgImages = {};
 let currentBgName = "Noon";
@@ -1613,8 +1620,6 @@ function renderVersionSelect(){
   const now = Date.now();
   const isV1 = (versionSelectIndex === 0);
   const versionName = isV1 ? "V1" : "V2";
-  const titleText = isV1 ? "數碼暴龍一代" : "數碼暴龍二代";
-  const typeText = isV1 ? "龍系數碼獸" : "獸系數碼獸";
   const accentColor = isV1 ? "#4a90d9" : "#e74c3c";
   const currentEggImage = isV1 ? eggImageV1 : v2EggImage;
   
@@ -1626,12 +1631,9 @@ function renderVersionSelect(){
   ctx.fillStyle = "#1a1a2e";
   ctx.fillRect(0, 0, 128, 48);
   ctx.fillStyle = "#FFD700";
-  ctx.font = "bold 11px pixel";
+  ctx.font = "16px 'Press Start 2P'";
   ctx.textAlign = "center";
-  ctx.fillText(titleText, 64, 20);
-  ctx.fillStyle = "#ccc";
-  ctx.font = "8px pixel";
-  ctx.fillText(versionName + " 蛋", 64, 35);
+  ctx.fillText(versionName, 64, 30);
   
   // === 蛋展示區域 ===
   const boxX = 28, boxY = 54, boxW = 72, boxH = 84;
@@ -1651,7 +1653,7 @@ function renderVersionSelect(){
   ctx.lineWidth = 1;
   roundRect(ctx, leftX, arrY, arrW, arrH, 5, true, false);
   ctx.fillStyle = isV1 ? "#555" : "#4a90d9";
-  ctx.font = "bold 12px pixel";
+  ctx.font = "12px 'Press Start 2P'";
   ctx.textAlign = "center";
   ctx.fillText("◀", leftX + arrW/2, arrY + 16);
   
@@ -1664,7 +1666,7 @@ function renderVersionSelect(){
   ctx.lineWidth = 1;
   roundRect(ctx, rightX, arrY, arrW, arrH, 5, true, false);
   ctx.fillStyle = !isV1 ? "#555" : "#e74c3c";
-  ctx.font = "bold 12px pixel";
+  ctx.font = "12px 'Press Start 2P'";
   ctx.fillText("▶", rightX + arrW/2, arrY + 16);
   
   // === 蛋精靈 (frame 0, 16×16 → 放大到 48×48) ===
@@ -1682,16 +1684,6 @@ function renderVersionSelect(){
     ctx.fill();
   }
   
-  // === 類型描述 ===
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 9px pixel";
-  ctx.fillText(typeText, 64, 128);
-  
-  // === 切換提示 ===
-  ctx.fillStyle = "#555";
-  ctx.font = "7px pixel";
-  ctx.fillText("◀ 左右切換版本 ▶", 64, 140);
-  
   // === 確定按鈕 ===
   const btnX = 28, btnY = 150, btnW = 72, btnH = 32;
   
@@ -1704,11 +1696,11 @@ function renderVersionSelect(){
   // 按鈕主體
   ctx.fillStyle = accentColor;
   roundRect(ctx, btnX, btnY, btnW, btnH, 8, false, true);
-  
+
   ctx.fillStyle = "#fff";
-  ctx.font = "bold 12px pixel";
+  ctx.font = "12px 'Press Start 2P'";
   ctx.fillText("確 定", 64, btnY + 22);
-  
+
   ctx.textAlign = "start";
 }
 
@@ -2292,6 +2284,7 @@ let trainingProjectileX = 0;
 let trainingProjectileTimer = null;
 let powerImage = new Image();
 let attackProjImage = new Image();
+let attackProjImageV2 = new Image(); // V2 火球參考圖
 let unknownImage = new Image();  // 圖鑑未發現的「?」圖示（紅色）
 let evadeMissileImage = new Image();  // 閃避訓練飛彈
 let abGuideImage = new Image();      // 攻速訓練 AB 指引圖
@@ -3754,7 +3747,9 @@ function renderTrainingCanvas(){
     if(trainingAttackActive){
       if(criticalAttackStep > 0){
         // 火球移動中（從 x=16 一格一格向左到 x=0）
-        const fireImg = (currentRow < 14) ? attackRowImages[currentRow] : attackRowImages[0];
+        const fireImg = (currentVersion === "V2")
+          ? ((currentRow < attackRowImagesV2.length) ? attackRowImagesV2[currentRow] : attackRowImagesV2[0])
+          : ((currentRow < 14) ? attackRowImages[currentRow] : attackRowImages[0]);
         if(fireImg && fireImg.complete){
           ctx.drawImage(fireImg, 0, 0, 16, 8, criticalAttackStep, 0, 16, 8);
           ctx.drawImage(fireImg, 0, 0, 16, 8, criticalAttackStep, 8, 16, 8);
@@ -4019,7 +4014,9 @@ function renderTrainingCanvas(){
   
   // 攻擊彈在龍左方，火球連續移動（單發，取上半 16×8）
   if(trainingAttackActive){
-    const fireImg = (currentRow < 14) ? attackRowImages[currentRow] : attackRowImages[0];
+    const fireImg = (currentVersion === "V2")
+      ? ((currentRow < attackRowImagesV2.length) ? attackRowImagesV2[currentRow] : attackRowImagesV2[0])
+      : ((currentRow < 14) ? attackRowImages[currentRow] : attackRowImages[0]);
     if(fireImg && fireImg.complete){
       ctx.drawImage(fireImg, 0, 0, 16, 8, trainingProjectileX, 0, 16, 8);
     }
@@ -4390,8 +4387,8 @@ function tryTrainingSuccess(type){
       case "hp": gameHpBonus += 0.8; break;
       case "atk": gameAtkBonus += 0.1; break;
       case "spd": gameSpdBonus += 0.04; break;
-      case "crit": gameCritBonus += 0.004; break;
-      case "dodge": gameDodgeBonus += 0.004; break;
+      case "crit": gameCritBonus += 0.001; break;
+      case "dodge": gameDodgeBonus += 0.001; break;
       case "affinity": gameAffBonus += 1; break;
     }
   }
@@ -5736,8 +5733,10 @@ function renderBattleScene(){
   // === 攻擊彈（普攻單發上方，爆擊雙發上下） ===
   if(battleProjectileActive){
     const atkrRow = (battleProjectileDir === 1) ? currentRow : battleEnemyRow;
-    let fireImg = (atkrRow < attackRowImages.length) ? attackRowImages[atkrRow] : null;
-    if(!fireImg || !fireImg.complete) fireImg = attackRowImages[0];
+    const atkrVersion = (battleProjectileDir === 1) ? currentVersion : (currentVersion === "V1" ? "V2" : "V1");
+    const atkrImages = (atkrVersion === "V2") ? attackRowImagesV2 : attackRowImages;
+    let fireImg = (atkrRow < atkrImages.length) ? atkrImages[atkrRow] : null;
+    if(!fireImg || !fireImg.complete) fireImg = atkrImages[0];
     if(fireImg && fireImg.complete){
       if(battleProjectileDir === 0){
         // 敵方火球：翻轉朝右
@@ -6677,7 +6676,7 @@ if(!savedData){
 }
 
 let loadedCount = 0;
-const TOTAL_IMAGES = 18 + 17 + BG_NAMES.length + 1 + 15 + 1 + 14 + 3 + 3 + 4 + 1 + 1 + 2; // 18 V1 row + 17 V2 row + 3 bg + 1 meat + 15 training + 1 evo + 14 atk fireballs + 3 evo icons + 7 battle scenes + 1 hp + 1 feces + 1 flushing + 2 eggs = 84
+const TOTAL_IMAGES = 18 + 17 + BG_NAMES.length + 1 + 15 + 1 + 17 + 1 + 3 + 3 + 4 + 1 + 1 + 2 + 17 + 1; // 18 V1 row + 17 V2 row + 3 bg + 1 meat + 15 training + 1 evo + 17 V1 atk fireballs + 1 V1 attackProj + 3 evo icons + 7 battle scenes + 1 hp + 1 feces + 1 flushing + 2 eggs + 17 V2 atk fireballs + 1 V2 attackProj
 function onImageLoaded(){
   loadedCount++;
   if(loadedCount >= TOTAL_IMAGES) {
@@ -6725,7 +6724,7 @@ for(let r = 0; r < 17; r++){
 }
 
 
-// 加載 17 張攻擊火球圖片 (00_at ~ 16_at，16×8 上半部)
+// 加載 17 張 V1 攻擊火球圖片 (00_at ~ 16_at，16×8 上半部)
 for(let r = 0; r < 17; r++){
   const img = new Image();
   const idx = String(r).padStart(2, '0');
@@ -6733,6 +6732,16 @@ for(let r = 0; r < 17; r++){
   img.onload = onImageLoaded;
   img.onerror = onImageError;
   attackRowImages[r] = img;
+}
+
+// 加載 17 張 V2 攻擊火球圖片 (V2_00_at ~ V2_16_at，16×8 上半部)
+for(let r = 0; r < 17; r++){
+  const img = new Image();
+  const idx = String(r).padStart(2, '0');
+  img.src = `sprites/V2_Attack/V2_${idx}_at.png`;
+  img.onload = onImageLoaded;
+  img.onerror = onImageError;
+  attackRowImagesV2[r] = img;
 }
 
 meatImage.src = "Food/meat.png";
@@ -6749,6 +6758,9 @@ unknownImage.onerror = onImageError;
 attackProjImage.src = "sprites/Attack/02_at.png";
 attackProjImage.onload = onImageLoaded;
 attackProjImage.onerror = onImageError;
+attackProjImageV2.src = "sprites/V2_Attack/V2_02_at.png";
+attackProjImageV2.onload = onImageLoaded;
+attackProjImageV2.onerror = onImageError;
 evadeMissileImage.src = "BG/missile.png";
 evadeMissileImage.onload = onImageLoaded;
 evadeMissileImage.onerror = onImageError;
