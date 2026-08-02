@@ -924,6 +924,211 @@ canvas {
   font-family: 'Press Start 2P', monospace;
 }
 
+/* ---- PVE 冒險地圖面板 ---- */
+.pve-map-panel {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(135deg, #0a0a2e, #1a1a4e, #0d0d35);
+  border-radius: 12px; padding: 16px; z-index: 50;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  overflow-y: auto;
+}
+.pve-map-title {
+  font-size: 18px; font-weight: bold; color: #ffcc00;
+  text-shadow: 0 0 8px rgba(255,204,0,0.5); letter-spacing: 2px;
+}
+.pve-map-grid {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
+  width: 100%; max-width: 360px;
+}
+.pve-map-card {
+  width: 100px; padding: 8px; border-radius: 10px;
+  background: rgba(255,255,255,0.08); cursor: pointer;
+  text-align: center; transition: all 0.2s;
+  border: 2px solid transparent;
+}
+.pve-map-card:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: #ffcc00;
+  transform: scale(1.05);
+}
+.pve-map-card-bg {
+  width: 56px; height: 56px; border-radius: 50%;
+  margin: 0 auto 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 28px; line-height: 1;
+}
+.pve-map-card-name {
+  font-size: 13px; font-weight: bold; color: #e0e0ff;
+}
+.pve-map-card-diff {
+  font-size: 10px; color: #ffcc00; margin-top: 2px;
+}
+.pve-map-back {
+  margin-top: 8px; padding: 8px 24px; background: rgba(255,255,255,0.1);
+  border-radius: 8px; cursor: pointer; color: #aaa; font-size: 13px;
+  transition: all 0.2s;
+}
+.pve-map-back:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+/* ---- PVE 遭遇面板 ---- */
+.pve-encounter-panel {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(180deg, #1a1a2e, #16213e);
+  border-radius: 12px; padding: 8px; z-index: 55;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.pve-encounter-title {
+  font-size: 14px; font-weight: bold; color: #ffcc00;
+  text-shadow: 0 0 6px rgba(255,204,0,0.3);
+}
+.pve-encounter-scene {
+  width: 360px; max-width: 100%; border-radius: 8px; overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.15);
+  background: #000;
+}
+.pve-encounter-scene canvas {
+  display: block; width: 100%; height: auto;
+}
+.pve-encounter-info {
+  text-align: center; padding: 4px 0;
+}
+.pve-encounter-name {
+  font-size: 15px; font-weight: bold; color: #fff;
+}
+.pve-encounter-dialog {
+  font-size: 12px; color: #ccc; margin-top: 4px;
+  min-height: 18px;
+}
+.pve-encounter-actions {
+  display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+}
+.pve-btn {
+  padding: 8px 16px; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: bold; cursor: pointer;
+  transition: all 0.2s; font-family: inherit;
+}
+.pve-btn:hover { transform: scale(1.08); }
+.pve-btn-comm { background: linear-gradient(135deg,#4ecdc4,#44b09e); color: #fff; }
+.pve-btn-fight { background: linear-gradient(135deg,#e74c3c,#c0392b); color: #fff; }
+.pve-btn-leave { background: linear-gradient(135deg,#7f8c8d,#636e72); color: #fff; }
+
+/* ========== 對戰選單（雙標籤頁） ========== */
+.battle-menu-panel { 
+  max-width: 420px; 
+  padding: 0; 
+  overflow: visible; 
+}
+.bm-tabs { 
+  display: flex; 
+  border-bottom: 2px solid #444; 
+  background: #1a1a2e; 
+  border-radius: 10px 10px 0 0; 
+}
+.bm-tab { 
+  flex: 1; 
+  text-align: center; 
+  padding: 10px 0; 
+  cursor: pointer; 
+  color: #aaa; 
+  font-size: 14px; 
+  font-weight: bold; 
+  transition: all .2s; 
+  border-bottom: 3px solid transparent; 
+  user-select: none; 
+}
+.bm-tab:hover { color: #ddd; background: #252540; }
+.bm-tab.active { 
+  color: #ffcc00; 
+  border-bottom-color: #ffcc00; 
+  background: #222244; 
+}
+.bm-tab-content { padding: 8px; }
+.bm-map-list { display: flex; flex-direction: column; gap: 4px; }
+.bm-map-row { 
+  background: #1e1e32; 
+  border-radius: 8px; 
+  overflow: hidden; 
+  border: 1px solid #333; 
+  transition: border-color .2s; 
+}
+.bm-map-row:hover { border-color: #ffcc00; }
+.bm-map-row-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 12px 14px; 
+  cursor: pointer; 
+  color: #e0e0e0; 
+  font-size: 15px; 
+  font-weight: bold; 
+  user-select: none; 
+  transition: background .2s; 
+}
+.bm-map-row-header:hover { background: #282848; }
+.bm-diff { color: #ffcc00; font-size: 12px; }
+.bm-map-row-body { 
+  background: #181828; 
+  border-top: 1px solid #333; 
+  padding: 10px; 
+  text-align: center; 
+}
+.bm-map-row-body canvas { 
+  display: block; 
+  margin: 0 auto 6px; 
+  border-radius: 6px; 
+  background: #000; 
+}
+.bm-enc-name { 
+  color: #ffcc00; 
+  font-size: 16px; 
+  font-weight: bold; 
+  margin-bottom: 4px; 
+}
+.bm-enc-dialog { 
+  color: #ccc; 
+  font-size: 13px; 
+  margin-bottom: 10px; 
+  min-height: 20px; 
+}
+.bm-enc-actions { 
+  display: flex; 
+  gap: 8px; 
+  justify-content: center; 
+  flex-wrap: wrap; 
+}
+.bm-enc-btn { 
+  padding: 8px 16px; 
+  border-radius: 6px; 
+  border: none; 
+  font-size: 14px; 
+  font-weight: bold; 
+  cursor: pointer; 
+  transition: transform .15s; 
+  color: #fff; 
+}
+.bm-enc-btn:hover { transform: scale(1.06); }
+.bm-enc-btn:active { transform: scale(0.96); }
+.bm-enc-btn.comm { background: linear-gradient(135deg,#4ecdc4,#44b09e); }
+.bm-enc-btn.fight { background: linear-gradient(135deg,#e74c3c,#c0392b); }
+.bm-enc-btn.leave { background: linear-gradient(135deg,#7f8c8d,#636e72); }
+.bm-battle-option { 
+  background: #1e1e32; 
+  border: 1px solid #444; 
+  border-radius: 8px; 
+  padding: 14px; 
+  margin: 6px 0; 
+  cursor: pointer; 
+  color: #e0e0e0; 
+  font-size: 15px; 
+  font-weight: bold; 
+  text-align: center; 
+  transition: all .2s; 
+}
+.bm-battle-option:hover { 
+  border-color: #ffcc00; 
+  background: #282848; 
+  color: #ffcc00; 
+}
+
 </style>
 </head>
 <body>
@@ -985,6 +1190,105 @@ canvas {
   <div class="sd-row"><span>親密度</span><span id="sdAffinity">0</span></div>
   <div class="sd-row"><span>訓練點</span><span id="sdTrainingPoints">12</span></div>
   <div class="sd-row"><span>育成失誤</span><span id="sdCareMistakes" style="color:#ff6666;">0</span></div>
+  <div class="sd-row"><span>💰  金幣</span><span id="sdGold" style="color:#ffcc00;">0</span></div>
+</div>
+
+<!-- PVE 冒險地圖選擇面板 -->
+<div id="pveMapDisplay" class="pve-map-panel" style="display:none;">
+  <div class="pve-map-title">🌍 冒險地圖</div>
+  <div class="pve-map-grid">
+    <div class="pve-map-card" onclick="pveEnterMap('hub')">
+      <div class="pve-map-card-bg" style="background:linear-gradient(135deg,#4a9e4a,#7ec87e);">🏘</div>
+      <div class="pve-map-card-name">出發地</div>
+      <div class="pve-map-card-diff">⭐ 簡單</div>
+    </div>
+    <div class="pve-map-card" onclick="pveEnterMap('plain')">
+      <div class="pve-map-card-bg" style="background:linear-gradient(135deg,#6b8e23,#a4c639);">🌿</div>
+      <div class="pve-map-card-name">平原</div>
+      <div class="pve-map-card-diff">⭐ 簡單</div>
+    </div>
+    <div class="pve-map-card" onclick="pveEnterMap('snow')">
+      <div class="pve-map-card-bg" style="background:linear-gradient(135deg,#b0c4de,#e0e8f0);">❄️</div>
+      <div class="pve-map-card-name">雪山</div>
+      <div class="pve-map-card-diff">⭐ 簡單</div>
+    </div>
+    <div class="pve-map-card" onclick="pveEnterMap('beach')">
+      <div class="pve-map-card-bg" style="background:linear-gradient(135deg,#4682b4,#87ceeb);">🏖</div>
+      <div class="pve-map-card-name">海灘</div>
+      <div class="pve-map-card-diff">⭐ 簡單</div>
+    </div>
+    <div class="pve-map-card" onclick="pveEnterMap('desert')">
+      <div class="pve-map-card-bg" style="background:linear-gradient(135deg,#d2b48c,#f4a460);">🏜</div>
+      <div class="pve-map-card-name">沙漠</div>
+      <div class="pve-map-card-diff">⭐ 簡單</div>
+    </div>
+  </div>
+  <div class="pve-map-back" onclick="closePveMap()">← 返回</div>
+</div>
+
+<!-- PVE 遭遇面板 -->
+<div id="pveEncounterDisplay" class="pve-encounter-panel" style="display:none;">
+  <div class="pve-encounter-title" id="pveEncounterTitle">🌿 平原</div>
+  <div class="pve-encounter-scene">
+    <canvas id="pveEncounterCanvas" width="384" height="288"></canvas>
+  </div>
+  <div class="pve-encounter-info">
+    <div class="pve-encounter-name" id="pveEncounterEnemyName">???</div>
+    <div class="pve-encounter-dialog" id="pveEncounterDialog">...</div>
+  </div>
+  <div class="pve-encounter-actions">
+    <button class="pve-btn pve-btn-comm" onclick="pveCommunicate()">💬 交流</button>
+    <button class="pve-btn pve-btn-fight" onclick="pveStartFight()">⚔ 對打</button>
+    <button class="pve-btn pve-btn-leave" onclick="pveLeaveEncounter()">🏃 離開</button>
+  </div>
+</div>
+
+<!-- 對戰選單（按鈕下方兩標籤頁） -->
+<div class="stats-display battle-menu-panel" id="battleMenuDisplay" style="display:none;">
+  <div class="bm-tabs">
+    <div class="bm-tab active" data-bmtab="map" id="bmTabMap" onclick="switchBattleTab('map')">🗺 任務地圖</div>
+    <div class="bm-tab" data-bmtab="battle" id="bmTabBattle" onclick="switchBattleTab('battle')">⚔ 對戰</div>
+  </div>
+  <!-- 任務地圖內容 -->
+  <div class="bm-tab-content" id="bmContentMap">
+    <div class="bm-map-list">
+      <div class="bm-map-row" data-map="hub">
+        <div class="bm-map-row-header" onclick="toggleMapRow('hub')">
+          <span>🏘 出發地</span><span class="bm-diff">⭐ 簡單</span>
+        </div>
+        <div class="bm-map-row-body" id="bmRowBody_hub" style="display:none;"></div>
+      </div>
+      <div class="bm-map-row" data-map="plain">
+        <div class="bm-map-row-header" onclick="toggleMapRow('plain')">
+          <span>🌿 平原</span><span class="bm-diff">⭐ 簡單</span>
+        </div>
+        <div class="bm-map-row-body" id="bmRowBody_plain" style="display:none;"></div>
+      </div>
+      <div class="bm-map-row" data-map="snow">
+        <div class="bm-map-row-header" onclick="toggleMapRow('snow')">
+          <span>❄️ 雪山</span><span class="bm-diff">⭐ 簡單</span>
+        </div>
+        <div class="bm-map-row-body" id="bmRowBody_snow" style="display:none;"></div>
+      </div>
+      <div class="bm-map-row" data-map="beach">
+        <div class="bm-map-row-header" onclick="toggleMapRow('beach')">
+          <span>🏖 海灘</span><span class="bm-diff">⭐ 簡單</span>
+        </div>
+        <div class="bm-map-row-body" id="bmRowBody_beach" style="display:none;"></div>
+      </div>
+      <div class="bm-map-row" data-map="desert">
+        <div class="bm-map-row-header" onclick="toggleMapRow('desert')">
+          <span>🏜 沙漠</span><span class="bm-diff">⭐ 簡單</span>
+        </div>
+        <div class="bm-map-row-body" id="bmRowBody_desert" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+  <!-- 對戰內容 -->
+  <div class="bm-tab-content" id="bmContentBattle" style="display:none;">
+    <div class="bm-battle-option" onclick="closeBattleMenu(); startBattle();">⚔ 快速對戰（電腦）</div>
+    <div class="bm-battle-option" onclick="showToast('玩家對戰努力開發中，敬請期待！');">玩家對戰</div>
+  </div>
 </div>
 
 <!-- 食物面板（按鈕下方） -->
@@ -1547,6 +1851,7 @@ function startBabyCareCycle(){
   babySleepPhase = 0;
   babySleepCountdown = BABY_AWAKE_SEC;
   babyHasPooped = false;
+  babyHungerTick = 0;
   isSleeping = false;
   babySleepTimer = setInterval(() => {
     if(currentRow > 1 || isEggPhase || evoAnimActive){
@@ -1555,6 +1860,16 @@ function startBabyCareCycle(){
       return;
     }
     babySleepCountdown--;
+    // 幼年期醒著時快速飢餓消耗：每2分鐘-1心
+    if(babySleepPhase === 0 && gameHunger > 0){
+      babyHungerTick = (babyHungerTick || 0) + 1;
+      if(babyHungerTick >= 120){
+        babyHungerTick = 0;
+        gameHunger = Math.max(0, gameHunger - 1);
+        updateCallButton();
+        updateNotifArea(true);
+      }
+    }
     if(babySleepCountdown <= 0){
       if(babySleepPhase === 0){
         // 醒 → 睡（3分鐘）
@@ -1697,7 +2012,7 @@ function hatchEgg() {
   birthTimestamp = Date.now(); // 記錄出生時間，後續年齡均以此為基準
   gameAgeLastDay = 0;
   stageStartDay = 0;
-  gameHunger = 0;
+  gameHunger = 2;
   gameWeight = DIGIMON_STATS[0].weight;
   gameAffinity = DIGIMON_STATS[0].bondInitial || 10;
   
@@ -2708,6 +3023,13 @@ function startTraining(){
   document.getElementById("statsDisplay").style.display = "none";
   document.getElementById("foodDisplay").style.display = "none";
   document.getElementById("digidexDisplay").style.display = "none";
+  document.getElementById("battleDisplay").style.display = "none";
+  const pveMapTr = document.getElementById("pveMapDisplay");
+  if(pveMapTr) pveMapTr.style.display = "none";
+  const pveEncTr = document.getElementById("pveEncounterDisplay");
+  if(pveEncTr) pveEncTr.style.display = "none";
+  const bmTr = document.getElementById("battleMenuDisplay");
+  if(bmTr) bmTr.style.display = "none";
   
   // 暫停自動模式
   if(autoTimer) clearInterval(autoTimer);
@@ -4204,7 +4526,8 @@ const FUNCTION_BTNS = ["狀態","食物","訓練","對戰","清理","睡眠","�
 // ========== 數值系統 ==========
 // ========== 自動存檔 ==========
 const SAVE_KEY = "digimon_vpet_save";
-const DATA_VERSION = 2; // 數據版本：2 - 訓練加成系統
+const DATA_VERSION = 3; // 數據版本：3 - 金幣系統 + PVE
+let gameGold = 0;
 function saveGameState(){
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
@@ -4226,6 +4549,7 @@ function saveGameState(){
       gameCareMistakes, callMistakeRecorded,
       gameTotalBattles, gameBattleWins,
       isSick, eightPoopsStartTime, eightPoopsMistakeRecorded,
+      gameGold,
       eggStartTime: isEggPhase ? eggStartTime : undefined,
       birthTimestamp: birthTimestamp || undefined, // 出生時間戳，永不改變
       cultivatedRows: Array.from(cultivatedRows), // 已真正培育的 row
@@ -4271,7 +4595,7 @@ function loadGameState(){
         gameAge = Math.floor((Date.now() - birthTimestamp) / 60000); // 從孵化開始至今的精確年齡
         gameAgeLastDay = Math.floor(gameAge / 1440);
         stageStartDay = 0;
-        gameHunger = 0;
+        gameHunger = 2;
         gameWeight = DIGIMON_STATS[0].weight;
         gameAffinity = DIGIMON_STATS[0].bondInitial || 10;
         resetAllBonuses();
@@ -4370,6 +4694,7 @@ function loadGameState(){
       callMistakeRecorded = data.callMistakeRecorded ?? false;
       gameTotalBattles = data.gameTotalBattles ?? 0;
       gameBattleWins = data.gameBattleWins ?? 0;
+      gameGold = data.gameGold ?? 0;
       isSick = data.isSick ?? false;
       eightPoopsStartTime = data.eightPoopsStartTime ?? 0;
       eightPoopsMistakeRecorded = data.eightPoopsMistakeRecorded ?? false;
@@ -4836,6 +5161,8 @@ function updateStatsDisplay(){
   if(sdTrainingPoints) sdTrainingPoints.textContent = gameTrainingPoints;
   const sdCareMistakes = document.getElementById("sdCareMistakes");
   if(sdCareMistakes) sdCareMistakes.textContent = gameCareMistakes;
+  const sdGold = document.getElementById("sdGold");
+  if(sdGold) sdGold.textContent = gameGold;
   updateCallButton();
 }
 
@@ -5170,7 +5497,7 @@ function clickFunction(idx){
   if(idx === 0) showStats();   // 狀態
   else if(idx === 1) showFood(); // 食物
   else if(idx === 2) startTraining(); // 訓練
-  else if(idx === 3) startBattle(); // 對戰
+  else if(idx === 3) openBattleMenu(); // 對戰 → 雙標籤頁選單
   else if(idx === 4) cleanPoops(); // 清理糞便
   else if(idx === 5) toggleLights(); // 關燈/開燈
   else if(idx === 6) curePet(); // 治療
@@ -5209,6 +5536,12 @@ function showStats(){
     document.getElementById("digidexDisplay").style.display = "none";
     document.getElementById("trainingDisplay").style.display = "none";
     document.getElementById("battleDisplay").style.display = "none";
+    const pveMapEgg = document.getElementById("pveMapDisplay");
+    if(pveMapEgg) pveMapEgg.style.display = "none";
+    const pveEncEgg = document.getElementById("pveEncounterDisplay");
+    if(pveEncEgg) pveEncEgg.style.display = "none";
+    const bmEgg = document.getElementById("battleMenuDisplay");
+    if(bmEgg) bmEgg.style.display = "none";
     document.getElementById("sdName").textContent = "數碼蛋";
     document.getElementById("sdStage").textContent = "蛋";
     document.getElementById("sdAttr").textContent = "—";
@@ -5222,6 +5555,8 @@ function showStats(){
     });
     const tpEl = document.getElementById("sdTrainingPoints");
     if(tpEl) tpEl.textContent = "0";
+    const sdGoldEgg = document.getElementById("sdGold");
+    if(sdGoldEgg) sdGoldEgg.textContent = gameGold;
     panel.style.display = "block";
     return;
   }
@@ -5238,6 +5573,12 @@ function showStats(){
   document.getElementById("digidexDisplay").style.display = "none";
   document.getElementById("trainingDisplay").style.display = "none";
   document.getElementById("battleDisplay").style.display = "none";
+  const pveMap = document.getElementById("pveMapDisplay");
+  if(pveMap) pveMap.style.display = "none";
+  const pveEnc = document.getElementById("pveEncounterDisplay");
+  if(pveEnc) pveEnc.style.display = "none";
+  const bmPanel = document.getElementById("battleMenuDisplay");
+  if(bmPanel) bmPanel.style.display = "none";
   const years = Math.floor(gameAge / 1440);
   const hours = Math.floor((gameAge % 1440) / 60);
   const mins = gameAge % 60;
@@ -5266,6 +5607,12 @@ function showFood(){
   document.getElementById("digidexDisplay").style.display = "none";
   document.getElementById("trainingDisplay").style.display = "none";
   document.getElementById("battleDisplay").style.display = "none";
+  const pveMapF = document.getElementById("pveMapDisplay");
+  if(pveMapF) pveMapF.style.display = "none";
+  const pveEncF = document.getElementById("pveEncounterDisplay");
+  if(pveEncF) pveEncF.style.display = "none";
+  const bmF = document.getElementById("battleMenuDisplay");
+  if(bmF) bmF.style.display = "none";
   panel.style.display = "block";
 }
 
@@ -5362,9 +5709,10 @@ function getEnemyRowImages(){
   if(battleEnemyVersion === "V3") return rowImagesV3;
   return rowImagesV1;
 }
-function getEnemyTotalCount(){
-  if(battleEnemyVersion === "V2") return ALL_NAMES_V2.length;
-  if(battleEnemyVersion === "V3") return ALL_NAMES_V3.length;
+function getEnemyTotalCount(ver){
+  const v = (ver !== undefined) ? ver : battleEnemyVersion;
+  if(v === "V2") return ALL_NAMES_V2.length;
+  if(v === "V3") return ALL_NAMES_V3.length;
   return ALL_NAMES_V1.length;
 }
 
@@ -5771,6 +6119,10 @@ function startBattle(){
   document.getElementById("foodDisplay").style.display = "none";
   document.getElementById("digidexDisplay").style.display = "none";
   document.getElementById("trainingDisplay").style.display = "none";
+  const pveMapBt = document.getElementById("pveMapDisplay");
+  if(pveMapBt) pveMapBt.style.display = "none";
+  const pveEncBt = document.getElementById("pveEncounterDisplay");
+  if(pveEncBt) pveEncBt.style.display = "none";
   panel.style.display = "block";
 
   // 暫停自動模式
@@ -6131,7 +6483,14 @@ function clearBattleState(){
 function endBattle(result){
   battleResult = result;
   gameTotalBattles++;
-  if(result === "win") gameBattleWins++;
+  if(result === "win"){
+    gameBattleWins++;
+    // PVE 模式：勝利獲得金幣獎勵
+    if(window._pveActive && window._pveMapGold){
+      const goldEarned = Math.floor(Math.random() * (window._pveMapGold.max - window._pveMapGold.min + 1)) + window._pveMapGold.min;
+      gameGold += goldEarned;
+    }
+  }
   battleActive = false;
   if(battleAnimTimer){ clearInterval(battleAnimTimer); battleAnimTimer = null; }
   battleProjectileX = 0;
@@ -6321,7 +6680,7 @@ function showBattleResult(result){
     canvas.style.width = "";
     canvas.style.height = "";
 
-    // 戰鬥生病判定
+    // 戰鬥生病判定（PVE 和普通戰鬥通用）
     if(result === "win"){
       if(Math.random() < 0.05) isSick = true;
     } else if(result === "lose"){
@@ -6330,8 +6689,35 @@ function showBattleResult(result){
     if(isSick){
       battleResult = "";
       battleEnemyRow = -1;
+      window._pveActive = false;
+      window._pveMapGold = null;
+      window._pveEnemyRow = null;
+      window._pveEnemyVersion = null;
+      window._pveEnemyName = null;
       enterSickMode();
       showToast("數碼獸生病了！請治療 💊");
+      return;
+    }
+
+    // PVE 模式處理：返回地圖面板或對戰選單
+    if(window._pveActive){
+      saveGameState();
+      updateStatsDisplay();
+      if(window._pveFromMenu){
+        // 從對戰選單發起的戰鬥 → 返回自動模式
+        window._pveFromMenu = false;
+      } else {
+        // 從原地圖面板發起的戰鬥 → 返回地圖面板
+        const pveMapPanel = document.getElementById("pveMapDisplay");
+        if(pveMapPanel) pveMapPanel.style.display = "flex";
+      }
+      window._pveActive = false;
+      window._pveMapGold = null;
+      window._pveEnemyRow = null;
+      window._pveEnemyVersion = null;
+      window._pveEnemyName = null;
+      battleResult = "";
+      battleEnemyRow = -1;
       return;
     }
 
@@ -6578,6 +6964,13 @@ function showDigidex(){
   statsPanel.style.display = "none";
   foodPanel.style.display = "none";
   document.getElementById("trainingDisplay").style.display = "none";
+  document.getElementById("battleDisplay").style.display = "none";
+  const pveMapD = document.getElementById("pveMapDisplay");
+  if(pveMapD) pveMapD.style.display = "none";
+  const pveEncD = document.getElementById("pveEncounterDisplay");
+  if(pveEncD) pveEncD.style.display = "none";
+  const bmD = document.getElementById("battleMenuDisplay");
+  if(bmD) bmD.style.display = "none";
   // 構建頁面切換 UI（只構建一次）
   let pagesBar = panel.querySelector('.digidex-pages');
   if(!pagesBar){
@@ -7472,7 +7865,8 @@ setInterval(() => { if(!isEggPhase){ gameHunger = Math.max(0, gameHunger - 1); u
 // 育成失誤檢查：CALL 出現超過 10 分鐘計 1 次，同個飢餓周期不重複計算
 setInterval(() => {
   if(!isEggPhase && callFirstShownTime > 0 && !callMistakeRecorded && gameHunger === 0){
-    if(Date.now() - callFirstShownTime >= 600000){
+    const mistakeTimeout = (currentRow <= 1) ? 300000 : 600000; // 幼年期5分鐘 / 其他10分鐘
+    if(Date.now() - callFirstShownTime >= mistakeTimeout){
       gameCareMistakes++;
       callMistakeRecorded = true;
     }
@@ -7541,6 +7935,528 @@ document.getElementById("battleRunBtn").onclick = () => {
   if(battleProjectileActive || battleBoomActive || battleIntro || battleResult || battleEvoState !== "none" || battleEnemyEvoState !== "none") return;
   endBattle("run");
 };
+
+// ============ PVE 冒險系統 ============
+
+const PVE_MAPS = {
+  hub:    { id:"hub",    name:"出發地",  emoji:"🏘", bgIdx:0, minRow:2, maxRow:6,  goldChatMin:3, goldChatMax:5,  goldFightMin:10, goldFightMax:15, dialog:"歡迎來到出發地！這裡的數碼獸都很友善。" },
+  plain:  { id:"plain",  name:"平原",    emoji:"🌿", bgIdx:0, minRow:2, maxRow:6,  goldChatMin:3, goldChatMax:5,  goldFightMin:10, goldFightMax:15, dialog:"遼闊的平原上，野生的數碼獸在奔跑。" },
+  snow:   { id:"snow",   name:"雪山",    emoji:"❄️", bgIdx:4, minRow:2, maxRow:6,  goldChatMin:3, goldChatMax:5,  goldFightMin:10, goldFightMax:15, dialog:"冰天雪地的雪山，寒風凜冽。" },
+  beach:  { id:"beach",  name:"海灘",    emoji:"🏖", bgIdx:3, minRow:2, maxRow:6,  goldChatMin:3, goldChatMax:5,  goldFightMin:10, goldFightMax:15, dialog:"海浪拍打著沙灘，陽光灑落。" },
+  desert: { id:"desert", name:"沙漠",    emoji:"🏜", bgIdx:1, minRow:2, maxRow:6,  goldChatMin:3, goldChatMax:5,  goldFightMin:10, goldFightMax:15, dialog:"炙熱的沙漠中，隱藏著神秘的力量。" },
+};
+
+let pveCurrentMapId = null;
+let pveCurrentEnemyRow = null;
+let pveCurrentEnemyVersion = null;
+let pveCurrentEnemyName = null;
+
+function pveGetEnemyName(row, version) {
+  if (version === "V3") {
+    const stats = (typeof DIGIMON_STATS_V3 !== "undefined" && DIGIMON_STATS_V3) ? DIGIMON_STATS_V3.find(s => s.row === row) : null;
+    return stats ? stats.name : ("V3-"+row);
+  }
+  const stats = DIGIMON_STATS.find(s => s.row === row);
+  return stats ? stats.name : (version + "-" + row);
+}
+
+// ========== 對戰選單（雙標籤頁） ==========
+let bmExpandedMapId = null; // 當前展開的地圖 ID
+
+function openBattleMenu() {
+  if (currentRow <= 1) {
+    alert("幼年期還不能冒險！");
+    return;
+  }
+  // 關閉其他面板
+  document.getElementById("statsDisplay").style.display = "none";
+  document.getElementById("foodDisplay").style.display = "none";
+  document.getElementById("trainingDisplay").style.display = "none";
+  document.getElementById("battleDisplay").style.display = "none";
+  document.getElementById("digidexDisplay").style.display = "none";
+  const pveEncD = document.getElementById("pveEncounterDisplay");
+  if (pveEncD) pveEncD.style.display = "none";
+  const pveMapD = document.getElementById("pveMapDisplay");
+  if (pveMapD) pveMapD.style.display = "none";
+
+  const menu = document.getElementById("battleMenuDisplay");
+  if (menu.style.display === "block") {
+    menu.style.display = "none";
+    bmExpandedMapId = null;
+    startAutoPlay();
+    return;
+  }
+  // 自動播放暫停
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  if (autoMoveTimer) { clearTimeout(autoMoveTimer); autoMoveTimer = null; }
+  if (flushingMode) stopFlushing();
+  if (trainingMode) stopTraining();
+
+  // 重置選單狀態
+  bmExpandedMapId = null;
+  switchBattleTab("map");
+  document.getElementById("bmTabMap").classList.add("active");
+  document.getElementById("bmTabBattle").classList.remove("active");
+  menu.style.display = "block";
+}
+
+function closeBattleMenu() {
+  document.getElementById("battleMenuDisplay").style.display = "none";
+  bmExpandedMapId = null;
+  startAutoPlay();
+}
+
+function switchBattleTab(tab) {
+  const tabMap = document.getElementById("bmTabMap");
+  const tabBattle = document.getElementById("bmTabBattle");
+  const contentMap = document.getElementById("bmContentMap");
+  const contentBattle = document.getElementById("bmContentBattle");
+
+  if (tab === "map") {
+    tabMap.classList.add("active");
+    tabBattle.classList.remove("active");
+    contentMap.style.display = "block";
+    contentBattle.style.display = "none";
+  } else {
+    tabMap.classList.remove("active");
+    tabBattle.classList.add("active");
+    contentMap.style.display = "none";
+    contentBattle.style.display = "block";
+  }
+  // 切換標籤時收起展開的地圖行
+  collapseMapRow();
+}
+
+function toggleMapRow(mapId) {
+  const body = document.getElementById("bmRowBody_" + mapId);
+  if (!body) return;
+
+  // 若點擊同一行已展開 → 收起
+  if (bmExpandedMapId === mapId) {
+    collapseMapRow();
+    return;
+  }
+
+  // 收起舊行
+  collapseMapRow();
+
+  // 展開新行
+  bmExpandedMapId = mapId;
+  body.style.display = "block";
+
+  // 準備遭遇內容
+  const bgIdxMap = { hub: 0, plain: 0, snow: 4, beach: 3, desert: 1 };
+  const bgIdx = bgIdxMap[mapId] || 0;
+
+  // 決定敵人版本和行號
+  let enemyVersion;
+  if (currentVersion === 1 || currentVersion === 2) {
+    enemyVersion = (Math.random() < 0.5 && currentVersion === 1) ? 2 : ((Math.random() < 0.5 && currentVersion === 2) ? 1 : currentVersion);
+  } else {
+    enemyVersion = (Math.random() < 0.5) ? 1 : (Math.random() < 0.5 ? 2 : currentVersion);
+  }
+
+  let enemyRow;
+  const tot = getEnemyTotalCount(enemyVersion);
+  let attempts = 0;
+  do {
+    enemyRow = Math.floor(Math.random() * tot);
+    attempts++;
+    if (attempts > 100) break;
+  } while (enemyRow <= 1);
+
+  const enemyName = pveGetEnemyName(enemyRow, enemyVersion);
+
+  // 儲存遭遇狀態
+  window._bmMapVersion = enemyVersion;
+  window._bmMapRow = enemyRow;
+  window._bmMapId = mapId;
+  window._bmBgIdx = bgIdx;
+
+  // 渲染遭遇場景
+  let html = '<canvas id="bmEncCanvas_' + mapId + '" width="320" height="200" style="width:320px;height:200px;"></canvas>';
+  html += '<div class="bm-enc-name">' + enemyName + '</div>';
+  html += '<div class="bm-enc-dialog" id="bmEncDialog_' + mapId + '">發現了 ' + enemyName + '！要做什麼？</div>';
+  html += '<div class="bm-enc-actions">';
+  html += '<button class="bm-enc-btn comm" onclick="bmEncAction(&apos;comm&apos;)">💬 交流</button>';
+  html += '<button class="bm-enc-btn fight" onclick="bmEncAction(&apos;fight&apos;)">⚔ 對打</button>';
+  html += '<button class="bm-enc-btn leave" onclick="bmEncAction(&apos;leave&apos;)">🏃 離開</button>';
+  html += '</div>';
+  body.innerHTML = html;
+
+  // 繪製遭遇場景
+  setTimeout(function() {
+    drawBmEncounterScene(mapId, bgIdx, enemyVersion, enemyRow);
+  }, 50);
+}
+
+function collapseMapRow() {
+  if (bmExpandedMapId) {
+    const body = document.getElementById("bmRowBody_" + bmExpandedMapId);
+    if (body) body.style.display = "none";
+    bmExpandedMapId = null;
+  }
+}
+
+function drawBmEncounterScene(mapId, bgIdx, enemyVersion, enemyRow) {
+  const canvas = document.getElementById("bmEncCanvas_" + mapId);
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  // 繪製背景
+  const bgSrc = BATTLE_BG_SOURCES[bgIdx % BATTLE_BG_SOURCES.length];
+  const bgImg = new Image();
+  bgImg.onload = function() {
+    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+    drawBmEnemySprite(ctx, enemyVersion, enemyRow, canvas.width, canvas.height);
+  };
+  bgImg.src = bgSrc;
+}
+
+function drawBmEnemySprite(ctx, version, row, cw, ch) {
+  const path = "sprites/V" + version + "/sprite_" + String(row).padStart(2, "0") + ".png";
+  const img = new Image();
+  img.onload = function() {
+    const size = 120;
+    const x = (cw - size) / 2;
+    const y = 40;
+    ctx.drawImage(img, x, y, size, size);
+  };
+  img.src = path;
+}
+
+function bmEncAction(action) {
+  const mapId = bmExpandedMapId;
+  if (!mapId) return;
+  const dialog = document.getElementById("bmEncDialog_" + mapId);
+
+  if (action === "leave") {
+    collapseMapRow();
+    return;
+  }
+
+  if (action === "comm") {
+    // 交流：10% 生氣強制對打，90% 獲得金幣
+    if (Math.random() < 0.1) {
+      if (dialog) dialog.textContent = "對方生氣了！必須戰鬥！";
+      setTimeout(function() { bmEncAction("fight"); }, 800);
+      return;
+    }
+    const reward = Math.floor(Math.random() * 20) + 5;
+    gameGold = (gameGold || 0) + reward;
+    if (dialog) dialog.textContent = "交流成功！獲得了 " + reward + " 金幣！💛";
+    updateStatsDisplay();
+    setTimeout(function() { collapseMapRow(); }, 1500);
+    return;
+  }
+
+  if (action === "fight") {
+    // 對打 → 進入現有對戰系統
+    const enemyVersion = window._bmMapVersion;
+    const enemyRow = window._bmMapRow;
+
+    // 設置 PVE 標記
+    window._pveActive = true;
+    window._pveFromMenu = true;
+    window._pveMapId = mapId;
+    window._pveMapGold = { min: 15, max: 50 };
+    window._pveEnemyVersion = enemyVersion;
+    window._pveEnemyRow = enemyRow;
+    window._pveEnemyName = pveGetEnemyName(enemyRow, enemyVersion);
+
+    // 關閉選單
+    closeBattleMenu();
+
+    // 啟動 PVE 對戰
+    startBattlePVE(enemyVersion, enemyRow, window._bmBgIdx || 0);
+  }
+}
+
+function openPveMap() {
+  if (currentRow <= 1) {
+    alert("幼年期還不能冒險！");
+    return;
+  }
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  if (autoMoveTimer) { clearInterval(autoMoveTimer); autoMoveTimer = null; }
+  if (flushingMode) stopFlushing();
+  if (trainingMode) stopTraining();
+
+  pveHideAllPanels();
+  const mapPanel = document.getElementById("pveMapDisplay");
+  if (mapPanel) mapPanel.style.display = "flex";
+}
+
+function closePveMap() {
+  const mapPanel = document.getElementById("pveMapDisplay");
+  if (mapPanel) mapPanel.style.display = "none";
+  startAutoPlay();
+}
+
+function pveHideAllPanels() {
+  ["statsDisplay","foodDisplay","digidexDisplay","trainingDisplay","battleDisplay","pveMapDisplay","pveEncounterDisplay","battleMenuDisplay"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+}
+
+function pveEnterMap(mapId) {
+  const map = PVE_MAPS[mapId];
+  if (!map) return;
+
+  pveCurrentMapId = mapId;
+
+  // 決定敵方版本（可能跨版本）
+  let enemyVersion = currentVersion;
+  const randV = Math.random();
+  if (currentVersion === "V1" && randV < 0.5) enemyVersion = "V2";
+  else if (currentVersion === "V2" && randV < 0.5) enemyVersion = "V1";
+  else if (currentVersion === "V3") {
+    const r = Math.random();
+    if (r < 0.33) enemyVersion = "V1";
+    else if (r < 0.66) enemyVersion = "V2";
+  }
+  pveCurrentEnemyVersion = enemyVersion;
+
+  // 選擇隨機敵人（避免幼年期）
+  battleEnemyVersion = enemyVersion; // 設置全局變數供 getEnemyTotalCount 使用
+  const enemyTotal = getEnemyTotalCount();
+  let enemyRow;
+  let attempts = 0;
+  do {
+    enemyRow = Math.floor(Math.random() * enemyTotal);
+    attempts++;
+    if (attempts > 100) break;
+  } while (enemyRow <= 1);
+  pveCurrentEnemyRow = enemyRow;
+  pveCurrentEnemyName = pveGetEnemyName(enemyRow, enemyVersion);
+
+  // 顯示遭遇面板
+  pveHideAllPanels();
+  const encPanel = document.getElementById("pveEncounterDisplay");
+  if (encPanel) encPanel.style.display = "flex";
+
+  const titleEl = document.getElementById("pveEncounterTitle");
+  if (titleEl) titleEl.textContent = map.emoji + " " + map.name;
+
+  const nameEl = document.getElementById("pveEncounterEnemyName");
+  if (nameEl) nameEl.textContent = "野生 " + pveCurrentEnemyName;
+
+  const dialogEl = document.getElementById("pveEncounterDialog");
+  if (dialogEl) dialogEl.textContent = "前方的數碼獸：「" + pveCurrentEnemyName + "」出現了！";
+
+  // 渲染場景
+  pveRenderEncounterScene(map, enemyVersion, enemyRow);
+}
+
+function pveRenderEncounterScene(map, enemyVersion, enemyRow) {
+  const canvas = document.getElementById("pveEncounterCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width, h = canvas.height;
+
+  const bgSrc = BATTLE_BG_SOURCES[map.bgIdx] || BATTLE_BG_SOURCES[0];
+  const bgImg = new Image();
+  bgImg.onload = () => {
+    ctx.drawImage(bgImg, 0, 0, w, h);
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.fillRect(0, h - 64, w, 64);
+    // 繪製地圖名稱
+    ctx.fillStyle = "#ffcc00";
+    ctx.font = "11px 'Press Start 2P', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(map.emoji + " " + map.name, w/2, h - 38);
+    ctx.fillStyle = "#fff";
+    ctx.font = "9px sans-serif";
+    ctx.fillText(map.dialog.substring(0,22), w/2, h - 20);
+    pveDrawEnemySprite(ctx, w, h, enemyVersion, enemyRow);
+  };
+  bgImg.onerror = () => {
+    ctx.fillStyle = "#1a1a2e";
+    ctx.fillRect(0, 0, w, h);
+    pveDrawEnemySprite(ctx, w, h, enemyVersion, enemyRow);
+  };
+  bgImg.src = bgSrc;
+}
+
+function pveDrawEnemySprite(ctx, canvasW, canvasH, version, row) {
+  let spritePath = "sprites/";
+  if (version === "V3") {
+    spritePath += "V3/" + row + ".png";
+  } else {
+    spritePath += version + "/" + row + ".png";
+  }
+
+  const img = new Image();
+  img.onload = () => {
+    const scale = 3;
+    const sx = canvasW / 2 - (img.width * scale) / 2;
+    const sy = canvasH / 2 - (img.height * scale) / 2 - 30;
+    ctx.imageSmoothingEnabled = false;
+    // 暗色背景框
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(sx - 4, sy - 4, img.width * scale + 8, img.height * scale + 8);
+    ctx.drawImage(img, sx, sy, img.width * scale, img.height * scale);
+  };
+  img.onerror = () => {
+    ctx.fillStyle = "#ff6666";
+    ctx.font = "16px 'Press Start 2P', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("???", canvasW / 2, canvasH / 2);
+  };
+  img.src = spritePath;
+}
+
+function pveCommunicate() {
+  const map = PVE_MAPS[pveCurrentMapId];
+  if (!map) return;
+
+  const rand = Math.random();
+  const goldEarned = Math.floor(Math.random() * (map.goldChatMax - map.goldChatMin + 1)) + map.goldChatMin;
+
+  if (rand < 0.1) {
+    // 10% 被激怒 → 強制戰鬥
+    const dialogEl = document.getElementById("pveEncounterDialog");
+    if (dialogEl) dialogEl.textContent = "💢 「" + pveCurrentEnemyName + "」被激怒了！強制進入戰鬥！";
+    const btns = document.querySelectorAll("#pveEncounterDisplay .pve-btn");
+    btns.forEach(b => { b.disabled = true; b.style.opacity = "0.5"; });
+    setTimeout(() => {
+      btns.forEach(b => { b.disabled = false; b.style.opacity = "1"; });
+      pveStartFight();
+    }, 1500);
+    return;
+  }
+
+  gameGold += goldEarned;
+  saveGameState();
+  updateStatsDisplay();
+
+  const messages = [
+    "「" + pveCurrentEnemyName + "」友善地回應了你！",
+    "你們愉快地交流了一會兒。",
+    "「" + pveCurrentEnemyName + "」分享了有趣的故事。",
+    "友好的互動讓氣氛十分融洽。",
+  ];
+  const msg = messages[Math.floor(Math.random() * messages.length)];
+
+  const dialogEl = document.getElementById("pveEncounterDialog");
+  if (dialogEl) dialogEl.textContent = msg + " (💰+" + goldEarned + ")";
+
+  const btns = document.querySelectorAll("#pveEncounterDisplay .pve-btn");
+  btns.forEach(b => { b.disabled = true; b.style.opacity = "0.5"; });
+
+  setTimeout(() => {
+    btns.forEach(b => { b.disabled = false; b.style.opacity = "1"; });
+    const encPanel = document.getElementById("pveEncounterDisplay");
+    if (encPanel) encPanel.style.display = "none";
+    const mapPanel = document.getElementById("pveMapDisplay");
+    if (mapPanel) mapPanel.style.display = "flex";
+  }, 2000);
+}
+
+function pveStartFight() {
+  const map = PVE_MAPS[pveCurrentMapId];
+  if (!map) return;
+
+  // 儲存 PVE 上下文
+  window._pveMapGold = { min: map.goldFightMin, max: map.goldFightMax };
+  window._pveActive = true;
+  window._pveEnemyRow = pveCurrentEnemyRow;
+  window._pveEnemyVersion = pveCurrentEnemyVersion;
+  window._pveEnemyName = pveCurrentEnemyName;
+
+  // 關閉遭遇面板，開啟 PVE 戰鬥
+  const encPanel = document.getElementById("pveEncounterDisplay");
+  if (encPanel) encPanel.style.display = "none";
+
+  startBattlePVE();
+}
+
+function startBattlePVE(enemyVersion, enemyRow, bgIdx) {
+  if (flushingMode) stopFlushing();
+  if (currentRow <= 1) {
+    alert("幼年期還不能戰鬥！");
+    return;
+  }
+
+  pveHideAllPanels();
+  const panel = document.getElementById("battleDisplay");
+  if (panel) panel.style.display = "block";
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  if (autoMoveTimer) { clearInterval(autoMoveTimer); autoMoveTimer = null; }
+
+  // 使用 PVE 指定的敵人參數（優先使用參數傳入值）
+  battleEnemyVersion = (enemyVersion !== undefined) ? enemyVersion : window._pveEnemyVersion;
+  battleEnemyRow = (enemyRow !== undefined) ? enemyRow : window._pveEnemyRow;
+  const es = getEnemyStats(battleEnemyRow);
+
+  // 設置背景（使用 PVE 地圖對應背景或傳入值）
+  if (bgIdx !== undefined) {
+    battleBgIdx = bgIdx;
+  } else {
+    const map = PVE_MAPS[pveCurrentMapId];
+    battleBgIdx = map ? map.bgIdx : Math.floor(Math.random() * BATTLE_BG_SOURCES.length);
+  }
+
+  // 初始化 HP
+  battlePlayerMaxHp = getTotalHp();
+  battlePlayerHp = getTotalHp();
+  battleEnemyMaxHp = es.hp;
+  battleEnemyHp = es.hp;
+
+  // 清空對戰記錄
+  battleLogEntries = [];
+  const logEl = document.getElementById("battleLog");
+  if (logEl) logEl.innerHTML = "";
+  updateBattleHpDisplay();
+
+  battleAnimStep = 0;
+  battleProjectileX = 0;
+  battleProjectileDir = 0;
+  battleProjectileActive = false;
+  battleBoomActive = false;
+  if (battleBoomTimer) { clearInterval(battleBoomTimer); battleBoomTimer = null; }
+  battlePlayerFrame = 0;
+  battleEnemyFrame = 0;
+  battlePlayerDodge = false;
+  battleEnemyDodge = false;
+  battleResult = "";
+  battleMsg = "";
+  battleActive = true;
+
+  // 重置逆境進化狀態
+  battleOriginalRow = currentRow;
+  battleAdversityEvoRow = -1;
+  battleAdversityTries = 0;
+  battleEvoState = "none";
+  battleEvoStep = 0;
+  battleEvoNextRow = -1;
+  battleEvoCallback = null;
+  battleResultEvo = false;
+
+  battleEnemyOriginalRow = battleEnemyRow;
+  battleEnemyAdversityEvoRow = -1;
+  battleEnemyAdversityTries = 0;
+  battleEnemyEvoState = "none";
+  battleEnemyEvoStep = 0;
+  battleEnemyEvoNextRow = -1;
+  battleEnemyEvoCallback = null;
+  battleEnemyResultEvo = false;
+
+  battleMsg = pveCurrentEnemyName + " 出現了！";
+  document.getElementById("battleMsg").textContent = battleMsg;
+  document.getElementById("battleAttackBtn").disabled = false;
+  document.getElementById("battleRunBtn").disabled = false;
+
+  startBattleIntro();
+}
+
+function pveLeaveEncounter() {
+  const encPanel = document.getElementById("pveEncounterDisplay");
+  if (encPanel) encPanel.style.display = "none";
+  const mapPanel = document.getElementById("pveMapDisplay");
+  if (mapPanel) mapPanel.style.display = "flex";
+}
 </script>
 </body>
 </html>
