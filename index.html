@@ -667,6 +667,40 @@ body{
   flex-shrink:0;
   line-height:1;
 }
+.training-multiplier-bar{
+  display:flex;
+  gap:6px;
+  justify-content:center;
+  margin-bottom:8px;
+}
+.training-multiplier-btn{
+  flex:1;
+  max-width:60px;
+  padding:6px 4px;
+  background:#222;
+  color:#888;
+  border:2px solid #555;
+  border-radius:4px;
+  font-size:14px;
+  font-weight:700;
+  font-family:inherit;
+  cursor:pointer;
+  user-select:none;
+  transition:all 0.15s;
+}
+.training-multiplier-btn.active{
+  background:#ff6600;
+  color:#fff;
+  border-color:#ff6600;
+}
+.training-multiplier-btn:hover:not(.active){
+  border-color:#888;
+  color:#ccc;
+}
+.training-multiplier-btn.disabled{
+  opacity:0.3;
+  pointer-events:none;
+}
 .training-click-btn{
   width:100%;
   max-width:360px;
@@ -1327,8 +1361,13 @@ canvas {
   <div class="sd-title">訓練</div>
   <!-- 模式選擇 -->
   <div id="trainingModeSelect">
-    <div style="text-align:center;color:#ffcc00;font-weight:700;margin-bottom:6px;font-size:14px;">
+    <div style="text-align:center;color:#ffcc00;font-weight:700;margin-bottom:4px;font-size:14px;">
       剩餘訓練點：<span id="tdTrainingPoints" style="font-size:18px;">12</span>
+    </div>
+    <div class="training-multiplier-bar" id="trainingMultiplierBar">
+      <button class="training-multiplier-btn active" data-mult="1">X1</button>
+      <button class="training-multiplier-btn" data-mult="2">X2</button>
+      <button class="training-multiplier-btn" data-mult="4">X4</button>
     </div>
     <div class="training-mode-selector">
       <div class="training-mode-btn" id="trainingModeAttack" data-mode="attack">
@@ -2909,6 +2948,7 @@ const TRAINING_CELEBRATION_SEQ = [0, 7, 0, 7]; // idle, happy, idle, happy
 let trainingTimer = null;           // 倒數計時 interval
 let trainingCountdown = 3;          // 剩餘秒數
 let trainingType = "attack";        // "attack" | "life" | "critical"
+let trainingMultiplier = 1;         // X1/X2/X4 倍率
 let trainingAttackFired = false;   // 攻擊訓練是否已發射過（只限一發）
 let trainingFailed = false;         // 是否失敗
 let trainingFailureActive = false;  // 失敗動畫播放中
@@ -3204,6 +3244,11 @@ function startTraining(){
 
   // 預設模式（高亮 1. 攻擊訓練）
   trainingType = "attack";
+  trainingMultiplier = 1;
+  document.querySelectorAll(".training-multiplier-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.mult === "1");
+    b.classList.remove("disabled");
+  });
   document.getElementById("trainingModeAttack").classList.add("active");
   document.getElementById("trainingModeLife").classList.remove("active");
   document.getElementById("trainingModeCritical").classList.remove("active");
@@ -5038,23 +5083,24 @@ function getStageMaxPoints(){
 
 function tryTrainingSuccess(type){
   const babyStage = (currentRow <= 1);
+  const mult = trainingMultiplier || 1;
   const cap = {"crit":0.35,"dodge":0.30,"affinity":100}[type] || null;
   const cur = type==="hp"?getTotalHp():type==="atk"?getTotalAtk():type==="spd"?getTotalSpd():type==="crit"?getTotalCrit():type==="dodge"?getTotalDodge():getTotalAffinity();
   if(cap !== null && cur >= cap) return {success:false,reason:"cap"};
-  if(!babyStage && gameTrainingPoints <= 0) return {success:false,reason:"no_points"};
+  if(!babyStage && gameTrainingPoints < mult) return {success:false,reason:"no_points"};
   const sMax = getStageMaxPoints();
-  if(!babyStage && sMax > 0 && stageTrainingPointsUsed >= sMax) return {success:false,reason:"stage_cap"};
-  if(!babyStage){ gameTrainingPoints--; stageTrainingPointsUsed++; updateNotifArea(true); }
+  if(!babyStage && sMax > 0 && stageTrainingPointsUsed + mult > sMax) return {success:false,reason:"stage_cap"};
+  if(!babyStage){ gameTrainingPoints -= mult; stageTrainingPointsUsed += mult; updateNotifArea(true); }
   // 幼年期訓練不累積加成（純動畫，不長屬性不計數）
   if(!babyStage){
-    totalTrainingCount++;
+    totalTrainingCount += mult;
     switch(type){
-      case "hp": gameHpBonus += 0.8; break;
-      case "atk": gameAtkBonus += 0.1; break;
-      case "spd": gameSpdBonus += 0.04; break;
-      case "crit": gameCritBonus += 0.001; break;
-      case "dodge": gameDodgeBonus += 0.001; break;
-      case "affinity": gameAffBonus += 1; break;
+      case "hp": gameHpBonus += 0.8 * mult; break;
+      case "atk": gameAtkBonus += 0.1 * mult; break;
+      case "spd": gameSpdBonus += 0.04 * mult; break;
+      case "crit": gameCritBonus += 0.001 * mult; break;
+      case "dodge": gameDodgeBonus += 0.001 * mult; break;
+      case "affinity": gameAffBonus += 1 * mult; break;
     }
   }
   return {success:true};
@@ -5343,6 +5389,12 @@ function trainingTypeMap(trainingType){
 function updateTrainingPointsDisplay(){
   const td = document.getElementById("tdTrainingPoints");
   if(td) td.textContent = gameTrainingPoints;
+  // 更新倍率按鈕可用狀態
+  const multBtns = document.querySelectorAll(".training-multiplier-btn");
+  multBtns.forEach(btn => {
+    const m = parseInt(btn.dataset.mult);
+    btn.classList.toggle("disabled", m > gameTrainingPoints);
+  });
 }
 
 const DIGIMON_STATS_V1 = {
@@ -8329,6 +8381,16 @@ document.querySelectorAll(".help-icon").forEach(el => {
     if(e.target.classList.contains("help-icon")) return;
     const mode = btn.dataset.mode;
     selectTrainingType(mode);
+  };
+});
+document.querySelectorAll(".training-multiplier-btn").forEach(btn => {
+  btn.onclick = (e) => {
+    const m = parseInt(btn.dataset.mult);
+    if(m > gameTrainingPoints) return;
+    trainingMultiplier = m;
+    document.querySelectorAll(".training-multiplier-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    updateTrainingPointsDisplay();
   };
 });
 document.getElementById("trainingModeBackBtn").onclick = backToTrainingModeSelect;
