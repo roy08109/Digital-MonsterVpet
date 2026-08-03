@@ -414,6 +414,11 @@ body{
   color:#fff;
   font-weight:700;
 }
+.func-btn.battle-grayed{
+  opacity:0.35;
+  pointer-events:none;
+  cursor:not-allowed;
+}
 
 /* 頁面最底部導航欄 */
 
@@ -1264,11 +1269,16 @@ canvas {
 <!-- 對戰選單（按鈕下方兩標籤頁） -->
 <div class="stats-display battle-menu-panel" id="battleMenuDisplay" style="display:none;">
   <div class="bm-tabs">
-    <div class="bm-tab active" data-bmtab="map" id="bmTabMap" onclick="switchBattleTab('map')">🗺 任務地圖</div>
-    <div class="bm-tab" data-bmtab="battle" id="bmTabBattle" onclick="switchBattleTab('battle')">⚔ 對戰</div>
+    <div class="bm-tab active" data-bmtab="battle" id="bmTabBattle" onclick="switchBattleTab('battle')">⚔ 對戰</div>
+    <div class="bm-tab" data-bmtab="map" id="bmTabMap" onclick="switchBattleTab('map')">🗺 任務地圖</div>
+  </div>
+  <!-- 對戰內容 -->
+  <div class="bm-tab-content" id="bmContentBattle">
+    <div class="bm-battle-option" onclick="closeBattleMenu(); startBattle();">⚔ 快速對戰（電腦）</div>
+    <div class="bm-battle-option" onclick="showToast('玩家對戰努力開發中，敬請期待！');">玩家對戰</div>
   </div>
   <!-- 任務地圖內容 -->
-  <div class="bm-tab-content" id="bmContentMap">
+  <div class="bm-tab-content" id="bmContentMap" style="display:none;">
     <div class="bm-map-list">
       <div class="bm-map-row" data-map="hub">
         <div class="bm-map-row-header" onclick="toggleMapRow('hub')">
@@ -1301,11 +1311,6 @@ canvas {
         <div class="bm-map-row-body" id="bmRowBody_desert" style="display:none;"></div>
       </div>
     </div>
-  </div>
-  <!-- 對戰內容 -->
-  <div class="bm-tab-content" id="bmContentBattle" style="display:none;">
-    <div class="bm-battle-option" onclick="closeBattleMenu(); startBattle();">⚔ 快速對戰（電腦）</div>
-    <div class="bm-battle-option" onclick="showToast('玩家對戰努力開發中，敬請期待！');">玩家對戰</div>
   </div>
 </div>
 
@@ -2834,6 +2839,10 @@ function cleanPoops(){
 }
 
 function startAutoPlay(){
+  // 防止定時器重複洩漏（先清除舊的再建立新的）
+  if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+  if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+  if(poopTimer){ clearInterval(poopTimer); poopTimer = null; }
   updateBgByTime(); // 首次根據時間設定背景
   autoX = 9 - getPoopOffset();
   autoTargetX = null;
@@ -3002,6 +3011,12 @@ const EVO_COLOR_IMGS = ["BG/Card core.png","BG/Card Star.png","BG/4-leaf clover.
 
 // ========== 對戰系統變數 ==========
 let battleActive = false;             // 對戰進行中
+function setBattleActive(val){
+  battleActive = val;
+  document.querySelectorAll('.func-btn').forEach(btn => {
+    btn.classList.toggle('battle-grayed', val);
+  });
+}
 let battleEnemyRow = -1;              // 敵方數碼獸 row
 let battlePlayerHp = 0;               // 玩家當前血量
 let battleEnemyHp = 0;                // 敵方當前血量
@@ -6198,7 +6213,7 @@ function executeAttack(who, onDone){
     document.getElementById("battleMsg").textContent = battleMsg;
     if(who === "player"){
       battlePlayerFrame = 11;
-      battleProjectileX = 44;
+      battleProjectileX = 38;
       battleProjectileDir = 1;
     } else {
       battleEnemyFrame = 11;
@@ -6258,7 +6273,7 @@ function executeAttack(who, onDone){
   document.getElementById("battleMsg").textContent = battleMsg;
   if(who === "player"){
     battlePlayerFrame = 11;
-    battleProjectileX = 48;  // 我方火球發射位置
+    battleProjectileX = 38;  // 我方火球發射位置
     battleProjectileDir = 1;
   } else {
     battleEnemyFrame = 11;
@@ -6436,7 +6451,7 @@ function startBattle(){
   battleEnemyDodge = false;
   battleResult = "";
   battleMsg = "";
-  battleActive = true;
+  setBattleActive(true);
   // 重置逆境進化狀態
   battleOriginalRow = currentRow;
   battleAdversityEvoRow = -1;
@@ -6767,7 +6782,7 @@ function handleBattleAttack(){
 
 function clearBattleState(){
   // 清理戰鬥狀態但不重置 canvas/bg（供直接切換到訓練使用）
-  battleActive = false;
+  setBattleActive(false);
   if(battleAnimTimer){ clearInterval(battleAnimTimer); battleAnimTimer = null; }
   if(battleBoomTimer){ clearInterval(battleBoomTimer); battleBoomTimer = null; }
   if(battleIntroTimer){ clearInterval(battleIntroTimer); battleIntroTimer = null; }
@@ -6820,7 +6835,7 @@ function endBattle(result){
       gameGold += goldEarned;
     }
   }
-  battleActive = false;
+  setBattleActive(false);
   if(battleAnimTimer){ clearInterval(battleAnimTimer); battleAnimTimer = null; }
   battleProjectileX = 0;
   battleProjectileActive = false;
@@ -6862,7 +6877,7 @@ function endBattle(result){
 
 // 退化動畫：evolution.png 從上到下 → 退化 → 從下到上 → 結果
 function runDevoAnim(result){
-  battleActive = true; // 保持活躍以便渲染
+  setBattleActive(true); // 保持活躍以便渲染
 
   // Phase 1: evoDown - evolution.png 從上到下一格一格覆蓋我方龍
   battleEvoState = "evoDown";
@@ -6898,7 +6913,7 @@ function runDevoAnim(result){
             if(battleEnemyAdversityEvoRow >= 0){
               runEnemyDevoAnim(result);
             } else {
-              battleActive = false;
+              setBattleActive(false);
               renderBattleScene();
               showBattleResult(result);
             }
@@ -6911,7 +6926,7 @@ function runDevoAnim(result){
 
 // 敵方退化動畫：evolution.png 從上到下 → 退化 → 從下到上 → 結果
 function runEnemyDevoAnim(result){
-  battleActive = true; // 保持活躍以便渲染
+  setBattleActive(true); // 保持活躍以便渲染
 
   battleEnemyEvoState = "evoDown";
   battleEnemyEvoStep = 0;
@@ -6948,7 +6963,7 @@ function runEnemyDevoAnim(result){
             battleEvoState = "none";
             battleEvoStep = 0;
             battleEvoCallback = null;
-            battleActive = false;
+            setBattleActive(false);
             renderBattleScene();
             showBattleResult(result);
           }
@@ -8388,11 +8403,9 @@ function openBattleMenu() {
   if (flushingMode) stopFlushing();
   if (trainingMode) stopTraining();
 
-  // 重置選單狀態
+  // 重置選單狀態，默認顯示對戰標籤頁
   bmExpandedMapId = null;
-  switchBattleTab("map");
-  document.getElementById("bmTabMap").classList.add("active");
-  document.getElementById("bmTabBattle").classList.remove("active");
+  switchBattleTab("battle");
   menu.style.display = "block";
 }
 
@@ -8818,7 +8831,7 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx) {
   battleEnemyDodge = false;
   battleResult = "";
   battleMsg = "";
-  battleActive = true;
+  setBattleActive(true);
 
   // 重置逆境進化狀態
   battleOriginalRow = currentRow;
