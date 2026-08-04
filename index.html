@@ -94,10 +94,9 @@ body{
 .debug-btn:active{ transform:translateY(-50%) scale(0.92); }
 
 .call-btn{
-  position:absolute;
-  left:0;
-  top:50%;
-  transform:translateY(-50%);
+  position:fixed;
+  left:60px;
+  top:12px;
   width:36px;
   height:36px;
   background:#333;
@@ -109,12 +108,13 @@ body{
   display:none; /* 預設隱藏，飢餓=0 時由 JS 顯示 */
   align-items:center;
   justify-content:center;
-  transition:background 0.2s, transform 0.3s;
+  transition:background 0.2s;
   line-height:1;
+  z-index:111;
 }
 .call-btn img{ width:20px; height:20px; image-rendering:pixelated; }
 .call-btn:hover{ background:#555; }
-.call-btn:active{ transform:translateY(-50%) scale(0.92); }
+.call-btn:active{ transform:scale(0.92); }
 
 /* 設定面板遮罩 */
 .settings-overlay{
@@ -1185,9 +1185,141 @@ canvas {
   color: #ffcc00; 
 }
 
+/* ========== 機器選擇啟動頁 ========== */
+.launcher-overlay {
+  position: fixed; top:0; left:0; right:0; bottom:0;
+  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 40%, #0d0d2a 100%);
+  z-index: 1000;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-start;
+  padding: 16px; overflow-y: auto;
+  font-family: 'Courier New', monospace;
+}
+.launcher-title {
+  color: #ffcc00; font-size: 20px; font-weight: bold;
+  text-shadow: 0 0 12px #ffcc0066; letter-spacing: 3px;
+  margin: 10px 0 6px;
+}
+.launcher-subtitle {
+  color: #888; font-size: 11px; margin-bottom: 16px;
+}
+.slot-cards-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  justify-items: center;
+  max-width: 100%;
+  width: 100%;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+.slot-card {
+  width: 100%; max-width: 260px;
+  background: linear-gradient(180deg, #1e1e3a 0%, #141428 100%);
+  border: 2px solid #333; border-radius: 12px;
+  padding: 14px 12px 10px; cursor: pointer;
+  transition: all 0.25s; position: relative;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.slot-card:hover {
+  border-color: #ffcc00; transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255,204,0,0.2);
+}
+.slot-card:active { transform: scale(0.97); }
+.slot-card-empty {
+  opacity: 0.7; border-style: dashed;
+}
+.slot-card-empty:hover { opacity: 1; border-color: #66ccff; }
+.slot-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px; padding-bottom: 6px;
+  border-bottom: 1px solid #333;
+}
+.slot-card-version {
+  color: #ffcc00; font-size: 13px; font-weight: bold; letter-spacing: 1px;
+}
+.slot-card-label {
+  color: #aaa; font-size: 10px;
+}
+.slot-preview-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.slot-mini-canvas {
+  width: 80px; height: 80px; image-rendering: pixelated;
+  background: #ffffff; border-radius: 6px; border: 1px solid #ddd;
+  flex-shrink: 0;
+}
+.slot-status-icons {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.slot-status-icon {
+  width: 24px; height: 24px; display: none;
+  border-radius: 4px; background: #1a1a30;
+  border: 1px solid #444; padding: 2px;
+  image-rendering: pixelated;
+}
+.slot-status-icon.show { display: block; }
+.slot-card-empty-text {
+  display: flex; align-items: center; justify-content: center;
+  height: 80px; color: #66ccff; font-size: 14px;
+  letter-spacing: 2px; text-align: center;
+}
+.slot-card-digi-name {
+  color: #eee; font-size: 13px; text-align: center;
+  margin-top: 6px; padding-top: 6px; border-top: 1px solid #333;
+  letter-spacing: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.slot-card-empty .slot-card-digi-name {
+  color: #66ccff; border-top-color: #334;
+}
+.launcher-add-btn {
+  margin-top: 20px; padding: 10px 28px;
+  background: linear-gradient(180deg, #2a5a2a, #1a3a1a);
+  border: 2px solid #4a8a4a; border-radius: 8px;
+  color: #aaffaa; font-size: 14px; cursor: pointer;
+  letter-spacing: 2px; transition: all 0.2s;
+  font-family: 'Courier New', monospace;
+}
+.launcher-add-btn:hover {
+  border-color: #aaffaa; background: linear-gradient(180deg, #3a6a3a, #2a4a2a);
+  box-shadow: 0 4px 16px rgba(100,255,100,0.25);
+}
+.launcher-add-btn:active { transform: scale(0.95); }
+.launcher-add-btn.hidden { display: none; }
+
+/* 返回按鈕 */
+.return-btn {
+  position: fixed; left: 12px; top: 12px;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #333;
+  border: none; color: #ccc;
+  font-size: 18px; cursor: pointer; z-index: 110;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; font-family: 'Courier New', monospace;
+}
+.return-btn:hover {
+  border-color: #ffcc00; color: #ffcc00;
+  box-shadow: 0 0 12px rgba(255,204,0,0.3);
+}
+#mainGameArea { display: none; }
+
 </style>
 </head>
 <body>
+
+<!-- ========== 機器選擇啟動頁 ========== -->
+<div class="launcher-overlay" id="launcherScreen">
+  <div class="launcher-title">數碼暴龍機</div>
+  <div class="launcher-subtitle">選擇你的暴龍機</div>
+  <div class="slot-cards-container" id="slotCardsContainer">
+  </div>
+  <button class="launcher-add-btn" id="launcherAddBtn" onclick="addSlot()">＋ 增加</button>
+</div>
+
+<!-- ========== 遊戲主區域 ========== -->
+<div id="mainGameArea">
+
 <div class="top-bar">
   <button class="call-btn" id="callBtn" title="呼叫"><img src="BG/call.png" alt="呼叫"></button>
   <div id="notifArea" class="title notif-area">數碼暴龍一代</div>
@@ -1204,6 +1336,9 @@ canvas {
 <!-- 中層：8個功能按鈕 -->
 <div class="btn-panel" id="btnPanel">
 </div>
+
+<!-- 返回按鈕 -->
+<button class="return-btn" id="returnBtn" onclick="handleReturnBtn()" title="返回暴龍機選擇">←</button>
 
 <!-- 對戰面板（8個按鈕下方） -->
 <div class="stats-display" id="battleDisplay" style="display:none;">
@@ -1529,6 +1664,8 @@ canvas {
 <!-- Toast 提示 -->
 <div id="toast"></div>
 
+</div><!-- mainGameArea 结束 -->
+
 <script>
 const canvas = document.getElementById('screen');
 const ctx = canvas.getContext('2d');
@@ -1575,6 +1712,7 @@ canvas.addEventListener('click', (e) => {
     // 停止版本選擇動畫
     if(versionSelectAnimTimer){ clearInterval(versionSelectAnimTimer); versionSelectAnimTimer = null; }
     startEggPhase(version);
+    saveGameState(); // 立即保存，确保卡片显示正确版本
     renderFrame();
     return;
   }
@@ -1751,12 +1889,12 @@ const BG_NAMES = ["Noon", "dusk", "Night"];
 
 let rowImages = new Array(18); // V1/V1_00.png ~ V1/V1_17.png (默认V1)
 let rowImagesV1 = new Array(18); // V1 精灵图备份
-let rowImagesV2 = new Array(17); // V2/V2_00.png ~ V2/V2_16.png
+let rowImagesV2 = new Array(18); // V2/V2_00.png ~ V2/V2_17.png（含究極體）
 let rowImagesV3 = new Array(17); // V3/V3_00.png ~ V3/V3_17.png（跳過 V3_14.png）
 let rowImagesV4 = new Array(17); // V4/V4_00.png ~ V4/V4_16.png（含究極體）
 let rowImagesV5 = new Array(18); // V5/V5_00.png ~ V5/V5_17.png（含究極體，跳過15）
 let attackRowImages = new Array(17); // V1 Attack/00_at.png ~ 16_at.png（V1龍發射的火球圖）
-let attackRowImagesV2 = new Array(17); // V2_Attack/V2_00_at.png ~ V2_16_at.png（V2龍發射的火球圖）
+let attackRowImagesV2 = new Array(18); // V2_Attack/V2_00_at.png ~ V2_17_at.png（V2龍發射的火球圖，16/17用V5替代）
 let attackRowImagesV3 = new Array(17); // V3 復用 V1 火球圖（不單獨加載）
 let attackRowImagesV4 = new Array(17); // V4_Attack/V4_00_at.png ~ V4_16_at.png
 let attackRowImagesV5 = new Array(18); // V5_Attack/V5_00_at.png ~ V5_17_at.png
@@ -1901,6 +2039,16 @@ const BABY_AWAKE_SEC = 120;   // 幼年期醒 2 分鐘
 const BABY_SLEEP_SEC = 180;   // 幼年期睡 3 分鐘
 let babyHasPooped = false;    // 幼年期只排一次屎
 
+// ========== 多槽位機器選擇系統 ==========
+const MAX_SLOTS = 4;
+const SLOT_VERSIONS = ['V1', 'V3', 'V4', 'V5'];
+const LAUNCHER_KEY = 'digimon_launcher_meta';
+let activeSlotIndex = -1;  // -1 = 在啟動頁，0~3 = 在遊戲中
+let slotCount = 1;         // 當前激活的槽位數量
+let slotLastAutoSave = 0;  // 上次自動存檔時間戳
+let launcherLoaded = false; // 是否已初始化啟動頁
+let autoSaveTimerId = null; // 自動存檔計時器 ID
+
 // ========== 蛋時期系統 ==========
 let isEggPhase = true;       // 是否在蛋時期
 let eggStartTime = Date.now();
@@ -1958,6 +2106,7 @@ function startBabyCareCycle(){
   babyHasPooped = false;
   babyHungerTick = 0;
   isSleeping = false;
+  updateCallButton(); // 確保每次進入幼年期循環時 CALL 狀態正確初始化
   babySleepTimer = setInterval(() => {
     if(currentRow > 1 || isEggPhase || evoAnimActive){
       clearInterval(babySleepTimer);
@@ -2143,7 +2292,7 @@ function hatchEgg() {
   birthTimestamp = Date.now(); // 記錄出生時間，後續年齡均以此為基準
   gameAgeLastDay = 0;
   stageStartDay = 0;
-  gameHunger = 2;
+  gameHunger = 0;
   gameWeight = DIGIMON_STATS[0].weight;
   gameAffinity = DIGIMON_STATS[0].bondInitial || 10;
   
@@ -4681,13 +4830,315 @@ function renderTrainingCanvas(){
 const FUNCTION_BTNS = ["狀態","食物","訓練","對戰","清理","睡眠","治療","圖鑑"];
 
 // ========== 數值系統 ==========
+// ========== 多槽位存檔輔助函數 ==========
+function getSlotSaveKey(idx){
+  return `digimon_save_slot_${idx}`;
+}
+function saveLauncherMeta(){
+  try {
+    localStorage.setItem(LAUNCHER_KEY, JSON.stringify({
+      slotCount,
+      timestamp: Date.now()
+    }));
+  } catch(e){}
+}
+function loadLauncherMeta(){
+  try {
+    const raw = localStorage.getItem(LAUNCHER_KEY);
+    if(!raw) { slotCount = 1; return; }
+    const meta = JSON.parse(raw);
+    slotCount = Math.min(MAX_SLOTS, Math.max(1, meta.slotCount || 1));
+  } catch(e){ slotCount = 1; }
+}
+function hasSlotData(idx){
+  return localStorage.getItem(getSlotSaveKey(idx)) !== null;
+}
+function getSlotPreviewData(idx){
+  // 提取預覽數據：空槽位返回 null
+  if(!hasSlotData(idx)) return null;
+  try {
+    const raw = localStorage.getItem(getSlotSaveKey(idx));
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    if(!data || typeof data !== 'object') return null;
+    return {
+      version: data.currentVersion || SLOT_VERSIONS[idx],
+      currentRow: data.currentRow ?? -1,
+      isEggPhase: data.isEggPhase || false,
+      isSleeping: data.isSleeping || false,
+      isSick: data.isSick || false,
+      hasPoop: (data.poopsOnScreen || 0) > 0,
+      gameAge: data.gameAge || 0,
+      birthTimestamp: data.birthTimestamp || 0,
+      eggStartTime: data.eggStartTime || 0
+    };
+  } catch(e){ return null; }
+}
+
+// ========== 計時器生命週期管理 ==========
+function stopAllTimers(){
+  if(typeof autoTimer !== 'undefined' && autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  if(typeof autoMoveTimer !== 'undefined' && autoMoveTimer) { clearInterval(autoMoveTimer); autoMoveTimer = null; }
+  if(typeof babySleepTimer !== 'undefined' && babySleepTimer) { clearInterval(babySleepTimer); babySleepTimer = null; }
+  if(typeof poopTimer !== 'undefined' && poopTimer) { clearInterval(poopTimer); poopTimer = null; }
+  if(typeof poopFrameTimer !== 'undefined' && poopFrameTimer) { clearInterval(poopFrameTimer); poopFrameTimer = null; }
+  if(typeof hungerTickTimer !== 'undefined' && hungerTickTimer) { clearInterval(hungerTickTimer); hungerTickTimer = null; }
+  if(typeof callBlinkTimer !== 'undefined' && callBlinkTimer) { clearInterval(callBlinkTimer); callBlinkTimer = null; }
+  if(typeof sleepZTimer !== 'undefined' && sleepZTimer) { clearInterval(sleepZTimer); sleepZTimer = null; }
+  if(typeof sleepCheckTimer !== 'undefined' && sleepCheckTimer) { clearInterval(sleepCheckTimer); sleepCheckTimer = null; }
+  if(typeof trainingCountdownTimer !== 'undefined' && trainingCountdownTimer) { clearInterval(trainingCountdownTimer); trainingCountdownTimer = null; }
+  if(typeof autoSaveTimerId !== 'undefined' && autoSaveTimerId) { clearInterval(autoSaveTimerId); autoSaveTimerId = null; }
+}
+
+function startAllTimers(){
+  stopAllTimers();
+  if(currentRow < 0 || isEggPhase) return;
+  autoTimer = setInterval(stepAutoAnim, ANIM_IV);
+  autoMoveTimer = setInterval(stepAutoMove, MOVE_IV);
+  if(isSleeping){
+    sleepZTimer = setInterval(tickSleepZ, 800);
+  } else {
+    sleepZTimer = null;
+  }
+  if(!isEggPhase && currentRow >= 0 && !isSleeping){
+    hungerTickTimer = setInterval(tickHunger, 30000);
+  }
+  if(currentRow <= 1 && !isSleeping){
+    babySleepTimer = setInterval(tickBabySleep, 1000);
+  }
+  if(!poopTimer && !isSleeping && currentRow >= 0){
+    setPoopTimer();
+  }
+  if(!sleepCheckTimer && !isEggPhase){
+    sleepCheckTimer = setInterval(checkSleepState, 15000);
+  }
+  autoSaveTimerId = setInterval(saveGameState, 30000);
+}
+
+// ========== 啟動頁渲染 ==========
+function initLauncher(){
+  loadLauncherMeta();
+  activeSlotIndex = -1;
+  launcherLoaded = true;
+  const launcher = document.getElementById('launcherScreen');
+  if(launcher) launcher.style.display = 'flex';
+  // 隱藏遊戲畫面
+  const mainGame = document.getElementById('mainGameArea');
+  if(mainGame) mainGame.style.display = 'none';
+  renderSlotCards();
+}
+
+function renderSlotCards(){
+  const container = document.getElementById('slotCardsContainer');
+  if(!container) return;
+  container.innerHTML = '';
+  for(let i = 0; i < slotCount; i++){
+    const preview = getSlotPreviewData(i);
+    const card = document.createElement('div');
+    card.className = 'slot-card' + (preview ? '' : ' slot-card-empty');
+    card.onclick = function(){ activateSlot(i); };
+
+    // 有存檔用存檔中的版本，空槽位用預設版本
+    const version = (preview && preview.version) ? preview.version : SLOT_VERSIONS[i];
+
+    if(preview){
+      // 有存檔數據的槽位
+      const digiInfo = getDigiInfo(preview);
+      card.innerHTML = `
+        <div class="slot-card-header">
+          <span class="slot-card-version">${version} 暴龍機</span>
+          <span class="slot-card-label">No.${i+1}</span>
+        </div>
+        <div class="slot-preview-row">
+          <canvas class="slot-mini-canvas" id="slotMiniCanvas${i}"></canvas>
+          <div class="slot-status-icons">
+            <canvas class="slot-status-icon" id="slotSleepIcon${i}" title="睡眠中"></canvas>
+            <canvas class="slot-status-icon" id="slotSickIcon${i}" title="生病"></canvas>
+            <canvas class="slot-status-icon" id="slotPoopIcon${i}" title="有大便"></canvas>
+          </div>
+        </div>
+        <div class="slot-card-digi-name">${digiInfo.name}</div>
+      `;
+      container.appendChild(card);
+      // 畫 mini preview
+      setTimeout(() => drawSlotMiniPreview(i, preview));
+    } else {
+      // 空槽位
+      card.innerHTML = `
+        <div class="slot-card-header">
+          <span class="slot-card-version">${version} 暴龍機</span>
+          <span class="slot-card-label">No.${i+1}</span>
+        </div>
+        <div class="slot-card-empty-text">新建暴龍機</div>
+        <div class="slot-card-digi-name">空</div>
+      `;
+      container.appendChild(card);
+    }
+  }
+  // 更新[增加]按鈕
+  const addBtn = document.getElementById('launcherAddBtn');
+  if(addBtn){
+    if(slotCount >= MAX_SLOTS){
+      addBtn.classList.add('hidden');
+    } else {
+      addBtn.classList.remove('hidden');
+    }
+  }
+}
+
+function getDigiInfo(preview){
+  if(preview.isEggPhase){
+    return { name: '數碼蛋', row: -1 };
+  }
+  const row = preview.currentRow;
+  if(row < 0) return { name: '數碼蛋', row: -1 };
+  // 需要切換到對應版本的 ALL_NAMES
+  const savedVer = preview.version || 'V1';
+  const names = getAllNamesForVersion(savedVer);
+  const name = names[row] || '????';
+  return { name, row };
+}
+
+function getAllNamesForVersion(ver){
+  if(ver === 'V2') return ALL_NAMES_V2;
+  if(ver === 'V3') return ALL_NAMES_V3;
+  if(ver === 'V4') return ALL_NAMES_V4;
+  if(ver === 'V5') return ALL_NAMES_V5;
+  if(ver === 'V1') return ALL_NAMES_V1;
+  return ALL_NAMES_V1;
+}
+
+function drawSlotMiniPreview(slotIndex, preview){
+  const canvas = document.getElementById('slotMiniCanvas' + slotIndex);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = 80; canvas.height = 80;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 80, 80);
+
+  if(preview.isEggPhase){
+    // 使用對應版本的蛋圖片
+    const ver = preview.version || 'V1';
+    const eggImg = getEggImageForVersion(ver);
+    if(eggImg && eggImg.complete && eggImg.naturalWidth > 0){
+      // 只取蛋精靈圖首張 16×16 幀（蛋圖為 48×16 含 3 幀）
+      const targetSize = 48;
+      const dx = (80 - targetSize) / 2, dy = (80 - targetSize) / 2;
+      ctx.drawImage(eggImg, 0, 0, 16, 16, dx, dy, targetSize, targetSize);
+    } else {
+      // 回退：灰色橢圓佔位符
+      ctx.fillStyle = '#666';
+      ctx.beginPath();
+      ctx.ellipse(40, 44, 20, 24, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#999';
+      ctx.beginPath();
+      ctx.ellipse(40, 44, 14, 16, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    return;
+  }
+
+  const row = preview.currentRow;
+  if(row < 0) return;
+  const ver = preview.version || 'V1';
+  // 使用當前已載入的精靈圖片或從存檔版本加載
+  const img = getSpriteImage(ver, row);
+  if(!img){
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = '20px monospace';
+    ctx.fillText('?', 32, 44);
+    return;
+  }
+  // 畫第一個 frame (16x16 IDLE 幀，放大4倍到64x64)
+  const srcW = 16, srcH = 16;
+  const scale = 4;
+  const dstW = srcW * scale;
+  const dstH = srcH * scale;
+  const px = Math.floor((80 - dstW) / 2);
+  const py = Math.floor((80 - dstH) / 2);
+  ctx.drawImage(img, 0, 0, srcW, srcH, px, py, dstW, dstH);
+
+  // 狀態圖標
+  updateSlotStatusIcons(slotIndex, preview);
+}
+
+function getSpriteImage(version, row){
+  // 根據傳入的 version 參數優先使用對應版本的精靈圖片
+  if(version === 'V1' && typeof rowImagesV1 !== 'undefined' && rowImagesV1[row]) return rowImagesV1[row];
+  if(version === 'V2' && typeof rowImagesV2 !== 'undefined' && rowImagesV2[row]) return rowImagesV2[row];
+  if(version === 'V3' && typeof rowImagesV3 !== 'undefined' && rowImagesV3[row]) return rowImagesV3[row];
+  if(version === 'V4' && typeof rowImagesV4 !== 'undefined' && rowImagesV4[row]) return rowImagesV4[row];
+  if(version === 'V5' && typeof rowImagesV5 !== 'undefined' && rowImagesV5[row]) return rowImagesV5[row];
+  // 回退：使用全局 rowImages（當前已載入版本）
+  if(rowImages && rowImages[row]){
+    return rowImages[row];
+  }
+  // 最後嘗試遍歷各版本
+  if(typeof rowImagesV1 !== 'undefined' && rowImagesV1[row]) return rowImagesV1[row];
+  if(typeof rowImagesV2 !== 'undefined' && rowImagesV2[row]) return rowImagesV2[row];
+  if(typeof rowImagesV3 !== 'undefined' && rowImagesV3[row]) return rowImagesV3[row];
+  if(typeof rowImagesV4 !== 'undefined' && rowImagesV4[row]) return rowImagesV4[row];
+  if(typeof rowImagesV5 !== 'undefined' && rowImagesV5[row]) return rowImagesV5[row];
+  return null;
+}
+
+function getEggImageForVersion(ver){
+  if(ver === 'V2' && typeof v2EggImage !== 'undefined') return v2EggImage;
+  if(ver === 'V3' && typeof v3EggImage !== 'undefined') return v3EggImage;
+  if(ver === 'V4' && typeof v4EggImage !== 'undefined') return v4EggImage;
+  if(ver === 'V5' && typeof v5EggImage !== 'undefined') return v5EggImage;
+  if(typeof eggImageV1 !== 'undefined') return eggImageV1;
+  return null;
+}
+
+function updateSlotStatusIcons(slotIndex, preview){
+  const sleepCanvas = document.getElementById('slotSleepIcon' + slotIndex);
+  const sickCanvas = document.getElementById('slotSickIcon' + slotIndex);
+  const poopCanvas = document.getElementById('slotPoopIcon' + slotIndex);
+
+  drawStatusIcon(sleepCanvas, preview.isSleeping, 'sleep');
+  drawStatusIcon(sickCanvas, preview.isSick, 'sick');
+  drawStatusIcon(poopCanvas, preview.hasPoop, 'poop');
+}
+
+function drawStatusIcon(canvas, show, type){
+  if(!canvas) return;
+  if(show){
+    canvas.parentElement.classList.add('show');
+  } else {
+    canvas.parentElement.classList.remove('show');
+  }
+  canvas.width = 24; canvas.height = 24;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 24, 24);
+  if(show){
+    ctx.fillStyle = '#1a1a30';
+    ctx.fillRect(0, 0, 24, 24);
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = (type === 'sleep') ? '#8888ff' : (type === 'sick') ? '#ff6666' : '#886633';
+    ctx.fillText((type === 'sleep') ? '🛏' : (type === 'sick') ? '💊' : '💩', 12, 17);
+  }
+}
+
+function addSlot(){
+  if(slotCount >= MAX_SLOTS) return;
+  slotCount++;
+  saveLauncherMeta();
+  renderSlotCards();
+}
+
 // ========== 自動存檔 ==========
 const SAVE_KEY = "digimon_vpet_save";
 const DATA_VERSION = 3; // 數據版本：3 - 金幣系統 + PVE
 let gameGold = 0;
 function saveGameState(){
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({
+    if(activeSlotIndex < 0) return;
+    if(versionSelectMode) return;
+    const slotKey = getSlotSaveKey(activeSlotIndex);
+    localStorage.setItem(slotKey, JSON.stringify({
       dataVersion: DATA_VERSION,
       currentVersion,
       gameAge,
@@ -4714,9 +5165,11 @@ function saveGameState(){
     }));
   } catch(e){ /* 忽略存檔錯誤 */ }
 }
-function loadGameState(){
+function loadGameState(slotIndex){
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const idx = (slotIndex !== undefined) ? slotIndex : activeSlotIndex;
+    if(idx < 0) return;
+    const raw = localStorage.getItem(getSlotSaveKey(idx));
     if(!raw) return;
     const data = JSON.parse(raw);
     // 讀取版本並切換數據
@@ -4771,7 +5224,7 @@ function loadGameState(){
         gameAge = Math.floor((Date.now() - birthTimestamp) / 60000); // 從孵化開始至今的精確年齡
         gameAgeLastDay = Math.floor(gameAge / 1440);
         stageStartDay = 0;
-        gameHunger = 2;
+        gameHunger = 0;
         gameWeight = DIGIMON_STATS[0].weight;
         gameAffinity = DIGIMON_STATS[0].bondInitial || 10;
         resetAllBonuses();
@@ -5226,6 +5679,7 @@ function startNaturalEvoAnim(nextRow){
                 stopBabyCareCycle(); // 脫離幼年期，恢復現實睡眠
               }
               // 進化慶祝：idle,happy,idle,happy + Happy.png（結束後自動恢復移動）
+              saveGameState(); // 立即保存進化結果
               startCelebration();
               showToast(ALL_NAMES[oldRow] + "進化為" + ALL_NAMES[currentRow] + "！");
             }
@@ -6453,20 +6907,9 @@ function startBattle(){
   // 隨機選擇對戰背景（5選1）
   battleBgIdx = Math.floor(Math.random() * BATTLE_BG_SOURCES.length);
 
-  // 跨版本對戰：隨機選擇敵方版本（敵人可選當前及以下版本）
-  if(currentVersion === "V3"){
-    const v3pool = ["V1","V2","V3"];
-    battleEnemyVersion = v3pool[Math.floor(Math.random() * v3pool.length)];
-  } else if(currentVersion === "V4"){
-    const v4pool = ["V1","V2","V3","V4"];
-    battleEnemyVersion = v4pool[Math.floor(Math.random() * v4pool.length)];
-  } else if(currentVersion === "V5"){
-    const v5pool = ["V1","V2","V3","V4","V5"];
-    battleEnemyVersion = v5pool[Math.floor(Math.random() * v5pool.length)];
-  } else {
-    // V1 ↔ V2
-    battleEnemyVersion = (currentVersion === "V1") ? "V2" : "V1";
-  }
+  // 跨版本對戰：隨機選擇敵方版本（全版本可互相對戰）
+  const ALL_VERSIONS = ["V1","V2","V3","V4","V5"];
+  battleEnemyVersion = ALL_VERSIONS[Math.floor(Math.random() * ALL_VERSIONS.length)];
   const playerStage = DIGIMON_STATS[currentRow].stage;
   const sameStageIndices = [];
   const enemyTotal = getEnemyTotalCount();
@@ -6504,6 +6947,9 @@ function startBattle(){
   battleResult = "";
   battleMsg = "";
   setBattleActive(true);
+  // 恢復按鈕狀態
+  document.getElementById("battleRefreshBtn").style.display = "inline-block";
+  document.getElementById("returnBtn").style.display = "none";
   // 重置逆境進化狀態
   battleOriginalRow = currentRow;
   battleAdversityEvoRow = -1;
@@ -6556,19 +7002,9 @@ function refreshBattleEnemy(){
   // 關閉 intro
   battleIntro = false; battleIntroStep = 0;
 
-  // 重新選擇敵方版本（敵人可選當前及以下版本）
-  if(currentVersion === "V3"){
-    const v3pool = ["V1","V2","V3"];
-    battleEnemyVersion = v3pool[Math.floor(Math.random() * v3pool.length)];
-  } else if(currentVersion === "V4"){
-    const v4pool = ["V1","V2","V3","V4"];
-    battleEnemyVersion = v4pool[Math.floor(Math.random() * v4pool.length)];
-  } else if(currentVersion === "V5"){
-    const v5pool = ["V1","V2","V3","V4","V5"];
-    battleEnemyVersion = v5pool[Math.floor(Math.random() * v5pool.length)];
-  } else {
-    battleEnemyVersion = (currentVersion === "V1") ? "V2" : "V1";
-  }
+  // 重新選擇敵方版本（全版本可互相對戰）
+  const ALL_VERSIONS = ["V1","V2","V3","V4","V5"];
+  battleEnemyVersion = ALL_VERSIONS[Math.floor(Math.random() * ALL_VERSIONS.length)];
 
   // 重新選擇同階段敵方
   const playerStage = DIGIMON_STATS[currentRow].stage;
@@ -6829,6 +7265,7 @@ function handleBattleAttack(){
   if(!battleActive || battleResult || battleIntro) return;
   document.getElementById("battleAttackBtn").disabled = true;
   document.getElementById("battleRunBtn").disabled = true;
+  document.getElementById("battleRefreshBtn").style.display = "none";
   startBattleIntro();
 }
 
@@ -6872,6 +7309,7 @@ function clearBattleState(){
   battleEnemyEvoNextRow = -1;
   battleEnemyEvoCallback = null;
   document.getElementById("battleDisplay").style.display = "none";
+  document.getElementById("returnBtn").style.display = "";
   updateStatsDisplay();
   saveGameState();
 }
@@ -7071,6 +7509,7 @@ function showBattleResult(result){
   setTimeout(() => {
     clearInterval(endAnimTimer);  // 防止 step 4 畫戰場畫面
     panel.style.display = "none";
+    document.getElementById("returnBtn").style.display = ""; // 恢復返回按鈕
     canvas.width = CANVAS_NORMAL_W;
     canvas.height = 16;
     canvas.style.width = "";
@@ -7528,6 +7967,7 @@ function toggleLights(){
   lightsOff = !lightsOff;
   const overlay = document.getElementById("darkOverlay");
   if(overlay){
+    overlay.style.display = ""; // 清除內聯樣式，讓 CSS class 規則生效
     if(lightsOff) overlay.classList.add("on");
     else overlay.classList.remove("on");
   }
@@ -7765,23 +8205,29 @@ document.getElementById("devPasswordInput").onkeydown = (e) => {
   if(e.key === "Enter") document.getElementById("devPasswordConfirmBtn").click();
 };
 
-// 刪除存檔
+// 刪除存檔（僅刪除當前暴龍機槽位，不影響其他槽位）
 document.getElementById("settingsDeleteBtn").onclick = () => {
   document.getElementById("settingsOverlay").classList.remove("open");
-  if(confirm("確定要刪除所有存檔資料嗎？\n這會清除數碼獸的所有進度並重新開始。")){
-    localStorage.removeItem(SAVE_KEY);
-    localStorage.removeItem("digivpet_settings");
-    if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
-    if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
-    // 顯示版本選擇而非直接開始
-    versionSelectMode = true;
-    versionSelectIndex = 0; // 重置到 V1
-    if(versionSelectAnimTimer){ clearInterval(versionSelectAnimTimer); versionSelectAnimTimer = null; }
-    versionSelectAnimTimer = setInterval(() => {
-      if(versionSelectMode) renderFrame();
-    }, 200);
-    renderFrame();
-    showToast("請選擇版本 🥚");
+  // 先保存目標槽位索引（後續會設為 -1）
+  const targetSlot = activeSlotIndex;
+  if(targetSlot < 0){
+    showToast("⚠ 沒有正在使用的暴龍機");
+    return;
+  }
+  const ver = SLOT_VERSIONS[targetSlot] || "V1";
+  if(confirm("確定要刪除 " + ver + " 暴龍機 (No." + (targetSlot + 1) + ") 的存檔嗎？\n這會清除該暴龍機的所有進度並重新選蛋。\n\n（其他暴龍機不受影響）")){
+    // 先設為 -1，防止 returnToLauncher 內的 saveGameState 重新寫入存檔
+    activeSlotIndex = -1;
+    // 停止所有計時器
+    stopAllTimers();
+    // 回到啟動頁（因 activeSlotIndex=-1，saveGameState 會直接返回不重寫存檔）
+    returnToLauncher();
+    // 在 returnToLauncher 之後刪除存檔（此時不會被 saveGameState 復原）
+    localStorage.removeItem(getSlotSaveKey(targetSlot));
+    // 清除啟動頁緩存
+    localStorage.removeItem("digimon_vpet_launcher_meta");
+    // 重新渲染卡片
+    setTimeout(() => renderSlotCards(), 100);
   }
 };
 
@@ -7846,8 +8292,10 @@ function loadSettings(){
   }
   // 恢復關燈狀態
   const overlay = document.getElementById("darkOverlay");
-  if(overlay && lightsOff){
-    overlay.classList.add("on");
+  if(overlay){
+    overlay.style.display = ""; // 清除內聯樣式
+    if(lightsOff) overlay.classList.add("on");
+    else overlay.classList.remove("on");
   }
 }
 loadSettings();
@@ -7961,25 +8409,319 @@ window.addEventListener("beforeinstallprompt", (e) => {
   console.log("✅ Chrome 已觸發安裝條件（beforeinstallprompt）");
 });
 
-buildFunctionButtons();
-loadGameState(); // 讀取存檔
-updateSleepByTime(); // 根據存檔時間同步睡眠狀態
-updateNotifArea(true); // 初始化通知區域
-// 首次啟動時顯示版本選擇，不直接進入蛋時期
-const savedData = localStorage.getItem(SAVE_KEY);
-if(!savedData){
-  versionSelectMode = true;
-  versionSelectIndex = 0; // 初始預設 V1
-  if(versionSelectAnimTimer) clearInterval(versionSelectAnimTimer);
-  versionSelectAnimTimer = setInterval(() => {
-    if(versionSelectMode) renderFrame();
-  }, 200);
-} else {
-  try{
-    const saveObj = JSON.parse(savedData);
-    currentVersion = saveObj.currentVersion || "V1";
-  } catch(e){ currentVersion = "V1"; }
+// ========== 槽位激活 / 返回 / 按鈕可見性 ==========
+function switchVersionData(ver){
+  // 切換 ALL_NAMES 和 EVO_PATHS
+  if(ver === 'V2'){
+    ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V2);
+    for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
+    Object.assign(DIGIMON_STATS, DIGIMON_STATS_V2);
+    for(const k in EVO_PATHS) delete EVO_PATHS[k];
+    Object.assign(EVO_PATHS, EVO_PATHS_V2);
+    if(typeof rowImagesV2 !== 'undefined' && rowImagesV2.length > 0) rowImages = rowImagesV2;
+    if(typeof v2EggImage !== 'undefined') eggImage = v2EggImage;
+  } else if(ver === 'V3'){
+    ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V3);
+    for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
+    Object.assign(DIGIMON_STATS, DIGIMON_STATS_V3);
+    for(const k in EVO_PATHS) delete EVO_PATHS[k];
+    Object.assign(EVO_PATHS, EVO_PATHS_V3);
+    if(typeof rowImagesV3 !== 'undefined' && rowImagesV3.length > 0) rowImages = rowImagesV3;
+    if(typeof v3EggImage !== 'undefined') eggImage = v3EggImage;
+  } else if(ver === 'V4'){
+    ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V4);
+    for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
+    Object.assign(DIGIMON_STATS, DIGIMON_STATS_V4);
+    for(const k in EVO_PATHS) delete EVO_PATHS[k];
+    Object.assign(EVO_PATHS, EVO_PATHS_V4);
+    if(typeof rowImagesV4 !== 'undefined' && rowImagesV4.length > 0) rowImages = rowImagesV4;
+    if(typeof v4EggImage !== 'undefined') eggImage = v4EggImage;
+  } else if(ver === 'V5'){
+    ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V5);
+    for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
+    Object.assign(DIGIMON_STATS, DIGIMON_STATS_V5);
+    for(const k in EVO_PATHS) delete EVO_PATHS[k];
+    Object.assign(EVO_PATHS, EVO_PATHS_V5);
+    if(typeof rowImagesV5 !== 'undefined' && rowImagesV5.length > 0) rowImages = rowImagesV5;
+    if(typeof v5EggImage !== 'undefined') eggImage = v5EggImage;
+  } else {
+    ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V1);
+    for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
+    Object.assign(DIGIMON_STATS, DIGIMON_STATS_V1);
+    for(const k in EVO_PATHS) delete EVO_PATHS[k];
+    Object.assign(EVO_PATHS, EVO_PATHS_V1);
+    if(typeof rowImagesV1 !== 'undefined' && rowImagesV1.length > 0) rowImages = rowImagesV1;
+    if(typeof eggImageV1 !== 'undefined') eggImage = eggImageV1;
+  }
 }
+
+function activateSlot(slotIndex){
+  if(slotIndex < 0 || slotIndex >= slotCount) return;
+  activeSlotIndex = slotIndex;
+  currentVersion = SLOT_VERSIONS[slotIndex];
+  switchVersionData(currentVersion);
+
+  // 顯示遊戲區域，隱藏啟動頁
+  const mainGame = document.getElementById('mainGameArea');
+  if(mainGame) mainGame.style.display = 'block';
+  const launcher = document.getElementById('launcherScreen');
+  if(launcher) launcher.style.display = 'none';
+
+  const hasData = hasSlotData(slotIndex);
+
+  if(hasData){
+    // 重置所有瞬時狀態（避免上一個槽位的狀態殘留）
+    trainingMode = false;
+    battleActive = false;
+    battleMode = false;
+    flushingMode = false;
+    curingMode = false;
+    evoAnimActive = false;
+    lifePhase = "play";
+    criticalPhase = "play";
+    stopAllTimers();
+    
+    // 載入存檔
+    loadGameState(slotIndex);
+    updateSleepByTime();
+    updateNotifArea(true);
+    // 即使圖片未完全加載，也先渲染一幀（蛋或精靈圖未加載時顯示佔位符）
+    try {
+      if(isEggPhase){
+        renderFrame();
+        startAutoPlay(); // 重啟蛋動畫定時器，否則退出後回來蛋不會播放
+      } else if(loadedCount >= TOTAL_IMAGES){
+        selectDigimon(currentRow);
+        if(currentRow <= 1) startBabyCareCycle();
+        // 離線進化補捉：圖片已載入時觸發進化動畫
+        if(evoAnimPending){
+          evoAnimPending = false;
+          startNaturalEvoAnim(getEvolutionRow(currentRow));
+        }
+      } else {
+        renderFrame(); // 圖片未就緒先顯示一幀
+      }
+    } catch(e){
+      console.error("啟動渲染失敗:", e);
+    }
+    saveLauncherMeta();
+    // 啟動定時自動存檔
+    if(autoSaveTimerId) clearInterval(autoSaveTimerId);
+    autoSaveTimerId = setInterval(saveGameState, 30000);
+  } else {
+    // 新遊戲：顯示版本選擇畫面，選完版本後進入蛋階段
+    currentRow = -1;
+    gameAge = 0;
+    gameHunger = 10;
+    gameWeight = 0;
+    gameAffinity = 0;
+    gameTrainingPoints = 0;
+    gameHpBonus = 0; gameAtkBonus = 0; gameSpdBonus = 0;
+    gameCritBonus = 0; gameDodgeBonus = 0; gameAffBonus = 0;
+    totalTrainingCount = 0;
+    gameCareMistakes = 0;
+    callFirstShownTime = 0;
+    poopsOnScreen = 0;
+    poopCountdown = 0;
+    babyHasPooped = false;
+    isSleeping = false;
+    isSick = false;
+    curingMode = false;
+    gameGold = 0;
+    gameTotalBattles = 0;
+    gameBattleWins = 0;
+    cultivatedRows = [];
+    eightPoopsStartTime = 0;
+    eightPoopsMistakeRecorded = false;
+    stageStartDay = 0;
+    stageTrainingPointsUsed = 0;
+    callMistakeRecorded = false;
+    gameAgeLastDay = 0;
+    lightsOff = false;
+    isEggPhase = false;
+    trainingMode = false;
+    battleActive = false;
+    battleMode = false;
+    flushingMode = false;
+    evoAnimActive = false;
+    versionSelectMode = true;
+    versionSelectIndex = 0;
+    updateNotifArea(true);
+    saveLauncherMeta();
+    // 立即渲染版本選擇畫面（圖片未載入也可顯示，會用圓形佔位符）
+    try {
+      renderVersionSelect();
+    } catch(e) {
+      console.error("版本選擇畫面渲染失敗:", e);
+      renderFrame();
+    }
+    if(loadedCount >= TOTAL_IMAGES){
+      if(versionSelectAnimTimer) clearInterval(versionSelectAnimTimer);
+      versionSelectAnimTimer = setInterval(() => {
+        if(versionSelectMode) renderFrame();
+      }, 200);
+    }
+    // 啟動定時自動存檔
+    if(autoSaveTimerId) clearInterval(autoSaveTimerId);
+    autoSaveTimerId = setInterval(saveGameState, 30000);
+  }
+}
+
+// 返回按鈕：先關閉面板，全關閉後才返回啟動器
+function handleReturnBtn(){
+  // 1. 設定面板
+  const settingsOverlay = document.getElementById("settingsOverlay");
+  if(settingsOverlay && settingsOverlay.classList.contains("open")){
+    settingsOverlay.classList.remove("open");
+    return;
+  }
+  
+  // 2. 遊戲內面板（依優先級檢查）
+  const panels = [
+    { id: "trainingDisplay",  cleanup: function(){ if(trainingMode) stopTraining(); } },
+    { id: "battleDisplay",    cleanup: function(){ quickBattleCleanup(); } },
+    { id: "pveEncounterDisplay", cleanup: null },
+    { id: "pveMapDisplay",    cleanup: null },
+    { id: "battleMenuDisplay", cleanup: null },
+    { id: "foodDisplay",      cleanup: function(){ if(gameMode==="eating"){ gameMode="auto"; gameModeStep=0; } } },
+    { id: "digidexDisplay",   cleanup: null },
+    { id: "statsDisplay",     cleanup: null },
+  ];
+  for(var pi = 0; pi < panels.length; pi++){
+    var el = document.getElementById(panels[pi].id);
+    if(el && (el.style.display === "block" || el.style.display === "flex")){
+      el.style.display = "none";
+      if(panels[pi].cleanup) panels[pi].cleanup();
+      startAutoPlay();
+      return;
+    }
+  }
+  
+  // 沒有打開的面板，返回啟動器
+  setTimeout(returnToLauncher, 10);
+}
+
+var _returningToLauncher = false;
+function returnToLauncher(){
+  // 防止重入
+  if(_returningToLauncher) return;
+  _returningToLauncher = true;
+  
+  try {
+    // === 0. 恢復返回按鈕顯示（防止對戰中途返回啟動器的極端情況） ===
+    const returnBtn = document.getElementById("returnBtn");
+    if(returnBtn) returnBtn.style.display = "";
+    // === 1. 立即終止版本選擇模式（最優先） ===
+    versionSelectMode = false;
+    versionSelectIndex = 0;
+    if(typeof versionSelectAnimTimer !== 'undefined' && versionSelectAnimTimer){
+      clearInterval(versionSelectAnimTimer);
+      versionSelectAnimTimer = null;
+    }
+    
+    // === 1. 重置全部旗標 ===
+    trainingMode = false;
+    battleActive = false;
+    battleMode = false;
+    flushingMode = false;
+    curingMode = false;
+    evoAnimActive = false;
+    lifePhase = "play";
+    criticalPhase = "play";
+    
+    // === 2. 停止所有計時器（try/catch 保護每一個） ===
+    var timersToClear = ['autoTimer','autoMoveTimer','babySleepTimer','poopTimer','poopFrameTimer',
+      'hungerTickTimer','callBlinkTimer','sleepZTimer','sleepCheckTimer',
+      'trainingCountdownTimer','autoSaveTimerId','trainingTimer','trainingProjectileTimer',
+      'boomTimer','trainingCelebrationTimer','lifeBoomTimer','lifeShieldHoldTimer',
+      'lifeFailureHoldTimer','battleBoomTimer','battleIntroTimer','speedCountdownTimer',
+      'speedCycleTimer','lifeBoxingTimer'];
+    for(var ti = 0; ti < timersToClear.length; ti++){
+      try {
+        var tname = timersToClear[ti];
+        if(typeof window[tname] !== 'undefined' && window[tname]){
+          clearInterval(window[tname]);
+          window[tname] = null;
+        }
+      } catch(et){}
+    }
+    
+    // === 3. 關閉所有面板 ===
+    var panels = ['statusPopup','foodPopup','battleDisplay','digidexContent'];
+    for(var pi = 0; pi < panels.length; pi++){
+      var p = document.getElementById(panels[pi]);
+      if(p) p.style.display = 'none';
+    }
+    // darkOverlay 使用 class 控制，避免內聯樣式覆蓋
+    var dkOv = document.getElementById("darkOverlay");
+    if(dkOv){ dkOv.style.display = ""; dkOv.classList.remove("on"); }
+    
+    // === 4. UI 切換優先 ===
+    var launcher = document.getElementById('launcherScreen');
+    var mainGame = document.getElementById('mainGameArea');
+    if(mainGame){ mainGame.style.display = 'none'; }
+    if(launcher){ launcher.style.display = 'flex'; launcher.style.zIndex = '1000'; }
+    
+    // === 5. 重置 canvas ===
+    if(typeof canvas !== 'undefined' && canvas){
+      try {
+        canvas.width = 32;
+        canvas.height = 16;
+        canvas.style.width = '';
+        canvas.style.height = '';
+      } catch(ec){}
+    }
+    
+    // === 6. 回到啟動頁前保存遊戲狀態（避免進度丟失） ===
+    try { saveGameState(); } catch(esg){}
+    
+    // === 7. 重置狀態 ===
+    activeSlotIndex = -1;
+    
+    // === 8. 保存與渲染 ===
+    try { saveLauncherMeta(); } catch(es){}
+    
+    // 延遲渲染，避免同步阻塞
+    setTimeout(function(){
+      try {
+        if(typeof renderSlotCards === 'function') renderSlotCards();
+      } catch(er){}
+      _returningToLauncher = false;
+    }, 50);
+    
+  } catch(e) {
+    // 即使出錯也要確保 UI 切換
+    try {
+      var fallbackLauncher = document.getElementById('launcherScreen');
+      if(fallbackLauncher){ fallbackLauncher.style.display = 'flex'; }
+      var fallbackGame = document.getElementById('mainGameArea');
+      if(fallbackGame){ fallbackGame.style.display = 'none'; }
+    } catch(ef){}
+    _returningToLauncher = false;
+  }
+}
+
+// ========== 舊版本存檔遷移 ==========
+(function migrateOldSave(){
+  const oldSave = localStorage.getItem("digimon_vpet_save");
+  if(oldSave){
+    try{
+      const oldData = JSON.parse(oldSave);
+      // 檢查是否為有效的舊存檔（有 currentVersion 和 currentRow）
+      if(oldData && typeof oldData.currentVersion === 'string' && typeof oldData.currentRow === 'number'){
+        // 只有當槽位 0 是空時才遷移
+        if(!hasSlotData(0)){
+          localStorage.setItem(getSlotSaveKey(0), oldSave);
+          // 不移除舊存檔，讓玩家自己清理
+        }
+      }
+    }catch(e){}
+  }
+})();
+
+buildFunctionButtons();
+// 顯示啟動頁，等待用戶選擇暴龍機
+initLauncher();
 
 let loadedCount = 0;
 const TOTAL_IMAGES = 18 + 17 + 17 + BG_NAMES.length + 1 + 15 + 1 + 17 + 1 + 3 + 3 + 4 + 1 + 1 + 2 + 1 + 17 + 1 + 17 + 17 + 17 + 17 + 17 + 1 + 1 + 1 + 1; // +V4/V5 rows(17+17) + V3/V4/V5 atk(17+17+17) + V4/V5 proj(1+1) + V4/V5 eggs(1+1)
@@ -7987,6 +8729,8 @@ function onImageLoaded(){
   loadedCount++;
   if(loadedCount >= TOTAL_IMAGES) {
     generateHdBackgrounds(); // 生成高清像素背景
+    // 如果在啟動頁，不做遊戲渲染
+    if(activeSlotIndex < 0) return;
     if(versionSelectMode){
       renderFrame(); // 顯示版本選擇畫面
       return;
@@ -8019,8 +8763,8 @@ for(let r = 0; r < 18; r++){
   rowImagesV1[r] = img;
 }
 
-// 加載 17 張 V2 獨立行圖片
-for(let r = 0; r < 17; r++){
+// 加載 18 張 V2 獨立行圖片
+for(let r = 0; r < 18; r++){
   const img = new Image();
   const idx = String(r).padStart(2, '0');
   img.src = `sprites/V2/V2_${idx}.png`;
@@ -8082,11 +8826,11 @@ for(let r = 0; r < 17; r++){
   attackRowImages[r] = img;
 }
 
-// 加載 17 張 V2 攻擊火球圖片 (V2_00_at ~ V2_16_at，16×8 上半部)
-for(let r = 0; r < 17; r++){
+// 加載 18 張 V2 攻擊火球圖片 (V2_00_at ~ V2_17_at，16×8 上半部，蓋亞獸/混沌龍獸用V5替代)
+for(let r = 0; r < 18; r++){
   const img = new Image();
   const idx = String(r).padStart(2, '0');
-  img.src = `sprites/V2_Attack/V2_${idx}_at.png`;
+  img.src = (r === 16 || r === 17) ? `sprites/V5_Attack/V5_${idx}_at.png` : `sprites/V2_Attack/V2_${idx}_at.png`;
   img.onload = onImageLoaded;
   img.onerror = onImageError;
   attackRowImagesV2[r] = img;
@@ -8292,22 +9036,23 @@ BG_NAMES.forEach(name => {
   bgImages[name] = img;
 });
 
-// 每分鐘自動切換背景
-setInterval(updateBgByTime, 60000);
+// 每分鐘自動切換背景（僅遊戲中執行）
+setInterval(() => { if(activeSlotIndex >= 0) updateBgByTime(); }, 60000);
 
 // 數值計時器：年齡每分鐘 +1，每日疊加 12 訓練點，檢查階段進化
 setInterval(() => { 
+  if(activeSlotIndex < 0) return;
   if(isEggPhase) return; // 蛋時期不計時
   if(evoAnimActive) return; // 進化動畫期間不計時
   gameAge++;
   updateSleepByTime(); // 每分鐘檢查是否需要進入/離開睡眠
   // 黑球獸(row 0) 5分鐘後進化為滾球獸(row 1)
-  if(currentRow === 0 && gameAge === 5 && !evoAnimActive){
+  if(currentRow === 0 && gameAge >= 5 && !evoAnimActive){
     startNaturalEvoAnim(1);
     return;
   }
   // 滾球獸(row 1) 15分鐘後依育成失誤進化
-  if(currentRow === 1 && gameAge === 15 && !evoAnimActive){
+  if(currentRow === 1 && gameAge >= 15 && !evoAnimActive){
     startNaturalEvoAnim(getEvolutionRow(1));
     return;
   }
@@ -8323,9 +9068,10 @@ setInterval(() => {
   updateNotifArea(true);
 }, 60000);
 // 飢餓：每 30 分鐘 -1 個心（10個心共 5 小時耗盡）
-setInterval(() => { if(!isEggPhase){ gameHunger = Math.max(0, gameHunger - 1); updateCallButton(); updateNotifArea(true); } }, 1800000);
+setInterval(() => { if(activeSlotIndex < 0) return; if(!isEggPhase){ gameHunger = Math.max(0, gameHunger - 1); updateCallButton(); updateNotifArea(true); } }, 1800000);
 // 育成失誤檢查：CALL 出現超過 10 分鐘計 1 次，同個飢餓周期不重複計算
 setInterval(() => {
+  if(activeSlotIndex < 0) return;
   if(!isEggPhase && callFirstShownTime > 0 && !callMistakeRecorded && gameHunger === 0){
     const mistakeTimeout = (currentRow <= 1) ? 300000 : 600000; // 幼年期5分鐘 / 其他10分鐘
     if(Date.now() - callFirstShownTime >= mistakeTimeout){
@@ -8351,8 +9097,6 @@ setInterval(() => {
   }
 }, 5000);
 
-// 定時自動存檔（每 30 秒）
-setInterval(saveGameState, 30000);
 // 頁面關閉/重新整理時存檔
 window.addEventListener("beforeunload", saveGameState);
 
