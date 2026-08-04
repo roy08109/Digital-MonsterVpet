@@ -443,6 +443,29 @@ body{
   cursor:not-allowed;
 }
 
+/* 重新育成按鈕（死亡後顯示） */
+.reborn-btn{
+  display:block;
+  width:calc(100% - 32px);
+  margin:8px 16px;
+  height:44px;
+  background:linear-gradient(135deg, #c42222, #8b0000);
+  border:none;
+  border-radius:8px;
+  color:#fff;
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+  letter-spacing:1px;
+  transition:background 0.2s;
+}
+.reborn-btn:hover{
+  background:linear-gradient(135deg, #e03030, #a00000);
+}
+.reborn-btn:active{
+  background:linear-gradient(135deg, #a01010, #700000);
+}
+
 /* 頁面最底部導航欄 */
 
 /* 狀態面板（按鈕下方） */
@@ -1364,6 +1387,12 @@ canvas {
   opacity: 0.7; border-style: dashed;
 }
 .slot-card-empty:hover { opacity: 1; border-color: #66ccff; }
+.slot-card-dead {
+  border-color: #992222; opacity: 0.75;
+}
+.slot-card-dead:hover {
+  border-color: #cc3333; opacity: 0.9;
+}
 .slot-card-header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 8px; padding-bottom: 6px;
@@ -1470,6 +1499,9 @@ canvas {
 <!-- 中層：8個功能按鈕 -->
 <div class="btn-panel" id="btnPanel">
 </div>
+
+<!-- 重新育成按鈕（死亡後顯示） -->
+<button class="reborn-btn" id="rebornBtn" onclick="rebornAsEgg()" title="重新開始育成" style="display:none;">重新育成數碼蛋</button>
 
 <!-- 返回按鈕 -->
 <button class="return-btn" id="returnBtn" onclick="handleReturnBtn()" title="返回暴龍機選擇">←</button>
@@ -1802,6 +1834,9 @@ canvas {
     </div>
     <div style="margin-top:14px;padding-top:10px;border-top:1px solid #333;">
       <button class="debug-evo-btn" id="debugAdversityEvoBtn" style="background:#FF5722;">⚡ 逆境進化 100%（開關）</button>
+    </div>
+    <div style="margin-top:14px;padding-top:10px;border-top:1px solid #333;">
+      <button class="debug-evo-btn" id="debugDeathBtn" style="background:#c42222;">💀 數碼獸死亡</button>
     </div>
     <button class="debug-close" id="debugCloseBtn">關閉</button>
   </div>
@@ -2267,7 +2302,11 @@ function startBabyCareCycle(){
         babyHungerTick = 0;
         gameHunger = Math.max(0, gameHunger - 1);
         if(autoFeedEnabled && gameHunger === 0){
-          gameHunger = 1;
+          if(gameMode === "auto"){
+            feedDigimon('meat');
+          } else {
+            gameHunger = 1;
+          }
           if(callBlinkTimer){ clearInterval(callBlinkTimer); callBlinkTimer = null; }
           callFirstShownTime = 0;
           callMistakeRecorded = false;
@@ -2404,9 +2443,13 @@ function startEggPhase(version = "V1") {
   
   // 重置生病狀態
   isSick = false;
+  sickStartTime = 0;
   curingMode = false;
   eightPoopsStartTime = 0;
   eightPoopsMistakeRecorded = false;
+  isDead = false;
+  deathReason = "";
+  hungerZeroStartTime = 0;
   
   // 重置遊戲狀態
   currentRow = 0;
@@ -2641,6 +2684,15 @@ function renderFrame(){
   // === 版本選擇畫面 ===
   if(versionSelectMode){
     renderVersionSelect();
+    return;
+  }
+  // === 死亡畫面 ===
+  if(isDead){
+    ctx.clearRect(0, 0, 32, 16);
+    if(deathImage.complete && deathImage.naturalWidth > 0){
+      // die.png 原始尺寸為 16×16，置中繪製於 32×16 畫布上
+      ctx.drawImage(deathImage, 8, 0, 16, 16);
+    }
     return;
   }
   if(trainingMode){
@@ -5032,7 +5084,8 @@ function getSlotPreviewData(idx){
       hasPoop: (data.poopsOnScreen || 0) > 0,
       gameAge: data.gameAge || 0,
       birthTimestamp: data.birthTimestamp || 0,
-      eggStartTime: data.eggStartTime || 0
+      eggStartTime: data.eggStartTime || 0,
+      isDead: data.isDead || false
     };
   } catch(e){ return null; }
 }
@@ -5061,9 +5114,6 @@ function startAllTimers(){
     sleepZTimer = setInterval(tickSleepZ, 800);
   } else {
     sleepZTimer = null;
-  }
-  if(!isEggPhase && currentRow >= 0 && !isSleeping){
-    hungerTickTimer = setInterval(tickHunger, 30000);
   }
   if(currentRow <= 1 && !isSleeping){
     babySleepTimer = setInterval(tickBabySleep, 1000);
@@ -5106,6 +5156,8 @@ function renderSlotCards(){
     if(preview){
       // 有存檔數據的槽位
       const digiInfo = getDigiInfo(preview);
+      const isDead = preview.isDead;
+      card.className = 'slot-card' + (isDead ? ' slot-card-dead' : '');
       card.innerHTML = `
         <div class="slot-card-header">
           <span class="slot-card-version">${version} 暴龍機</span>
@@ -5113,13 +5165,15 @@ function renderSlotCards(){
         </div>
         <div class="slot-preview-row">
           <canvas class="slot-mini-canvas" id="slotMiniCanvas${i}"></canvas>
-          <div class="slot-status-icons">
-            <canvas class="slot-status-icon" id="slotSleepIcon${i}" title="睡眠中"></canvas>
-            <canvas class="slot-status-icon" id="slotSickIcon${i}" title="生病"></canvas>
-            <canvas class="slot-status-icon" id="slotPoopIcon${i}" title="有大便"></canvas>
-          </div>
+          ${isDead ? ``
+            : `<div class="slot-status-icons">
+                 <canvas class="slot-status-icon" id="slotSleepIcon${i}" title="睡眠中"></canvas>
+                 <canvas class="slot-status-icon" id="slotSickIcon${i}" title="生病"></canvas>
+                 <canvas class="slot-status-icon" id="slotPoopIcon${i}" title="有大便"></canvas>
+               </div>`
+          }
         </div>
-        <div class="slot-card-digi-name">${digiInfo.name}</div>
+        <div class="slot-card-digi-name"${isDead ? ' style="color:#ff5555;"' : ''}>${digiInfo.name}</div>
       `;
       container.appendChild(card);
       // 畫 mini preview
@@ -5149,6 +5203,9 @@ function renderSlotCards(){
 }
 
 function getDigiInfo(preview){
+  if(preview.isDead){
+    return { name: '已離世', row: -1 };
+  }
   if(preview.isEggPhase){
     return { name: '數碼蛋', row: -1 };
   }
@@ -5177,6 +5234,24 @@ function drawSlotMiniPreview(slotIndex, preview){
   canvas.width = 80; canvas.height = 80;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, 80, 80);
+
+  // 死亡狀態：顯示 DIE 圖
+  if(preview.isDead){
+    if(deathImage && deathImage.complete && deathImage.naturalWidth > 0){
+      // die.png 為 16×16，放大到 48×48 置中顯示
+      const targetSize = 48;
+      const dx = (80 - targetSize) / 2, dy = (80 - targetSize) / 2;
+      ctx.drawImage(deathImage, 0, 0, 16, 16, dx, dy, targetSize, targetSize);
+    } else {
+      // 回退：紅色 DIE 文字
+      ctx.fillStyle = '#ff3333';
+      ctx.font = 'bold 18px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('DIE', 40, 48);
+      ctx.textAlign = 'start';
+    }
+    return;
+  }
 
   if(preview.isEggPhase){
     // 使用對應版本的蛋圖片
@@ -5319,6 +5394,7 @@ function saveGameState(){
       gameCareMistakes, callMistakeRecorded,
       gameTotalBattles, gameBattleWins,
       isSick, eightPoopsStartTime, eightPoopsMistakeRecorded,
+      isDead, deathReason, sickStartTime, hungerZeroStartTime,
       gameGold,
       eggStartTime: isEggPhase ? eggStartTime : undefined,
       birthTimestamp: birthTimestamp || undefined, // 出生時間戳，永不改變
@@ -5499,14 +5575,19 @@ function loadGameState(slotIndex){
       gameBattleWins = data.gameBattleWins ?? 0;
       gameGold = data.gameGold ?? 0;
       isSick = data.isSick ?? false;
+      isDead = data.isDead ?? false;
+      deathReason = data.deathReason ?? "";
+      sickStartTime = data.sickStartTime ?? 0;
+      hungerZeroStartTime = data.hungerZeroStartTime ?? 0;
       autoFeedEnabled = data.autoFeedEnabled ?? false;
       eightPoopsStartTime = data.eightPoopsStartTime ?? 0;
       eightPoopsMistakeRecorded = data.eightPoopsMistakeRecorded ?? false;
-      // 離線期間大便生病檢查：存檔時已有≥8個大便且未記錄失誤 → 離線≥20分鐘則生病
-      if(!isSick && poopsOnScreen >= 8 && !eightPoopsMistakeRecorded && elapsed >= 20){
+      // 離線期間大便生病檢查：存檔時已有≥8個大便且未記錄失誤 → 立即生病
+      if(!isSick && poopsOnScreen >= 8 && !eightPoopsMistakeRecorded){
         gameCareMistakes++;
         eightPoopsMistakeRecorded = true;
         isSick = true;
+        sickStartTime = Date.now() - elapsed * 1000; // 推算生病開始時間
       }
       // 離線育成失誤：存檔時飢餓=0且未記錄失誤，離線≥10分鐘則計1次
       if(data.gameHunger === 0 && !callMistakeRecorded && elapsed >= 10){
@@ -5542,7 +5623,7 @@ function loadGameState(slotIndex){
       gameTrainingPoints = (currentRow <= 1) ? 0 : 12;
       poopsOnScreen = 0; poopCountdown = 0; babyHasPooped = false;
       gameTotalBattles = 0; gameBattleWins = 0;
-      isSick = false; eightPoopsStartTime = 0; eightPoopsMistakeRecorded = false;
+      isSick = false; sickStartTime = 0; eightPoopsStartTime = 0; eightPoopsMistakeRecorded = false;
     }
     // 離線期間的階段進化檢查（確保即時觸發）
     if(currentRow >= 2) checkStageEvolution();
@@ -5564,6 +5645,16 @@ let gameBattleWins = 0;       // 戰鬥勝利次數
 let callFirstShownTime = 0;   // CALL 按鈕首次出現的時間戳 (ms)
 let callMistakeRecorded = false; // 當前飢餓周期是否已記錄失誤
 let callBlinkTimer = null;       // CALL 按鈕閃爍計時器
+
+// === 死亡系統 ===
+let isDead = false;                  // 數碼獸是否死亡
+let deathReason = "";                // 死亡原因訊息
+let deathImage = new Image();        // 死亡圖
+let sickStartTime = 0;               // 生病開始時間 (ms)
+let hungerZeroStartTime = 0;         // 飢餓歸零開始時間 (ms)
+const DEATH_SICK_TIMEOUT = 24 * 60 * 60 * 1000;    // 生病 24 小時後死亡
+const DEATH_HUNGER_TIMEOUT = 24 * 60 * 60 * 1000;  // 飢餓歸零 24 小時後死亡
+const DEATH_AGE_LIMIT = 15 * 1440;                  // 15 歲壽命上限（分鐘）
 
 // === 訓練加成系統（永久累積，進化不歸零）===
 let gameHpBonus = 0;       // 生命訓練加成
@@ -5608,6 +5699,7 @@ const FLUSHING_HAPPY_SEQ = [0, 7, 0, 7]; // idle, happy, idle, happy 柱位
 
 // === 生病：進入生病模式 ===
 function enterSickMode(){
+  if(sickStartTime === 0) sickStartTime = Date.now();
   updateNotifArea(true);
   gameMode = "auto";
   // 停止所有移動/動畫計時器
@@ -5622,6 +5714,114 @@ function enterSickMode(){
   updateCssBackground("auto");
   renderFrame();
   startPoopTimer();
+  saveGameState();
+}
+
+// === 死亡系統 ===
+function onDigimonDied(reason) {
+  if(isDead) return;
+  isDead = true;
+  deathReason = reason;
+  
+  // 隱藏 darkOverlay
+  const overlay = document.getElementById("darkOverlay");
+  if(overlay) overlay.classList.remove("on");
+  
+  // 停止所有計時器
+  if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+  if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+  if(callBlinkTimer){ clearInterval(callBlinkTimer); callBlinkTimer = null; }
+  if(curingTimer){ clearInterval(curingTimer); curingTimer = null; }
+  if(trainingTimer){ clearInterval(trainingTimer); trainingTimer = null; }
+  
+  // 關閉所有功能面板
+  trainingMode = false;
+  battleActive = false;
+  flushingMode = false;
+  curingMode = false;
+  evoAnimActive = false;
+  
+  // 顯示重新育成按鈕
+  const rebornBtn = document.getElementById("rebornBtn");
+  if(rebornBtn) rebornBtn.style.display = "block";
+  
+  // 更新通知區域
+  updateNotifArea(true);
+  showToast(deathReason);
+  
+  renderFrame();
+  saveGameState();
+}
+
+function rebornAsEgg() {
+  // 重置死亡狀態
+  isDead = false;
+  deathReason = "";
+  sickStartTime = 0;
+  hungerZeroStartTime = 0;
+
+  // 關閉所有面板
+  trainingMode = false;
+  battleActive = false;
+  flushingMode = false;
+  curingMode = false;
+  evoAnimActive = false;
+  isSick = false;
+  curingMode = false;
+  battleMode = false;
+
+  // 停止所有計時器
+  if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+  if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+  if(callBlinkTimer){ clearInterval(callBlinkTimer); callBlinkTimer = null; }
+  if(curingTimer){ clearInterval(curingTimer); curingTimer = null; }
+  if(trainingTimer){ clearInterval(trainingTimer); trainingTimer = null; }
+
+  // 隱藏重新育成按鈕
+  const rebornBtn = document.getElementById("rebornBtn");
+  if(rebornBtn) rebornBtn.style.display = "none";
+
+  // 重置部分狀態（讓畫面乾淨，圖鑑/金幣/訓練加成將在 startEggPhase 中由對應邏輯處理）
+  currentRow = -1;
+  gameAge = 0;
+  gameHunger = 0;
+  gameWeight = 0;
+  gameAffinity = 0;
+  gameTrainingPoints = 0;
+  gameCareMistakes = 0;
+  callFirstShownTime = 0;
+  callMistakeRecorded = false;
+  birthTimestamp = 0;
+  gameAgeLastDay = 0;
+  stageStartDay = 0;
+  poopsOnScreen = 0;
+  isEggPhase = false;
+  isSleeping = false;
+  isEating = false;
+  eightPoopsStartTime = 0;
+  eightPoopsMistakeRecorded = false;
+
+  // 進入版本選擇畫面（讓玩家重新選擇蛋版本）
+  versionSelectMode = true;
+  versionSelectIndex = 0;
+  updateNotifArea(true);
+  showToast("選擇要重新育成的數碼蛋版本 🥚");
+
+  // 立即渲染版本選擇畫面
+  try {
+    renderVersionSelect();
+  } catch(e) {
+    console.error("版本選擇畫面渲染失敗:", e);
+    renderFrame();
+  }
+  // 啟動版本選擇動畫計時器（如果圖片已載入完成）
+  if(loadedCount >= TOTAL_IMAGES){
+    if(versionSelectAnimTimer) clearInterval(versionSelectAnimTimer);
+    versionSelectAnimTimer = setInterval(() => {
+      if(versionSelectMode) renderFrame();
+    }, 200);
+  }
+
   saveGameState();
 }
 
@@ -5641,6 +5841,7 @@ function curePet(){
       curingTimer = null;
       curingMode = false;
       isSick = false;
+      sickStartTime = 0;
       updateNotifArea(true);
       showToast("治療成功！數碼獸恢復健康 🎉");
       startAutoPlay();
@@ -6387,6 +6588,11 @@ function buildFunctionButtons(){
 }
 
 function clickFunction(idx){
+  // 死亡時只允許：狀態(0)、圖鑑(7)
+  if(isDead && idx !== 0 && idx !== 7){
+    showToast("數碼獸已離世，查看狀態或圖鑑後重新育成吧... 💔");
+    return;
+  }
   // 蛋時期限制：只允許狀態(0)、圖鑑(7)
   if(isEggPhase && idx !== 0 && idx !== 7){
     showToast("蛋還在孵化中，請耐心等待 🥚");
@@ -7188,6 +7394,7 @@ function runBattleAuto(){
 }
 
 function startBattle(targetSlotIdx){
+  if(isDead){ showToast("數碼獸已離世，無法戰鬥..."); return; }
   // targetSlotIdx >= 0 表示自家對戰模式
   const isSelfBattle = (targetSlotIdx !== undefined && targetSlotIdx >= 0);
   if(flushingMode) stopFlushing(); // 中斷清潔動畫
@@ -7872,9 +8079,9 @@ function showBattleResult(result){
     // 戰鬥生病判定（PVE 和普通戰鬥通用，自家對戰不觸發生病）
     if(!battleIsSelfBattle){
       if(result === "win"){
-        if(Math.random() < 0.05) isSick = true;
+        if(Math.random() < 0.05){ isSick = true; sickStartTime = Date.now(); enterSickMode(); }
       } else if(result === "lose"){
-        if(Math.random() < 0.30) isSick = true;
+        if(Math.random() < 0.30){ isSick = true; sickStartTime = Date.now(); enterSickMode(); }
       }
     }
     if(isSick){
@@ -8530,6 +8737,22 @@ document.getElementById("debugAdversityEvoBtn").onclick = () => {
   document.getElementById("debugOverlay").classList.remove("open");
 };
 
+// 測試死亡按鈕（確認後觸發）
+document.getElementById("debugDeathBtn").onclick = () => {
+  if(isEggPhase){
+    showToast("蛋階段無法觸發死亡");
+    return;
+  }
+  if(isDead){
+    showToast("數碼獸已經死亡");
+    return;
+  }
+  if(confirm("確定要讓數碼獸死亡嗎？此操作不可逆！")){
+    onDigimonDied("測試模式：數碼獸被強制終止生命...");
+    document.getElementById("debugOverlay").classList.remove("open");
+  }
+};
+
 // 打開設定面板
 document.getElementById("settingsBtn").onclick = () => {
   refreshChildSelect();
@@ -8616,6 +8839,16 @@ function toggleAutoFeed(event){
   if(autoFeedEnabled){
     tgl.classList.add("on");
     showToast("自動餵食後不會出現飢餓育成失誤");
+    // 開啟時如果飢餓度為 0，立即餵食（不需等到下一次 tick）
+    if(gameHunger === 0 && currentRow >= 0 && !isEggPhase){
+      if(gameMode === "auto"){
+        feedDigimon('meat');
+      } else {
+        gameHunger = 1;
+        updateCallButton();
+        updateNotifArea(true);
+      }
+    }
   } else {
     tgl.classList.remove("on");
   }
@@ -8717,6 +8950,13 @@ function updateNotifArea(isCheck){
 
   // 計算優先級
   let prio = 0, text = "";
+
+  if(isDead){
+    prio = 0; text = "數碼獸已離世...";
+    el.textContent = text;
+    el.classList.remove("fading");
+    return;
+  }
 
   if(typeof isSick !== "undefined" && isSick){
     prio = 1; text = "暴龍生病了";
@@ -8863,6 +9103,12 @@ function activateSlot(slotIndex){
     
     // 載入存檔
     loadGameState(slotIndex);
+    // 檢查死亡狀態：顯示重新育成按鈕並渲染死亡畫面
+    if(isDead){
+      const rebornBtn = document.getElementById("rebornBtn");
+      if(rebornBtn) rebornBtn.style.display = "block";
+      updateNotifArea(true);
+    }
     // 恢復自動餵食開關UI
     const autoTgl = document.getElementById("autoFeedToggle");
     if(autoTgl){
@@ -8912,6 +9158,7 @@ function activateSlot(slotIndex){
     babyHasPooped = false;
     isSleeping = false;
     isSick = false;
+    sickStartTime = 0;
     curingMode = false;
     gameGold = 0;
     gameTotalBattles = 0;
@@ -9422,6 +9669,11 @@ sickImage.src = "BG/sick.png";
 sickImage.onload = onImageLoaded;
 sickImage.onerror = onImageError;
 
+// 死亡圖
+deathImage.src = "BG/die.png";
+deathImage.onload = onImageLoaded;
+deathImage.onerror = onImageError;
+
 BG_NAMES.forEach(name => {
   const img = new Image();
   img.src = `BG/${name}.png`;
@@ -9462,7 +9714,7 @@ setInterval(() => {
   updateNotifArea(true);
 }, 60000);
 // 飢餓：每 30 分鐘 -1 個心（10個心共 5 小時耗盡）
-setInterval(() => { if(activeSlotIndex < 0) return; if(!isEggPhase){ gameHunger = Math.max(0, gameHunger - 1); if(autoFeedEnabled && gameHunger === 0){ gameHunger = 1; if(callBlinkTimer){ clearInterval(callBlinkTimer); callBlinkTimer = null; } callFirstShownTime = 0; callMistakeRecorded = false; } updateCallButton(); updateNotifArea(true); } }, 1800000);
+setInterval(() => { if(activeSlotIndex < 0) return; if(!isEggPhase){ gameHunger = Math.max(0, gameHunger - 1); if(autoFeedEnabled && gameHunger === 0){ if(gameMode === "auto"){ feedDigimon('meat'); } else { gameHunger = 1; } if(callBlinkTimer){ clearInterval(callBlinkTimer); callBlinkTimer = null; } callFirstShownTime = 0; callMistakeRecorded = false; } updateCallButton(); updateNotifArea(true); } }, 1800000);
 // 育成失誤檢查：CALL 出現超過 10 分鐘計 1 次，同個飢餓周期不重複計算
 setInterval(() => {
   if(activeSlotIndex < 0) return;
@@ -9473,23 +9725,51 @@ setInterval(() => {
       callMistakeRecorded = true;
     }
   }
-  // 大便滿 8 個且超過 20 分鐘 → 生病 + 育成失誤 +1（不重複計算）
+  // 大便滿 8 個 → 立即生病 + 育成失誤 +1（不重複計算）
   if(!isEggPhase && poopsOnScreen >= 8 && !eightPoopsMistakeRecorded){
-    if(eightPoopsStartTime === 0) eightPoopsStartTime = Date.now();
-    if(Date.now() - eightPoopsStartTime >= 1200000){ // 20分鐘
-      gameCareMistakes++;
-      eightPoopsMistakeRecorded = true;
-      if(!isSick){
-        isSick = true;
-        enterSickMode();
-        updateNotifArea(true);
-        showToast("糞便堆積過久，數碼獸生病了！💩");
-      }
-      updateStatsDisplay();
-      saveGameState();
+    gameCareMistakes++;
+    eightPoopsMistakeRecorded = true;
+    if(!isSick){
+      isSick = true;
+      sickStartTime = Date.now();
+      enterSickMode();
+      updateNotifArea(true);
+      showToast("糞便堆積過久，數碼獸生病了！💩");
     }
+    if(!isDead) updateStatsDisplay();
+    saveGameState();
   }
 }, 5000);
+
+// === 每 2 秒檢查死亡條件 ===
+setInterval(() => {
+  if(activeSlotIndex < 0 || isEggPhase || isDead || evoAnimActive) return;
+  
+  const now = Date.now();
+  
+  // 條件1：生病超過 24 小時 → 死亡
+  if(isSick && sickStartTime > 0 && (now - sickStartTime >= DEATH_SICK_TIMEOUT)){
+    onDigimonDied("生病過久，數碼獸不幸離世了...");
+    return;
+  }
+  
+  // 條件2：飢餓歸零超過 24 小時 → 死亡
+  if(gameHunger === 0 && !isSick){
+    if(hungerZeroStartTime === 0) hungerZeroStartTime = now;
+    if(now - hungerZeroStartTime >= DEATH_HUNGER_TIMEOUT){
+      onDigimonDied("飢餓過久，數碼獸不幸離世了...");
+      return;
+    }
+  } else if(gameHunger > 0){
+    hungerZeroStartTime = 0;
+  }
+  
+  // 條件3：年齡達到 15 歲（壽命上限）→ 死亡
+  if(gameAge >= DEATH_AGE_LIMIT && currentRow >= 2){
+    onDigimonDied("壽命已盡，數碼獸安然離世... 🌟");
+    return;
+  }
+}, 2000);
 
 // 頁面關閉/重新整理時存檔
 window.addEventListener("beforeunload", saveGameState);
