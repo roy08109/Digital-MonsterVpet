@@ -1989,6 +1989,20 @@ canvas {
     <div style="margin-top:14px;padding-top:10px;border-top:1px solid #333;">
       <button class="debug-evo-btn" id="debugDeathBtn" style="background:#c42222;">💀 數碼獸死亡</button>
     </div>
+    <div style="margin-top:14px;padding-top:10px;border-top:1px solid #333;">
+      <div style="font-size:12px;color:#aaa;margin-bottom:6px;">⚡ 速度測試（快速對戰）</div>
+      <select id="debugSpeedRatio" class="debug-select" style="margin-bottom:4px;">
+        <option value="1.00">1.00x 正常速度</option>
+        <option value="1.35" selected>1.35x 4:3 連擊</option>
+        <option value="1.50">1.50x 3:2 連擊</option>
+        <option value="2.00">2.00x 2:1 連擊</option>
+        <option value="0.74">0.74x 敵方1.35x</option>
+        <option value="0.67">0.67x 敵方1.50x</option>
+        <option value="0.50">0.50x 敵方2.00x</option>
+      </select>
+      <button class="debug-evo-btn" id="debugSpeedTestBtn" style="background:#2196F3;">⚡ 速度測試對戰</button>
+      <button class="debug-evo-btn" id="debugSpeedResetBtn" style="background:#666;margin-top:4px;">↺ 重置速度加成</button>
+    </div>
     <button class="debug-close" id="debugCloseBtn">關閉</button>
   </div>
 </div>
@@ -2121,7 +2135,7 @@ const ALL_NAMES_V6 = [
   "泡沫獸","年糕獸","甲蟲獸","礦石獸","蝌蚪獸","安哥拉獸",
   "比多獸","古加獸","獨角獸","陸龜獸","星星獸","青蛙獸","迪路獸",
   "西姆巴安哥拉獸","阿特魯比多獸","奧古加獸","三角龍獸","土撥鼠獸","皮可羅獸","大王青蛙獸","天女獸","拉莫特獸",
-  "海克力斯比多獸","劍獅獸","機械蛋蛋獸","聖天女獸","大古加獸","爆破獸","黃金龍獸","迪亞比兔獸","特拉洛克獸","莫斯提獸",
+  "海克力斯比多獸","劍獅獸","鋼鐵悟空獸","聖龍獸","大古加獸","爆破獸","黃金鄉獸","迪爾兔德獸","特拉洛克獸","莫斯提獸",
 ];
 const ALL_NAMES = [...ALL_NAMES_V1]; // 运行时可动态切换
 const TOTAL_DIGIMON = ALL_NAMES.length;
@@ -2449,10 +2463,10 @@ const BABY_SLEEP_SEC = 180;   // 幼年期睡 3 分鐘
 let babyHasPooped = false;    // 幼年期只排一次屎
 
 // ========== 多槽位機器選擇系統 ==========
-const MAX_SLOTS = 4;
-const SLOT_VERSIONS = ['V1', 'V3', 'V4', 'V5'];
+const MAX_SLOTS = 6;
+const SLOT_VERSIONS = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
 const LAUNCHER_KEY = 'digimon_launcher_meta';
-let activeSlotIndex = -1;  // -1 = 在啟動頁，0~3 = 在遊戲中
+let activeSlotIndex = -1;  // -1 = 在啟動頁，0~5 = 在遊戲中
 let slotCount = 1;         // 當前激活的槽位數量
 let slotLastAutoSave = 0;  // 上次自動存檔時間戳
 let launcherLoaded = false; // 是否已初始化啟動頁
@@ -5647,6 +5661,8 @@ function saveGameState(){
       gameCritBonus, gameDodgeBonus, gameAffBonus,
       totalTrainingCount, gameAgeLastDay,
       stageStartDay, stageTrainingPointsUsed,
+      trainingHpCount, trainingAtkCount, trainingSpdCount,
+      trainingCritCount, trainingDodgeCount, trainingAffCount,
       poopsOnScreen, poopCountdown, babyHasPooped,
       isSleeping,
       isEggPhase,
@@ -5890,6 +5906,12 @@ function loadGameState(slotIndex){
       gameAgeLastDay = data.gameAgeLastDay ?? 0;
       stageStartDay = data.stageStartDay ?? 0;
       stageTrainingPointsUsed = data.stageTrainingPointsUsed ?? 0;
+      trainingHpCount = data.trainingHpCount ?? 0;
+      trainingAtkCount = data.trainingAtkCount ?? 0;
+      trainingSpdCount = data.trainingSpdCount ?? 0;
+      trainingCritCount = data.trainingCritCount ?? 0;
+      trainingDodgeCount = data.trainingDodgeCount ?? 0;
+      trainingAffCount = data.trainingAffCount ?? 0;
       poopsOnScreen = data.poopsOnScreen ?? 0;
       poopCountdown = data.poopCountdown ?? 0;
       babyHasPooped = data.babyHasPooped ?? false;
@@ -5976,6 +5998,12 @@ function loadGameState(slotIndex){
       gameAgeLastDay = data.gameAgeLastDay ?? 0;
       stageStartDay = data.stageStartDay ?? 0;
       stageTrainingPointsUsed = data.stageTrainingPointsUsed ?? 0;
+      trainingHpCount = data.trainingHpCount ?? 0;
+      trainingAtkCount = data.trainingAtkCount ?? 0;
+      trainingSpdCount = data.trainingSpdCount ?? 0;
+      trainingCritCount = data.trainingCritCount ?? 0;
+      trainingDodgeCount = data.trainingDodgeCount ?? 0;
+      trainingAffCount = data.trainingAffCount ?? 0;
       gameTrainingPoints = (data.gameTrainingPoints != null) ? data.gameTrainingPoints : ((currentRow <= 1) ? 0 : 12);
       poopsOnScreen = 0; poopCountdown = 0; babyHasPooped = false;
       gameTotalBattles = 0; gameBattleWins = 0;
@@ -6015,6 +6043,7 @@ const DEATH_AGE_LIMIT = 15 * 1440;                  // 15 歲壽命上限（分�
 let gameHpBonus = 0;       // 生命訓練加成
 let gameAtkBonus = 0;      // 攻擊訓練加成
 let gameSpdBonus = 0;      // 速度訓練加成
+let debugSpeedBackup = null; // 速度測試：備份原始加成
 let gameCritBonus = 0;     // 暴擊訓練加成
 let gameDodgeBonus = 0;    // 閃避訓練加成
 let gameAffBonus = 0;      // 親密度訓練加成
@@ -6022,6 +6051,12 @@ let totalTrainingCount = 0;// 全生命周期累計訓練成功次數
 let gameAgeLastDay = 0;    // 上次加訓練點的日數 floor(gameAge/1440)
 let stageStartDay = 0;     // 當前階段開始的日數
 let stageTrainingPointsUsed = 0; // 當前階段已消耗訓練點
+let trainingHpCount = 0;   // 生命訓練次數
+let trainingAtkCount = 0;  // 攻擊訓練次數
+let trainingSpdCount = 0;  // 速度訓練次數
+let trainingCritCount = 0; // 暴擊訓練次數
+let trainingDodgeCount = 0;// 閃避訓練次數
+let trainingAffCount = 0;  // 親密度訓練次數
 
 // === 排便系統 ===
 let poopsOnScreen = 0;           // 當前糞便數量 (0~8)
@@ -6275,12 +6310,12 @@ function tryTrainingSuccess(type){
   if(!babyStage){
     totalTrainingCount += mult;
     switch(type){
-      case "hp": gameHpBonus += 0.8 * mult; break;
-      case "atk": gameAtkBonus += 0.1 * mult; break;
-      case "spd": gameSpdBonus += 0.04 * mult; break;
-      case "crit": gameCritBonus += 0.001 * mult; break;
-      case "dodge": gameDodgeBonus += 0.001 * mult; break;
-      case "affinity": gameAffBonus += 1 * mult; break;
+      case "hp": gameHpBonus += 0.8 * mult; trainingHpCount += mult; break;
+      case "atk": gameAtkBonus += 0.1 * mult; trainingAtkCount += mult; break;
+      case "spd": gameSpdBonus += 0.04 * mult; trainingSpdCount += mult; break;
+      case "crit": gameCritBonus += 0.001 * mult; trainingCritCount += mult; break;
+      case "dodge": gameDodgeBonus += 0.001 * mult; trainingDodgeCount += mult; break;
+      case "affinity": gameAffBonus += 1 * mult; trainingAffCount += mult; break;
     }
   }
   return {success:true};
@@ -6389,6 +6424,8 @@ function startNaturalEvoAnim(nextRow){
         }
         stageStartDay = Math.floor(gameAge / 1440);
         stageTrainingPointsUsed = 0;
+        trainingHpCount = 0; trainingAtkCount = 0; trainingSpdCount = 0;
+        trainingCritCount = 0; trainingDodgeCount = 0; trainingAffCount = 0;
         // 進化到成長期，增加 12 訓練點
         if(currentRow >= 2 && currentRow <= 3){ gameTrainingPoints += 12; updateNotifArea(true); }
         battlePlayerMaxHp = getTotalHp();
@@ -6526,6 +6563,8 @@ function resetAllBonuses(){
   gameHpBonus = 0; gameAtkBonus = 0; gameSpdBonus = 0;
   gameCritBonus = 0; gameDodgeBonus = 0; gameAffBonus = 0;
   totalTrainingCount = 0; stageTrainingPointsUsed = 0;
+  trainingHpCount = 0; trainingAtkCount = 0; trainingSpdCount = 0;
+  trainingCritCount = 0; trainingDodgeCount = 0; trainingAffCount = 0;
   gameTrainingPoints = 12; gameAgeLastDay = 0; stageStartDay = 0;
 }
 
@@ -6550,12 +6589,12 @@ function updateStatsDisplay(){
   const sdAffinity = document.getElementById("sdAffinity");
   const sdTrainingPoints = document.getElementById("sdTrainingPoints");
   const baby = (currentRow <= 1);
-  if(sdHp) sdHp.innerHTML = baby ? '<span class="sd-col total">' + s.hp + '</span>' : '<span class="sd-col bonus">(+' + gameHpBonus.toFixed(1) + ')</span><span class="sd-op"> + </span><span class="sd-col base">(' + s.hp + ')</span><span class="sd-op"> = </span><span class="sd-col total">' + getTotalHp().toFixed(1) + '</span>';
-  if(sdAtk) sdAtk.innerHTML = baby ? '<span class="sd-col total">' + s.atk + '</span>' : '<span class="sd-col bonus">(+' + gameAtkBonus.toFixed(1) + ')</span><span class="sd-op"> + </span><span class="sd-col base">(' + s.atk + ')</span><span class="sd-op"> = </span><span class="sd-col total">' + getTotalAtk().toFixed(1) + '</span>';
-  if(sdSpeed) sdSpeed.innerHTML = baby ? '<span class="sd-col total">' + s.spd.toFixed(2) + '</span>' : '<span class="sd-col bonus">(+' + gameSpdBonus.toFixed(2) + ')</span><span class="sd-op"> + </span><span class="sd-col base">(' + s.spd.toFixed(2) + ')</span><span class="sd-op"> = </span><span class="sd-col total">' + getTotalSpd().toFixed(2) + '</span>';
-  if(sdDouble) sdDouble.innerHTML = baby ? '<span class="sd-col total">' + Math.round(s.critRate*100) + '%</span>' : '<span class="sd-col bonus">(+' + (gameCritBonus*100).toFixed(1) + '%)</span><span class="sd-op"> + </span><span class="sd-col base">(' + Math.round(s.critRate*100) + '%)</span><span class="sd-op"> = </span><span class="sd-col total">' + (getTotalCrit()*100).toFixed(1) + '%</span>';
-  if(sdEvade) sdEvade.innerHTML = baby ? '<span class="sd-col total">' + Math.round(s.dodgeRate*100) + '%</span>' : '<span class="sd-col bonus">(+' + (gameDodgeBonus*100).toFixed(1) + '%)</span><span class="sd-op"> + </span><span class="sd-col base">(' + Math.round(s.dodgeRate*100) + '%)</span><span class="sd-op"> = </span><span class="sd-col total">' + (getTotalDodge()*100).toFixed(1) + '%</span>';
-  if(sdAffinity) sdAffinity.innerHTML = baby ? '<span class="sd-col total">' + (s.bondInitial||0) + '</span>' : '<span class="sd-col bonus">(+' + gameAffBonus + ')</span><span class="sd-op"> + </span><span class="sd-col base">(' + (s.bondInitial||0) + ')</span><span class="sd-op"> = </span><span class="sd-col total">' + getTotalAffinity() + '</span>';
+  if(sdHp) sdHp.innerHTML = baby ? '<span class="sd-col total">' + s.hp + '</span>' : '<span class="sd-op"> --- [</span><span class="sd-col count">' + trainingHpCount + '</span><span class="sd-op">]次  </span><span class="sd-col bonus">(+' + gameHpBonus.toFixed(1) + ')</span><span class="sd-op"> + </span><span class="sd-col base">(' + s.hp + ')</span><span class="sd-op"> = </span><span class="sd-col total">' + getTotalHp().toFixed(1) + '</span>';
+  if(sdAtk) sdAtk.innerHTML = baby ? '<span class="sd-col total">' + s.atk + '</span>' : '<span class="sd-op"> --- [</span><span class="sd-col count">' + trainingAtkCount + '</span><span class="sd-op">]次  </span><span class="sd-col bonus">(+' + gameAtkBonus.toFixed(1) + ')</span><span class="sd-op"> + </span><span class="sd-col base">(' + s.atk + ')</span><span class="sd-op"> = </span><span class="sd-col total">' + getTotalAtk().toFixed(1) + '</span>';
+  if(sdSpeed) sdSpeed.innerHTML = baby ? '<span class="sd-col total">' + s.spd.toFixed(2) + '</span>' : '<span class="sd-op"> --- [</span><span class="sd-col count">' + trainingSpdCount + '</span><span class="sd-op">]次  </span><span class="sd-col bonus">(+' + gameSpdBonus.toFixed(2) + ')</span><span class="sd-op"> + </span><span class="sd-col base">(' + s.spd.toFixed(2) + ')</span><span class="sd-op"> = </span><span class="sd-col total">' + getTotalSpd().toFixed(2) + '</span>';
+  if(sdDouble) sdDouble.innerHTML = baby ? '<span class="sd-col total">' + Math.round(s.critRate*100) + '%</span>' : '<span class="sd-op"> --- [</span><span class="sd-col count">' + trainingCritCount + '</span><span class="sd-op">]次  </span><span class="sd-col bonus">(+' + (gameCritBonus*100).toFixed(1) + '%)</span><span class="sd-op"> + </span><span class="sd-col base">(' + Math.round(s.critRate*100) + '%)</span><span class="sd-op"> = </span><span class="sd-col total">' + (getTotalCrit()*100).toFixed(1) + '%</span>';
+  if(sdEvade) sdEvade.innerHTML = baby ? '<span class="sd-col total">' + Math.round(s.dodgeRate*100) + '%</span>' : '<span class="sd-op"> --- [</span><span class="sd-col count">' + trainingDodgeCount + '</span><span class="sd-op">]次  </span><span class="sd-col bonus">(+' + (gameDodgeBonus*100).toFixed(1) + '%)</span><span class="sd-op"> + </span><span class="sd-col base">(' + Math.round(s.dodgeRate*100) + '%)</span><span class="sd-op"> = </span><span class="sd-col total">' + (getTotalDodge()*100).toFixed(1) + '%</span>';
+  if(sdAffinity) sdAffinity.innerHTML = baby ? '<span class="sd-col total">' + (s.bondInitial||0) + '</span>' : '<span class="sd-op"> --- [</span><span class="sd-col count">' + trainingAffCount + '</span><span class="sd-op">]次  </span><span class="sd-col bonus">(+' + gameAffBonus + ')</span><span class="sd-op"> + </span><span class="sd-col base">(' + (s.bondInitial||0) + ')</span><span class="sd-op"> = </span><span class="sd-col total">' + getTotalAffinity() + '</span>';
   if(sdTrainingPoints) sdTrainingPoints.textContent = gameTrainingPoints;
   const sdCareMistakes = document.getElementById("sdCareMistakes");
   if(sdCareMistakes) sdCareMistakes.textContent = gameCareMistakes;
@@ -6744,12 +6783,12 @@ const DIGIMON_STATS_V6 = {
   21:{name:"拉莫特獸",     stage:"完全體", attr:"data",    hp:215, atk:28,  spd:3.7, critRate:0.16, dodgeRate:0.08, bondInitial:20, weight:210, minWeight:140},
   22:{name:"海克力斯比多獸",stage:"究極體", attr:"vaccine", hp:230, atk:34,  spd:4.3, critRate:0.19, dodgeRate:0.10, bondInitial:25, weight:200, minWeight:135},
   23:{name:"劍獅獸",       stage:"究極體", attr:"vaccine", hp:225, atk:35,  spd:4.8, critRate:0.20, dodgeRate:0.13, bondInitial:25, weight:185, minWeight:125},
-  24:{name:"機械蛋蛋獸",   stage:"究極體", attr:"virus",   hp:210, atk:38,  spd:4.5, critRate:0.22, dodgeRate:0.12, bondInitial:25, weight:230, minWeight:155},
-  25:{name:"聖天女獸",     stage:"究極體", attr:"vaccine", hp:240, atk:33,  spd:4.6, critRate:0.18, dodgeRate:0.11, bondInitial:25, weight:190, minWeight:130},
+  24:{name:"鋼鐵悟空獸",   stage:"究極體", attr:"virus",   hp:210, atk:38,  spd:4.5, critRate:0.22, dodgeRate:0.12, bondInitial:25, weight:230, minWeight:155},
+  25:{name:"聖龍獸",     stage:"究極體", attr:"vaccine", hp:240, atk:33,  spd:4.6, critRate:0.18, dodgeRate:0.11, bondInitial:25, weight:190, minWeight:130},
   26:{name:"大古加獸",     stage:"究極體", attr:"virus",   hp:205, atk:39,  spd:5.0, critRate:0.23, dodgeRate:0.15, bondInitial:25, weight:200, minWeight:140},
   27:{name:"爆破獸",       stage:"究極體", attr:"vaccine", hp:235, atk:36,  spd:4.2, critRate:0.21, dodgeRate:0.09, bondInitial:25, weight:215, minWeight:145},
-  28:{name:"黃金龍獸",     stage:"究極體", attr:"data",    hp:250, atk:32,  spd:3.8, critRate:0.18, dodgeRate:0.07, bondInitial:25, weight:260, minWeight:175},
-  29:{name:"迪亞比兔獸",   stage:"究極體", attr:"data",    hp:245, atk:34,  spd:4.1, critRate:0.20, dodgeRate:0.09, bondInitial:25, weight:240, minWeight:160},
+  28:{name:"黃金鄉獸",     stage:"究極體", attr:"data",    hp:250, atk:32,  spd:3.8, critRate:0.18, dodgeRate:0.07, bondInitial:25, weight:260, minWeight:175},
+  29:{name:"迪爾兔德獸",   stage:"究極體", attr:"data",    hp:245, atk:34,  spd:4.1, critRate:0.20, dodgeRate:0.09, bondInitial:25, weight:240, minWeight:160},
   30:{name:"特拉洛克獸",   stage:"究極體", attr:"virus",   hp:215, atk:40,  spd:5.2, critRate:0.24, dodgeRate:0.14, bondInitial:25, weight:195, minWeight:135},
   31:{name:"莫斯提獸",     stage:"究極體", attr:"virus",   hp:220, atk:42,  spd:4.9, critRate:0.25, dodgeRate:0.16, bondInitial:25, weight:185, minWeight:130},
 };
@@ -8160,6 +8199,8 @@ function runEvoAnim(){
         const s = getBattlePlayerStats();
         stageStartDay = Math.floor(gameAge / 1440);
         stageTrainingPointsUsed = 0;
+        trainingHpCount = 0; trainingAtkCount = 0; trainingSpdCount = 0;
+        trainingCritCount = 0; trainingDodgeCount = 0; trainingAffCount = 0;
         battlePlayerMaxHp = getBattlePlayerTotalHp();
         battlePlayerHp = getBattlePlayerTotalHp();
         updateBattleHpDisplay();
@@ -8476,7 +8517,7 @@ function executeAttack(who, onDone){
 // 全自動戰鬥主循環
 function runBattleAuto(){
   if(!battleActive || battleResult) return;
-  const who = battleOrder[battleTurnIdx % 2];
+  const who = battleOrder[battleTurnIdx % battleOrder.length];
   executeAttack(who, () => {
     if(!battleActive || battleResult) return;
     battleTurnIdx++;
@@ -8626,6 +8667,17 @@ function startBattle(targetSlotIdx){
     battleSelfEnemyCritBonus = save.gameCritBonus || 0;
     battleSelfEnemyDodgeBonus = save.gameDodgeBonus || 0;
     battleSelfEnemyAffBonus = save.gameAffBonus || 0;
+  } else if(window._speedTestActive){
+    // 速度測試模式：使用已預設的敵方版本和行號
+    battleIsSelfBattle = false;
+    battleSelfEnemyHpBonus = 0;
+    battleSelfEnemyAtkBonus = 0;
+    battleSelfEnemySpdBonus = 0;
+    battleSelfEnemyCritBonus = 0;
+    battleSelfEnemyDodgeBonus = 0;
+    battleSelfEnemyAffBonus = 0;
+    enemyRow = battleEnemyRow;
+    es = getEnemyStats(enemyRow);
   } else {
     // 普通對戰模式
     battleIsSelfBattle = false;
@@ -8836,11 +8888,32 @@ function beginBattle(){
   document.getElementById("battleLog").innerHTML = "";
 
   // 速度決定先後手（玩家使用總速度含訓練加成，相同時隨機）
+  // 速度優勢：≥對方1.35倍 → 4:3連擊；≥對方1.5倍 → 1:1/2:1交替連擊；≥對方2倍 → 全程2:1連擊
   const playerSpd = getBattlePlayerTotalSpd();
   const enemySpd = (es.spd || 10) + (battleIsSelfBattle ? battleSelfEnemySpdBonus : 0);
-  if(playerSpd > enemySpd) battleOrder = ["player", "enemy"];
-  else if(enemySpd > playerSpd) battleOrder = ["enemy", "player"];
-  else battleOrder = Math.random() < 0.5 ? ["player", "enemy"] : ["enemy", "player"];
+  if(playerSpd > enemySpd){
+    if(playerSpd >= enemySpd * 2){
+      battleOrder = ["player", "player", "enemy"];
+    } else if(playerSpd >= enemySpd * 1.5){
+      battleOrder = ["player", "enemy", "player", "player", "enemy"];
+    } else if(playerSpd >= enemySpd * 1.35){
+      battleOrder = ["player", "enemy", "player", "enemy", "player", "player", "enemy"];
+    } else {
+      battleOrder = ["player", "enemy"];
+    }
+  } else if(enemySpd > playerSpd){
+    if(enemySpd >= playerSpd * 2){
+      battleOrder = ["enemy", "enemy", "player"];
+    } else if(enemySpd >= playerSpd * 1.5){
+      battleOrder = ["enemy", "player", "enemy", "enemy", "player"];
+    } else if(enemySpd >= playerSpd * 1.35){
+      battleOrder = ["enemy", "player", "enemy", "player", "enemy", "enemy", "player"];
+    } else {
+      battleOrder = ["enemy", "player"];
+    }
+  } else {
+    battleOrder = Math.random() < 0.5 ? ["player", "enemy"] : ["enemy", "player"];
+  }
   battleTurnIdx = 0;
   battleTurn = battleOrder[0];
 
@@ -9270,6 +9343,17 @@ function showBattleResult(result){
     }
     panel.style.display = "none";
     document.getElementById("returnBtn").style.display = ""; // 恢復返回按鈕
+
+    // 速度測試模式：恢復原始速度加成
+    if(window._speedTestActive){
+      if(debugSpeedBackup !== null){
+        gameSpdBonus = debugSpeedBackup;
+      }
+      window._speedTestActive = false;
+      debugSpeedBackup = null;
+      updateStatsDisplay();
+    }
+
     canvas.width = CANVAS_NORMAL_W;
     canvas.height = 16;
     canvas.style.width = "";
@@ -9996,6 +10080,59 @@ document.getElementById("debugDeathBtn").onclick = () => {
   }
 };
 
+// 速度測試對戰按鈕
+document.getElementById("debugSpeedTestBtn").onclick = () => {
+  if(isDead || currentRow <= 1){
+    showToast("當前無法進行速度測試");
+    return;
+  }
+  const ratio = parseFloat(document.getElementById("debugSpeedRatio").value);
+  // 使用與 startBattle 相同的邏輯預選敵方
+  const ALL_VERSIONS = ["V1","V2","V3","V4","V5","V6"];
+  const enemyVer = ALL_VERSIONS[Math.floor(Math.random() * ALL_VERSIONS.length)];
+  battleEnemyVersion = enemyVer;
+  const playerStage = getBattlePlayerStats().stage;
+  const sameStageIndices = [];
+  const enemyTotal = getEnemyTotalCount();
+  for(let i = 0; i < enemyTotal; i++){
+    const es2 = getEnemyStats(i);
+    if(es2 && es2.stage === playerStage){
+      sameStageIndices.push(i);
+    }
+  }
+  if(sameStageIndices.length === 0){
+    showToast("找不到同階段敵方");
+    return;
+  }
+  const enemyRow = sameStageIndices[Math.floor(Math.random() * sameStageIndices.length)];
+  const es = getEnemyStats(enemyRow);
+  const enemySpd = es.spd || 10;
+  const targetPlayerSpd = enemySpd * ratio;
+  const playerStats = getBattlePlayerStats();
+  const baseSpd = playerStats.spd || 10;
+
+  // 備份當前加成並設定速度測試加成
+  debugSpeedBackup = gameSpdBonus;
+  gameSpdBonus = Math.max(0, targetPlayerSpd - baseSpd);
+
+  // 標記速度測試模式：startBattle 會跳過隨機選敵
+  window._speedTestActive = true;
+  battleEnemyRow = enemyRow;
+
+  document.getElementById("debugOverlay").classList.remove("open");
+  closeBattleMenu();
+  startBattle();
+  showToast("速度測試：玩家 " + getBattlePlayerTotalSpd().toFixed(2) + " vs 敵方 " + enemySpd.toFixed(2) + "（比率 " + ratio.toFixed(2) + "x）");
+};
+
+// 重置速度加成按鈕
+document.getElementById("debugSpeedResetBtn").onclick = () => {
+  gameSpdBonus = 0;
+  debugSpeedBackup = null;
+  updateStatsDisplay();
+  showToast("速度訓練加成已歸零");
+};
+
 // 打開設定面板
 document.getElementById("settingsBtn").onclick = () => {
   refreshChildSelect();
@@ -10398,6 +10535,8 @@ function activateSlot(slotIndex){
     gameHpBonus = 0; gameAtkBonus = 0; gameSpdBonus = 0;
     gameCritBonus = 0; gameDodgeBonus = 0; gameAffBonus = 0;
     totalTrainingCount = 0;
+    trainingHpCount = 0; trainingAtkCount = 0; trainingSpdCount = 0;
+    trainingCritCount = 0; trainingDodgeCount = 0; trainingAffCount = 0;
     gameCareMistakes = 0;
     callFirstShownTime = 0;
     poopsOnScreen = 0;
