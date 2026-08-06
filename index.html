@@ -1439,6 +1439,34 @@ canvas {
   margin-left: auto;
 }
 
+/* 對戰標題行內精靈 */
+.battle-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.bt-label {
+  flex-shrink: 0;
+}
+.bt-team-sprites {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.bt-sprite {
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
+  border: 1px solid #444;
+  border-radius: 3px;
+  background: #1a1a1a;
+}
+.bt-sprite.defeated {
+  border-color: #cc3333;
+  opacity: 0.5;
+}
+
 /* ========== 機器選擇啟動頁 ========== */
 .launcher-overlay {
   position: fixed; top:0; left:0; right:0; bottom:0;
@@ -1605,7 +1633,19 @@ canvas {
 
 <!-- 對戰面板（8個按鈕下方） -->
 <div class="stats-display" id="battleDisplay" style="display:none;">
-  <div class="sd-title" id="battleTitle">對戰</div>
+  <div class="sd-title battle-title-row" id="battleTitle">
+    <div class="bt-team-sprites" id="btEnemySprites" style="display:none">
+      <canvas class="bt-sprite" width="28" height="28" data-idx="0"></canvas>
+      <canvas class="bt-sprite" width="28" height="28" data-idx="1"></canvas>
+      <canvas class="bt-sprite" width="28" height="28" data-idx="2"></canvas>
+    </div>
+    <span class="bt-label">對戰</span>
+    <div class="bt-team-sprites" id="btPlayerSprites" style="display:none">
+      <canvas class="bt-sprite" width="28" height="28" data-idx="0"></canvas>
+      <canvas class="bt-sprite" width="28" height="28" data-idx="1"></canvas>
+      <canvas class="bt-sprite" width="28" height="28" data-idx="2"></canvas>
+    </div>
+  </div>
   <div class="battle-info" id="battleInfo">
     <div class="battle-vs-row">
       <div class="battle-side enemy">
@@ -7691,6 +7731,7 @@ function handleQuickBattle3v3RoundEnd(result){
   if(enemy){
     enemy.currentHp = Math.max(0, battleEnemyHp);
   }
+  updateBattleTeamSprites();
   if(result !== "win" && result !== "lose"){
     document.getElementById("battleDisplay").style.display = "none";
     document.getElementById("returnBtn").style.display = "";
@@ -7780,6 +7821,7 @@ function continueQuickBattle3v3Round(result, outgoingSide){
     battlePlayerOffsetX = 28;
     battleEnemyOffsetX = 0;
   }
+  updateBattleTeamSprites();
   renderBattleScene();
 
   const animateIn = setInterval(() => {
@@ -7842,6 +7884,7 @@ function startQuickBattle3v3NextRound(){
   battleEnemyEvoCallback = null;
   battleOriginalRow = getBattlePlayerRow();
   setBattleActive(true);
+  updateBattleTeamSprites();
   renderBattleScene();
   setTimeout(() => {
     document.getElementById("battleMsg").textContent = "第 " + (battleQuick3v3PlayerIdx + 1) + " 隻 VS 第 " + (battleQuick3v3EnemyIdx + 1) + " 隻，自動開戰！";
@@ -7851,6 +7894,8 @@ function startQuickBattle3v3NextRound(){
 
 function finishQuickBattle3v3Match(playerWon){
   document.getElementById("battleDisplay").style.display = "none";
+  document.getElementById("btEnemySprites").style.display = "none";
+  document.getElementById("btPlayerSprites").style.display = "none";
   document.getElementById("returnBtn").style.display = "";
   canvas.width = CANVAS_NORMAL_W;
   canvas.height = 16;
@@ -8441,6 +8486,66 @@ function runBattleAuto(){
   });
 }
 
+// ========== 對戰標題精靈顯示 ==========
+function updateBattleTeamSprites(){
+  const enemyContainer = document.getElementById("btEnemySprites");
+  const playerContainer = document.getElementById("btPlayerSprites");
+  const is3v3 = !!(battleQuick3v3Active && battleQuick3v3PlayerTeam && battleQuick3v3EnemyTeam);
+  
+  enemyContainer.style.display = is3v3 ? "flex" : "none";
+  playerContainer.style.display = is3v3 ? "flex" : "none";
+  if(!is3v3) return;
+  
+  drawTeamSprites(enemyContainer, battleQuick3v3EnemyTeam, true);
+  drawTeamSprites(playerContainer, battleQuick3v3PlayerTeam, false);
+}
+
+function drawTeamSprites(container, team, reverse){
+  const canvases = container.querySelectorAll("canvas");
+  canvases.forEach(function(canvas, displayIdx){
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, 28, 28);
+    
+    const teamIdx = reverse ? (team.length - 1 - displayIdx) : displayIdx;
+    const member = team[teamIdx];
+    if(!member){
+      ctx.fillStyle = "#1a1a1a";
+      ctx.fillRect(0, 0, 28, 28);
+      return;
+    }
+    
+    const img = getSpriteImage(member.version, member.originalRow || member.row);
+    if(img && img.complete && img.naturalWidth > 0){
+      ctx.imageSmoothingEnabled = false;
+      if(reverse){
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(img, 0, 0, 16, 16, -28, 0, 28, 28);
+        ctx.restore();
+      } else {
+        ctx.drawImage(img, 0, 0, 16, 16, 0, 0, 28, 28);
+      }
+    } else {
+      ctx.fillStyle = "#1a1a1a";
+      ctx.fillRect(0, 0, 28, 28);
+    }
+    
+    const hp = member.currentHp !== undefined ? member.currentHp : member.maxHp;
+    if(hp <= 0){
+      ctx.fillStyle = "rgba(180, 0, 0, 0.45)";
+      ctx.fillRect(0, 0, 28, 28);
+      ctx.strokeStyle = "#ff3333";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(4, 4);
+      ctx.lineTo(24, 24);
+      ctx.moveTo(24, 4);
+      ctx.lineTo(4, 24);
+      ctx.stroke();
+    }
+  });
+}
+
 function startBattle(targetSlotIdx){
   if(!battleQuick3v3Active && isDead){ showToast("數碼獸已離世，無法戰鬥..."); return; }
   // targetSlotIdx >= 0 表示自家對戰模式
@@ -8626,6 +8731,7 @@ function startBattle(targetSlotIdx){
   updateCssBackground("battle");
   battlePlayerFrame = 0;
   battleEnemyFrame = 0;
+  updateBattleTeamSprites();
   renderBattleScene();
 }
 
