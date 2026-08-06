@@ -1431,6 +1431,13 @@ canvas {
   background: #333;
   color: #888;
 }
+.qb3v3-card-sprite {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+  margin-left: auto;
+}
 
 /* ========== 機器選擇啟動頁 ========== */
 .launcher-overlay {
@@ -3675,6 +3682,7 @@ let battleQuick3v3PlayerTeam = [];
 let battleQuick3v3EnemyTeam = [];
 let battleQuick3v3PlayerIdx = 0;
 let battleQuick3v3EnemyIdx = 0;
+let battleQuick3v3EnemyAdversityTries = [];
 let battleHappyImg = new Image();       // Happy 圖片
 let battleSadImg = new Image();         // Sad 圖片
 let battleShowHappy = false;           // 顯示 Happy 圖
@@ -7527,12 +7535,31 @@ function renderQuickBattle3v3Panel(){
     html += '<div class="self-battle-card-name">' + name + '</div>';
     html += '<div class="self-battle-card-stage">' + stage + '</div>';
     if(statsLine) html += '<div class="self-battle-card-stats">' + statsLine + '</div>';
-    html += '</div></div>';
+    html += '</div>';
+    // 卡片最右加入 IDLE 精靈圖
+    if(snapshot && !disabled){
+      html += '<canvas class="qb3v3-card-sprite" width="32" height="32" data-version="' + snapshot.version + '" data-row="' + snapshot.row + '"></canvas>';
+    }
+    html += '</div>';
   }
   if(!html){
     html = '<div style="text-align:center;color:#999;padding:16px;">沒有可選的自家數碼獸</div>';
   }
   if(list) list.innerHTML = html;
+  // 繪製所有卡片的 IDLE 精靈
+  if(list){
+    const canvases = list.querySelectorAll('.qb3v3-card-sprite');
+    canvases.forEach(function(c){
+      const ver = c.dataset.version;
+      const row = parseInt(c.dataset.row, 10);
+      const img = getSpriteImage(ver, row);
+      if(img && img.complete && img.naturalWidth > 0){
+        var ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, 0, 0, 16, 16, 0, 0, 32, 32);
+      }
+    });
+  }
   if(startBtn) startBtn.disabled = !(battleQuick3v3SelectedSlots.length === 3 && !!battleQuick3v3Stage);
 }
 function openQuickBattle3v3Menu(){
@@ -7635,7 +7662,8 @@ function startQuickBattle3v3(){
       dodgeBonus: snapshot.dodgeBonus || 0,
       affBonus: snapshot.affBonus || 0,
       maxHp,
-      currentHp: maxHp
+      currentHp: maxHp,
+      adversityTries: 0
     });
   }
   const enemyTeam = buildQuickBattle3v3EnemyTeam(battleQuick3v3Stage);
@@ -7643,6 +7671,7 @@ function startQuickBattle3v3(){
     showToast("找不到可用的 3V3 對手");
     return;
   }
+  battleQuick3v3EnemyAdversityTries = [0, 0, 0];
   battleQuick3v3Active = true;
   battleQuick3v3PlayerTeam = team;
   battleQuick3v3EnemyTeam = enemyTeam;
@@ -7789,14 +7818,24 @@ function startQuickBattle3v3NextRound(){
   battleProjectileX = 0;
   battleProjectileDir = 0;
   battleAdversityEvoRow = -1;
-  battleAdversityTries = 0;
+  // 3V3模式下從fighter/敵方陣列同步進化計數，否則清零
+  if(battleQuick3v3Active){
+    const fighter = getBattlePlayerFighter();
+    battleAdversityTries = (fighter && fighter.adversityTries !== undefined) ? fighter.adversityTries : 0;
+  } else {
+    battleAdversityTries = 0;
+  }
   battleEvoState = "none";
   battleEvoStep = 0;
   battleEvoNextRow = -1;
   battleEvoCallback = null;
   battleEnemyOriginalRow = battleEnemyRow;
   battleEnemyAdversityEvoRow = -1;
-  battleEnemyAdversityTries = 0;
+  if(battleQuick3v3Active){
+    battleEnemyAdversityTries = battleQuick3v3EnemyAdversityTries[battleQuick3v3EnemyIdx] || 0;
+  } else {
+    battleEnemyAdversityTries = 0;
+  }
   battleEnemyEvoState = "none";
   battleEnemyEvoStep = 0;
   battleEnemyEvoNextRow = -1;
@@ -8008,7 +8047,11 @@ function getAdversityEvoCandidates(fromRow, forEnemy = false){
 
 // 逆境進化判定：血量<40%且尚未用完次數，且必須有下一階段可進化
 function tryAdversityEvo(){
-  if(battleQuick3v3Active) return false;
+  // 3V3模式下從當前fighter同步進化計數
+  if(battleQuick3v3Active){
+    const fighter = getBattlePlayerFighter();
+    battleAdversityTries = (fighter && fighter.adversityTries !== undefined) ? fighter.adversityTries : 0;
+  }
   if(battleAdversityTries >= ADVERSITY_EVO_MAX_TRIES) return false;
   // 檢查是否有合法進化目標（基於 EVO_PATHS）
   const candidates = getAdversityEvoCandidates(getBattlePlayerRow());
@@ -8024,6 +8067,11 @@ function tryAdversityEvo(){
 // 逆境進化執行：動畫 → 進化 → 攻擊
 function doAdversityEvo(nextAttacker, onDone){
   battleAdversityTries++;
+  // 3V3模式下同步進化計數到fighter對象
+  if(battleQuick3v3Active){
+    const fighter = getBattlePlayerFighter();
+    if(fighter) fighter.adversityTries = battleAdversityTries;
+  }
 
   // 只使用 EVO_PATHS 中的合法進化目標
   const candidates = getAdversityEvoCandidates(getBattlePlayerRow());
@@ -8106,6 +8154,10 @@ function runEvoAnimUp(){
 // ========== 敵方逆境進化 ==========
 function doEnemyAdversityEvo(nextAttacker, onDone){
   battleEnemyAdversityTries++;
+  // 3V3模式下同步進化計數到敵方隊伍陣列
+  if(battleQuick3v3Active){
+    battleQuick3v3EnemyAdversityTries[battleQuick3v3EnemyIdx] = battleEnemyAdversityTries;
+  }
 
   // 只使用 EVO_PATHS 中的合法進化目標
   const candidates = getAdversityEvoCandidates(battleEnemyRow, true);
@@ -8142,6 +8194,14 @@ function runEnemyEvoAnim(){
         battleEnemyRow = battleEnemyEvoNextRow;
         // 敵方逆境進化不解鎖玩家圖鑑
         const s = getEnemyStats(battleEnemyEvoNextRow);
+        // 3V3模式下同步進化後的row和maxHp到敵方fighter對象
+        if(battleQuick3v3Active){
+          const enemy = getBattleEnemyFighter();
+          if(enemy){
+            enemy.row = battleEnemyEvoNextRow;
+            enemy.maxHp = s.hp;
+          }
+        }
         if(battleIsSelfBattle){
           battleEnemyMaxHp = s.hp + battleSelfEnemyHpBonus;
           battleEnemyHp = s.hp + battleSelfEnemyHpBonus;
@@ -8198,7 +8258,11 @@ function executeAttack(who, onDone){
   }
 
   // 敵方攻擊前逆境進化判定
-  if(!battleQuick3v3Active && who === "enemy" && battleEnemyAdversityTries < ADVERSITY_EVO_MAX_TRIES){
+  // 3V3模式下從敵方隊伍陣列同步進化計數
+  if(battleQuick3v3Active){
+    battleEnemyAdversityTries = battleQuick3v3EnemyAdversityTries[battleQuick3v3EnemyIdx] || 0;
+  }
+  if(who === "enemy" && battleEnemyAdversityTries < ADVERSITY_EVO_MAX_TRIES){
     const eHpPct = battleEnemyHp / battleEnemyMaxHp;
     if(eHpPct > 0 && eHpPct < 0.4 && (window.forceAdversityEvo || Math.random() < 0.0542)){
       // 檢查敵方是否有合法進化目標（基於 EVO_PATHS，完全體不可再進化）
@@ -8924,14 +8988,14 @@ function endBattle(result){
   battleEnemyDodge = false;
   document.getElementById("adversityEvoBanner").style.display = "none";
 
-  // 玩家有逆境進化 → 先播放玩家退化動畫
-  if(battleAdversityEvoRow >= 0){
+  // 玩家有逆境進化 → 先播放玩家退化動畫 (3V3模式下不退化，保留到下回合)
+  if(!battleQuick3v3Active && battleAdversityEvoRow >= 0){
     runDevoAnim(result);
     return;
   }
 
-  // 敵方有逆境進化 → 先播放敵方退化動畫
-  if(battleEnemyAdversityEvoRow >= 0){
+  // 敵方有逆境進化 → 先播放敵方退化動畫 (3V3模式下不退化，保留到下回合)
+  if(!battleQuick3v3Active && battleEnemyAdversityEvoRow >= 0){
     runEnemyDevoAnim(result);
     return;
   }
