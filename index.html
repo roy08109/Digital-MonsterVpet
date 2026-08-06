@@ -878,22 +878,21 @@ body{
   flex-direction:column;
   align-items:center;
   background:#333;
+  border:1px solid #444;
   border-radius:6px;
   padding:8px;
   width:72px;
   cursor:pointer;
-  transition:background .15s;
+  transition:background .15s, border-color .15s, box-shadow .15s;
 }
 .digidex-entry:hover{ background:#555; }
-.digidex-entry-locked{ opacity:0.55; }
-.digidex-entry-locked:hover{ background:#3a3a3a; }
-/* 曾擁有但當前不在存檔中 */
-.digidex-entry-prior{
+.digidex-entry-owned{
   position:relative;
   border:1px solid #c8a000;
   background:#3a3520;
+  box-shadow:0 0 8px rgba(255,204,0,.18);
 }
-.digidex-entry-prior:hover{ background:#4a4530; }
+.digidex-entry-owned:hover{ background:#4a4530; }
 .digidex-badge{
   position:absolute;
   top:2px;
@@ -904,10 +903,10 @@ body{
   z-index:1;
   pointer-events:none;
 }
-/* 從未擁有：極淡灰色 */
+/* 從未擁有：依然完整顯示，只是沒有星 */
 .digidex-entry-never{
-  opacity:0.35;
   background:#2a2a2a;
+  border-color:#444;
 }
 .digidex-entry-never:hover{ background:#353535; }
 .digidex-entry canvas{
@@ -1686,7 +1685,7 @@ canvas {
   <div id="foodList" style="padding:4px 0;">
     <div class="food-item" id="foodItemMeat">
       <span class="food-label" onclick="feedDigimon('meat')">🥩 1.肉</span>
-      <span style="font-size:10px;color:#888;margin-right:6px;">自動</span>
+      <span style="font-size:10px;color:#888;margin-right:6px;">一鍵</span>
       <div class="toggle-switch-sm" id="autoFeedToggle" onclick="toggleAutoFeed(event)"></div>
     </div>
   </div>
@@ -2402,16 +2401,7 @@ function startBabyCareCycle(){
       if(babyHungerTick >= 120){
         babyHungerTick = 0;
         gameHunger = Math.max(0, gameHunger - 1);
-        if(autoFeedEnabled && gameHunger === 0){
-          if(gameMode === "auto"){
-            feedDigimon('meat');
-          } else {
-            gameHunger = 1;
-          }
-          if(callBlinkTimer){ clearInterval(callBlinkTimer); callBlinkTimer = null; }
-          callFirstShownTime = 0;
-          callMistakeRecorded = false;
-        }
+
         updateCallButton();
         updateNotifArea(true);
       }
@@ -5157,7 +5147,7 @@ function renderTrainingCanvas(){
           : (currentVersion === "V5")
             ? ((currentRow < attackRowImagesV5.length) ? attackRowImagesV5[currentRow] : attackRowImagesV5[0])
             : (currentVersion === "V6")
-              ? ((currentRow < attackRowImages.length) ? attackRowImages[currentRow] : attackRowImages[0])
+              ? ((currentRow < attackRowImagesV6.length) ? attackRowImagesV6[currentRow] : attackRowImagesV6[0])
               : ((currentRow < 14) ? attackRowImages[currentRow] : attackRowImages[0]);
     if(fireImg && fireImg.complete){
       ctx.drawImage(fireImg, 0, 0, 16, 8, trainingProjectileX, 0, 16, 8);
@@ -5504,7 +5494,7 @@ function saveGameState(){
     if(activeSlotIndex < 0) return;
     if(versionSelectMode) return;
     const slotKey = getSlotSaveKey(activeSlotIndex);
-    localStorage.setItem(slotKey, JSON.stringify({
+    const jsonStr = JSON.stringify({
       dataVersion: DATA_VERSION,
       currentVersion,
       gameAge,
@@ -5520,18 +5510,57 @@ function saveGameState(){
       poopsOnScreen, poopCountdown, babyHasPooped,
       isSleeping,
       isEggPhase,
-      gameCareMistakes, callMistakeRecorded,
+      gameCareMistakes, callMistakeRecorded, callFirstShownTime, babyIICallEverShown,
       gameTotalBattles, gameBattleWins,
       isSick, eightPoopsStartTime, eightPoopsMistakeRecorded,
       isDead, deathReason, sickStartTime, hungerZeroStartTime,
       gameGold,
       eggStartTime: isEggPhase ? eggStartTime : undefined,
-      birthTimestamp: birthTimestamp || undefined, // 出生時間戳，永不改變
-      cultivatedRows: Array.from(cultivatedRows), // 已真正培育的 row
+      birthTimestamp: birthTimestamp || undefined,
+      cultivatedRows: Array.from(cultivatedRows),
       autoFeedEnabled,
       timestamp: Date.now()
-    }));
-  } catch(e){ /* 忽略存檔錯誤 */ }
+    });
+    localStorage.setItem(slotKey, jsonStr);
+    // 写入后二次验证，确保关键数据正确持久化
+    const verify = JSON.parse(localStorage.getItem(slotKey));
+    if(verify.gameAtkBonus !== gameAtkBonus || verify.gameTrainingPoints !== gameTrainingPoints){
+      localStorage.setItem(slotKey, jsonStr);
+    }
+  } catch(e){ console.warn('存档失败:', e); }
+}
+function resolveOfflineBabyEvolution(data){
+  if(isEggPhase || currentRow > 1) return;
+
+  babyIICallEverShown = !!(data && data.babyIICallEverShown);
+  const babyCallShown =
+    babyIICallEverShown ||
+    !!(data && data.callFirstShownTime) ||
+    ((data && data.gameHunger) === 0) ||
+    gameHunger === 0 ||
+    !!(data && data.forceBabyCallShown);
+
+  if(gameAge >= 5 && babyCallShown){
+    babyIICallEverShown = true;
+  }
+
+  if(gameAge >= 15){
+    if(currentRow === 0){
+      currentRow = 1;
+      markDigidexObtained(1);
+    }
+    if(babyIICallEverShown && gameCareMistakes === 0){
+      gameCareMistakes = 1;
+    }
+    evoAnimPending = true;
+    markDigidexObtained(getEvolutionRow(1));
+    return;
+  }
+
+  if(currentRow === 0 && gameAge >= 5){
+    evoAnimPending = true;
+    markDigidexObtained(1);
+  }
 }
 function loadGameState(slotIndex){
   try {
@@ -5622,10 +5651,12 @@ function loadGameState(slotIndex){
           gameAgeLastDay = offlineDay;
           updateNotifArea(true);
         }
-        // 離線進化捕捉
-    if(currentRow === 0 && gameAge >= 5) { evoAnimPending = true; markDigidexObtained(1); }
-    if(currentRow === 1 && gameAge >= 15) { evoAnimPending = true; markDigidexObtained(2); }
-    return; // 孵化完成，跳過後續離線計算
+        resolveOfflineBabyEvolution({
+          isEggPhase: true,
+          gameHunger,
+          forceBabyCallShown: true
+        });
+        return; // 孵化完成，跳過後續離線計算
       } else {
         // 仍在蛋時期，恢復狀態
         isEggPhase = true;
@@ -5651,12 +5682,7 @@ function loadGameState(slotIndex){
     } else {
       gameAge = (data.gameAge || 0) + elapsed;
     }
-    // 如果自動餵食已開啟，離線期間自動餵食會阻止飢餓歸零
-    if(data.autoFeedEnabled){
-      gameHunger = Math.max(1, (data.gameHunger ?? 5)); // 自動餵食保證不會餓到 0
-    } else {
-      gameHunger = Math.min(10, Math.max(0, (data.gameHunger ?? 5) - Math.floor(elapsed / 30)));
-    }
+    gameHunger = Math.min(10, Math.max(0, (data.gameHunger ?? 5) - Math.floor(elapsed / 30)));
     gameTrainingPoints = data.gameTrainingPoints ?? 12;
     gameAgeLastDay = data.gameAgeLastDay ?? 0;
     // 離線期間每天疊加 12 點訓練點
@@ -5702,9 +5728,10 @@ function loadGameState(slotIndex){
     }
     // 將當前存檔的已培育 row 同步到永久擁有歷史（確保舊資料不丟失）
     let historyChanged = false;
+    const historySet = digidexOwnedHistory[currentVersion || 'V1'] || (digidexOwnedHistory[currentVersion || 'V1'] = new Set());
     for(const r of cultivatedRows){
-      if(!digidexOwnedHistory.has(r)){
-        digidexOwnedHistory.add(r);
+      if(!historySet.has(r)){
+        historySet.add(r);
         historyChanged = true;
       }
     }
@@ -5729,6 +5756,8 @@ function loadGameState(slotIndex){
       isSleeping = data.isSleeping ?? false;
       gameCareMistakes = data.gameCareMistakes ?? 0;
       callMistakeRecorded = data.callMistakeRecorded ?? false;
+      callFirstShownTime = data.callFirstShownTime ?? 0;
+      babyIICallEverShown = data.babyIICallEverShown ?? false;
       gameTotalBattles = data.gameTotalBattles ?? 0;
       gameBattleWins = data.gameBattleWins ?? 0;
       gameGold = data.gameGold ?? 0;
@@ -5747,13 +5776,35 @@ function loadGameState(slotIndex){
         isSick = true;
         sickStartTime = Date.now() - elapsed * 1000; // 推算生病開始時間
       }
-      // 離線育成失誤：存檔時飢餓=0且未記錄失誤，離線≥10分鐘則計1次
-      if(data.gameHunger === 0 && !callMistakeRecorded && elapsed >= 10){
-        gameCareMistakes++;
-        callMistakeRecorded = true;
+      // 離線育成失誤：以 CALL 實際出現時間補算，不只看存檔當下是否已經飢餓歸零
+      if(gameHunger === 0){
+        if(currentRow > 1){
+          let offlineCallShownTime = 0;
+          if((data.gameHunger ?? 0) === 0){
+            offlineCallShownTime = data.callFirstShownTime || data.hungerZeroStartTime || data.timestamp || 0;
+          } else if(!autoFeedEnabled){
+            const minutesUntilZero = Math.max(0, (data.gameHunger ?? 0) * 30);
+            if(elapsed >= minutesUntilZero){
+              offlineCallShownTime = (data.timestamp || Date.now()) + minutesUntilZero * 60000;
+            }
+          }
+          if(offlineCallShownTime > 0){
+            const offlineCallElapsed = Date.now() - offlineCallShownTime;
+            if(!callMistakeRecorded && offlineCallElapsed >= 600000){
+              gameCareMistakes++;
+              callMistakeRecorded = true;
+              callFirstShownTime = 0;
+            } else {
+              callFirstShownTime = offlineCallShownTime;
+            }
+          } else {
+            callFirstShownTime = Date.now();
+          }
+        } else {
+          callFirstShownTime = Date.now();
+        }
+      } else {
         callFirstShownTime = 0;
-      } else if(gameHunger === 0){
-        callFirstShownTime = Date.now();
       }
       // 計算離線經過的秒數，處理排便倒數（睡眠中跳過）
       if(!data.isSleeping){
@@ -5774,21 +5825,26 @@ function loadGameState(slotIndex){
     } else {
       gameWeight = DIGIMON_STATS[data.currentRow ?? 2].weight;
       gameAffinity = DIGIMON_STATS[data.currentRow ?? 2].bondInitial || 0;
-      gameHpBonus = 0; gameAtkBonus = 0; gameSpdBonus = 0;
-      gameCritBonus = 0; gameDodgeBonus = 0; gameAffBonus = 0;
-      totalTrainingCount = 0; gameAgeLastDay = 0;
-      stageStartDay = 0; stageTrainingPointsUsed = 0;
-      gameTrainingPoints = (currentRow <= 1) ? 0 : 12;
+      // 版本升級時保留已有的訓練加成（如果存檔中存在該欄位）
+      gameHpBonus = data.gameHpBonus ?? 0;
+      gameAtkBonus = data.gameAtkBonus ?? 0;
+      gameSpdBonus = data.gameSpdBonus ?? 0;
+      gameCritBonus = data.gameCritBonus ?? 0;
+      gameDodgeBonus = data.gameDodgeBonus ?? 0;
+      gameAffBonus = data.gameAffBonus ?? 0;
+      totalTrainingCount = data.totalTrainingCount ?? 0;
+      gameAgeLastDay = data.gameAgeLastDay ?? 0;
+      stageStartDay = data.stageStartDay ?? 0;
+      stageTrainingPointsUsed = data.stageTrainingPointsUsed ?? 0;
+      gameTrainingPoints = (data.gameTrainingPoints != null) ? data.gameTrainingPoints : ((currentRow <= 1) ? 0 : 12);
       poopsOnScreen = 0; poopCountdown = 0; babyHasPooped = false;
       gameTotalBattles = 0; gameBattleWins = 0;
       isSick = false; sickStartTime = 0; eightPoopsStartTime = 0; eightPoopsMistakeRecorded = false;
+      babyIICallEverShown = data.babyIICallEverShown ?? false;
     }
+    resolveOfflineBabyEvolution(data);
     // 離線期間的階段進化檢查（確保即時觸發）
     if(currentRow >= 2) checkStageEvolution();
-    // 離線補捉：黑球獸應在 5 分鐘後進化（待圖片載入後觸發）
-    if(currentRow === 0 && gameAge >= 5) { evoAnimPending = true; markDigidexObtained(1); }
-    // 離線補捉：滾球獸應在 15 分鐘後進化
-    if(currentRow === 1 && gameAge >= 15) { evoAnimPending = true; markDigidexObtained(2); }
   } catch(e){ /* 忽略讀檔錯誤 */ }
 }
 
@@ -5913,6 +5969,7 @@ function onDigimonDied(reason) {
 }
 
 function rebornAsEgg() {
+  const rebornSlotKey = activeSlotIndex >= 0 ? getSlotSaveKey(activeSlotIndex) : "";
   // 重置死亡狀態
   isDead = false;
   deathReason = "";
@@ -5959,6 +6016,12 @@ function rebornAsEgg() {
   isEating = false;
   eightPoopsStartTime = 0;
   eightPoopsMistakeRecorded = false;
+  cultivatedRows = new Set();
+
+  // 一旦玩家確認重新育成，立即清除舊槽位存檔，避免後續又被舊龍資料覆蓋回來
+  if(rebornSlotKey){
+    try { localStorage.removeItem(rebornSlotKey); } catch(e){}
+  }
 
   // 進入版本選擇畫面（讓玩家重新選擇蛋版本）
   versionSelectMode = true;
@@ -6901,6 +6964,8 @@ function clickFunction(idx){
   }
   // 進食中不能點其他按鈕
   if(gameMode === "eating") return;
+  // 進化動畫中不能操作按鈕
+  if(evoAnimActive || birthEvoCelebrate || preEvoCelebrate) return;
   // 清潔動畫中不能操作其他按鈕
   if(flushingMode && idx !== 4) return;
   // 對戰中：所有功能按鈕無效，請使用對戰面板內按鈕操作
@@ -8581,14 +8646,10 @@ function renderDigidexPage(stageList){
     for(const row of stage.rows){
       const entry = document.createElement('div');
       entry.className = 'digidex-entry';
-      // 二態判斷：擁有過（當前或歷史）/ 從未擁有
       const inCurrent = (row === -1) ? isEggPhase : cultivatedRows.has(row);
-      const ownedBefore = !inCurrent && verHistory.has(row);
-      const owned = inCurrent || ownedBefore;       // 只要擁有過就算 owned
-      const neverOwned = !owned;
+      const owned = inCurrent || verHistory.has(row);
 
       if(row === -1){
-        // 蛋：使用對應版本蛋圖左邊 16×16
         entry.style.cursor = 'default';
         const eggImg = getEggImageForVersion(currentDigidexVersion);
         const c = document.createElement('canvas');
@@ -8600,34 +8661,27 @@ function renderDigidexPage(stageList){
         }
         c.style.width = '48px'; c.style.height = '48px';
         if(owned){
-          // 擁有過：亮色 + ★
-          if(!inCurrent) entry.classList.add('digidex-entry-prior');
+          entry.classList.add('digidex-entry-owned');
           const badge = document.createElement('div');
           badge.className = 'digidex-badge';
           badge.textContent = '★';
           entry.appendChild(badge);
         } else {
-          // 從未孵化：灰色
           entry.classList.add('digidex-entry-never');
-          c.style.opacity = '0.25';
         }
         entry.appendChild(c);
-      } else if(owned){
-        // 擁有過：亮色 + ★
-        entry.style.cursor = 'pointer';
-        if(!inCurrent) entry.classList.add('digidex-entry-prior');
-        const badge = document.createElement('div');
-        badge.className = 'digidex-badge';
-        badge.textContent = '★';
-        entry.appendChild(badge);
-        const sprite = createMiniSprite(row, 48, currentDigidexVersion);
-        entry.appendChild(sprite);
       } else {
-        // 從未擁有：灰色
         entry.style.cursor = 'pointer';
-        entry.classList.add('digidex-entry-never');
+        if(owned){
+          entry.classList.add('digidex-entry-owned');
+          const badge = document.createElement('div');
+          badge.className = 'digidex-badge';
+          badge.textContent = '★';
+          entry.appendChild(badge);
+        } else {
+          entry.classList.add('digidex-entry-never');
+        }
         const sprite = createMiniSprite(row, 48, currentDigidexVersion);
-        sprite.style.opacity = '0.25';
         entry.appendChild(sprite);
       }
       const nameSpan = document.createElement('div');
@@ -8638,15 +8692,9 @@ function renderDigidexPage(stageList){
         nameSpan.textContent = names[row] || `??_${String(row).padStart(2,'0')}`;
       }
       entry.appendChild(nameSpan);
-      // 點擊：蛋無操作；已發現開詳情；未發現顯示進化條件子視圖
-      if(row !== -1 && inCurrent){
+      if(row !== -1){
         entry.addEventListener('click', (e) => {
           showDigidexDetail(row);
-          e.stopPropagation();
-        });
-      } else if(row !== -1 && !inCurrent){
-        entry.addEventListener('click', (e) => {
-          showUnknownConditions(row);
           e.stopPropagation();
         });
       }
@@ -8766,12 +8814,6 @@ function buildEvoSection(row, ver){
 
 function showDigidexDetail(row){
   if(row === -1) return; // 蛋無詳情頁
-  // 允許查看當前擁有或曾擁有過的數碼獸詳情
-  const verHistory = digidexOwnedHistory[currentDigidexVersion] || new Set();
-  if(!cultivatedRows.has(row) && !verHistory.has(row)){
-    alert("尚未發現此數碼獸，請繼續培育！");
-    return;
-  }
   const container = document.getElementById("digidexContent");
   const detailDiv = document.getElementById("digidexDetail");
   const stats = getStatsForVersion(currentDigidexVersion);
@@ -8839,9 +8881,17 @@ function feedDigimon(food){
       restartAnimTimer(REFUSE_IV);
       return;
     }
-    gameHunger = Math.min(10, gameHunger + 1);
-    updateNotifArea(true);
-    gameWeight = Math.min(99, Math.max(1, gameWeight + 1));       // 吃東西增加體重，最高99
+    if(autoFeedEnabled){
+      // 一鍵食肉：一次餵滿饑餓度
+      const filled = 10 - gameHunger;
+      gameHunger = 10;
+      updateNotifArea(true);
+      gameWeight = Math.min(99, gameWeight + filled); // 體重按實際吃飽量增加
+    } else {
+      gameHunger = Math.min(10, gameHunger + 1);
+      updateNotifArea(true);
+      gameWeight = Math.min(99, Math.max(1, gameWeight + 1)); // 吃東西增加體重，最高99
+    }
     updateCallButton();
     // 進食：eat1/eat2 動畫，龍在右邊，食物從左到右
     gameMode = "eating";
@@ -9157,16 +9207,20 @@ document.getElementById("settingsDeleteBtn").onclick = () => {
   }
   const ver = SLOT_VERSIONS[targetSlot] || "V1";
   if(confirm("確定要刪除 " + ver + " 暴龍機 (No." + (targetSlot + 1) + ") 的存檔嗎？\n這會清除該暴龍機的所有進度並重新選蛋。\n\n（其他暴龍機不受影響）")){
-    // 先設為 -1，防止 returnToLauncher 內的 saveGameState 重新寫入存檔
+    const deleteConfirm = prompt("請輸入 del 確認刪除存檔");
+    if((deleteConfirm || "").trim().toLowerCase() !== "del"){
+      showToast("已取消刪除存檔");
+      return;
+    }
+    const slotKey = getSlotSaveKey(targetSlot);
+    try { localStorage.removeItem(slotKey); } catch(e){}
+    try { localStorage.removeItem(LAUNCHER_KEY); } catch(e){}
+    // 先設為 -1，防止 returnToLauncher 內的 saveGameState 重新寫入舊資料
     activeSlotIndex = -1;
     // 停止所有計時器
     stopAllTimers();
-    // 回到啟動頁（因 activeSlotIndex=-1，saveGameState 會直接返回不重寫存檔）
+    // 回到啟動頁
     returnToLauncher();
-    // 在 returnToLauncher 之後刪除存檔（此時不會被 saveGameState 復原）
-    localStorage.removeItem(getSlotSaveKey(targetSlot));
-    // 清除啟動頁緩存
-    localStorage.removeItem("digimon_vpet_launcher_meta");
     // 重新渲染卡片
     setTimeout(() => renderSlotCards(), 100);
   }
@@ -9183,26 +9237,17 @@ function toggleSoundSetting(){
   }
 }
 
-// 自動餵食開關
+// 一鍵食肉開關
 function toggleAutoFeed(event){
   event.stopPropagation();
   autoFeedEnabled = !autoFeedEnabled;
   const tgl = document.getElementById("autoFeedToggle");
   if(autoFeedEnabled){
     tgl.classList.add("on");
-    showToast("自動餵食後不會出現飢餓育成失誤");
-    // 開啟時如果飢餓度為 0，立即餵食（不需等到下一次 tick）
-    if(gameHunger === 0 && currentRow >= 0 && !isEggPhase){
-      if(gameMode === "auto"){
-        feedDigimon('meat');
-      } else {
-        gameHunger = 1;
-        updateCallButton();
-        updateNotifArea(true);
-      }
-    }
+    showToast("一鍵食肉: 餵食一次飢餓全滿");
   } else {
     tgl.classList.remove("on");
+    showToast("已關閉一鍵食肉");
   }
   saveGameState();
 }
@@ -9563,6 +9608,8 @@ function activateSlot(slotIndex){
 
 // 返回按鈕：先關閉面板，全關閉後才返回啟動器
 function handleReturnBtn(){
+  // 進化動畫中不能操作按鈕
+  if(evoAnimActive || birthEvoCelebrate || preEvoCelebrate) return;
   // 1. 設定面板
   const settingsOverlay = document.getElementById("settingsOverlay");
   if(settingsOverlay && settingsOverlay.classList.contains("open")){
@@ -9902,7 +9949,7 @@ attackProjImageV4.onerror = onImageError;
 attackProjImageV5.src = "sprites/V5_Attack/V5_02_at.png";
 attackProjImageV5.onload = onImageLoaded;
 attackProjImageV5.onerror = onImageError;
-attackProjImageV6.src = "sprites/V1_Attack/V1_02_at.png"; // V6 復用 V1 火球
+attackProjImageV6.src = "sprites/V6_Attack/V6_02_at.png";
 attackProjImageV6.onload = onImageLoaded;
 attackProjImageV6.onerror = onImageError;
 evadeMissileImage.src = "BG/missile.png";
@@ -10112,7 +10159,7 @@ setInterval(() => {
   updateNotifArea(true);
 }, 60000);
 // 飢餓：每 30 分鐘 -1 個心（10個心共 5 小時耗盡）
-setInterval(() => { if(activeSlotIndex < 0) return; if(!isEggPhase){ gameHunger = Math.max(0, gameHunger - 1); if(autoFeedEnabled && gameHunger === 0){ if(gameMode === "auto"){ feedDigimon('meat'); } else { gameHunger = 1; } if(callBlinkTimer){ clearInterval(callBlinkTimer); callBlinkTimer = null; } callFirstShownTime = 0; callMistakeRecorded = false; } updateCallButton(); updateNotifArea(true); } }, 1800000);
+setInterval(() => { if(activeSlotIndex < 0) return; if(!isEggPhase){ gameHunger = Math.max(0, gameHunger - 1); updateCallButton(); updateNotifArea(true); } }, 1800000);
 // 育成失誤檢查：CALL 出現超過 10 分鐘計 1 次，同個飢餓周期不重複計算
 setInterval(() => {
   if(activeSlotIndex < 0) return;
