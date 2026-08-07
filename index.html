@@ -5656,6 +5656,7 @@ function getSpriteImage(version, row){
   if(version === 'V4' && typeof rowImagesV4 !== 'undefined' && rowImagesV4[row]) return rowImagesV4[row];
   if(version === 'V5' && typeof rowImagesV5 !== 'undefined' && rowImagesV5[row]) return rowImagesV5[row];
   if(version === 'V6' && typeof rowImagesV6 !== 'undefined' && rowImagesV6[row]) return rowImagesV6[row];
+  if(version === 'V7' && typeof rowImagesV7 !== 'undefined' && rowImagesV7[row]) return rowImagesV7[row];
   // 回退：使用全局 rowImages（當前已載入版本）
   if(rowImages && rowImages[row]){
     return rowImages[row];
@@ -5667,6 +5668,7 @@ function getSpriteImage(version, row){
   if(typeof rowImagesV4 !== 'undefined' && rowImagesV4[row]) return rowImagesV4[row];
   if(typeof rowImagesV5 !== 'undefined' && rowImagesV5[row]) return rowImagesV5[row];
   if(typeof rowImagesV6 !== 'undefined' && rowImagesV6[row]) return rowImagesV6[row];
+  if(typeof rowImagesV7 !== 'undefined' && rowImagesV7[row]) return rowImagesV7[row];
   return null;
 }
 
@@ -5676,6 +5678,7 @@ function getEggImageForVersion(ver){
   if(ver === 'V4' && typeof v4EggImage !== 'undefined') return v4EggImage;
   if(ver === 'V5' && typeof v5EggImage !== 'undefined') return v5EggImage;
   if(ver === 'V6' && typeof v6EggImage !== 'undefined') return v6EggImage;
+  if(ver === 'V7' && typeof v7EggImage !== 'undefined') return v7EggImage;
   if(typeof eggImageV1 !== 'undefined') return eggImageV1;
   return null;
 }
