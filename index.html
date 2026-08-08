@@ -116,6 +116,44 @@ body{
 .call-btn:hover{ background:#555; }
 .call-btn:active{ transform:scale(0.92); }
 
+.evo-btn{
+  position:fixed;
+  left:100px;
+  top:12px;
+  width:36px;
+  height:36px;
+  background:#333;
+  border:none;
+  border-radius:50%;
+  color:#fff;
+  font-size:12px;
+  font-weight:bold;
+  cursor:pointer;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  transition:background 0.2s, box-shadow 0.3s;
+  line-height:1;
+  z-index:111;
+}
+.evo-btn:hover{ background:#555; }
+.evo-btn:active{ transform:scale(0.92); }
+.evo-btn.ready{
+  background:#1a5c1a;
+  color:#ffcc00;
+  animation: evoGlow 1.5s ease-in-out infinite;
+}
+.evo-btn.waiting{
+  background:#444;
+  color:#999;
+  cursor:not-allowed;
+  font-size:10px;
+}
+@keyframes evoGlow{
+  0%,100%{ box-shadow:0 0 4px rgba(255,204,0,0.3); }
+  50%{ box-shadow:0 0 12px rgba(255,204,0,0.8); }
+}
+
 /* 設定面板遮罩 */
 .settings-overlay{
   display:none;
@@ -1537,16 +1575,23 @@ canvas {
   background: #ffffff; border-radius: 6px; border: 1px solid #ddd;
   flex-shrink: 0;
 }
-.slot-status-icons {
-  display: flex; flex-direction: column; gap: 6px;
+.slot-info-panel {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: 11px; color: #aaa;
+  min-width: 70px; flex-shrink: 0;
 }
-.slot-status-icon {
-  width: 24px; height: 24px; display: none;
-  border-radius: 4px; background: #1a1a30;
-  border: 1px solid #444; padding: 2px;
-  image-rendering: pixelated;
+.slot-info-row {
+  display: flex; align-items: center; gap: 4px;
+  line-height: 1.3;
 }
-.slot-status-icon.show { display: block; }
+.slot-info-icon-img {
+  width: 20px; height: 20px; image-rendering: pixelated;
+  flex-shrink: 0; vertical-align: middle;
+}
+
+.slot-info-val {
+  color: #eee; font-weight: bold; font-size: 11px;
+}
 .slot-card-empty-text {
   display: flex; align-items: center; justify-content: center;
   height: 80px; color: #66ccff; font-size: 14px;
@@ -1610,6 +1655,7 @@ canvas {
 
 <div class="top-bar">
   <button class="call-btn" id="callBtn" title="呼叫"><img src="BG/call.png" alt="呼叫"></button>
+  <button class="evo-btn" id="evoBtn" title="手動進化" onclick="manualEvolution()">EVO</button>
   <div id="notifArea" class="title notif-area">數碼暴龍一代</div>
   <button class="debug-btn" id="debugBtn" title="測驗" style="display:none;">🧪</button>
   <button class="settings-btn" id="settingsBtn" title="設定">⚙</button>
@@ -1971,10 +2017,7 @@ canvas {
       <span class="debug-label">體重 (kg)</span>
       <input type="number" id="debugWeight" value="10" min="1" max="999">
     </div>
-    <div class="debug-row">
-      <span class="debug-label">訓練增量</span>
-      <input type="number" id="debugTraining" value="0" min="-9999" max="9999" step="12" placeholder="±12倍數">
-    </div>
+
     <button class="debug-btn-apply" id="debugApplyBtn">✓ 套用設定</button>
     <div style="margin-top:14px;padding-top:10px;border-top:1px solid #333;">
       <button class="debug-evo-btn child" id="debugEvoChildBtn" style="background:#4CAF50;">🐣 一鍵成長期</button>
@@ -2199,10 +2242,10 @@ function getEvolutionRowV5(row){
 function getEvolutionRowV6(row){
   if(row === 0) return 1; // 泡沫獸 → 年糕獸(自動)
   if(row === 1){ // 年糕獸→成長期 (4種結果)
-    if(gameCareMistakes >= 2) return 4;           // 失誤≥2 → 蝌蚪獸(virus)
-    if(gameCareMistakes >= 1) return 3;           // 失誤=1 → 礦石獸(data)
-    if(gameTrainingCount < 4) return 5;           // 失誤=0 訓練<4 → 安哥拉獸(vaccine)
-    return 2;                                      // 失誤=0 訓練≥4 → 甲蟲獸(vaccine)
+    if(gameCareMistakes >= 1 && gameTrainingCount < 4) return 4; // 失誤=1 訓練<4 → 蝌蚪獸(virus)
+    if(gameCareMistakes >= 1) return 3;                          // 失誤=1 訓練≥4 → 礦石獸(data)
+    if(gameTrainingCount < 4) return 5;                          // 失誤=0 訓練<4 → 安哥拉獸(vaccine)
+    return 2;                                                     // 失誤=0 訓練≥4 → 甲蟲獸(vaccine)
   }
   if(row >= 2 && row <= 5) return getChildEvoResultV6(row); // 成長期→成熟期
   if(row >= 6 && row <= 12){ // 成熟期→完全體（分組隨機）
@@ -2242,10 +2285,10 @@ function getChildEvoResultV6(row){
 function getEvolutionRowV7(row){
   if(row === 0) return 1; // 噼啪獸 → 普卡獸(自動)
   if(row === 1){ // 普卡獸→成長期 (4種結果)
-    if(gameCareMistakes >= 2) return 4;           // 失誤≥2 → 沙古門獸(virus)
-    if(gameCareMistakes >= 1) return 5;           // 失誤=1 → 水母獸(data)
-    if(gameTrainingCount < 4) return 3;           // 失誤=0 訓練<4 → 加尼獸(data)
-    return 2;                                      // 失誤=0 訓練≥4 → 哥瑪獸(vaccine)
+    if(gameCareMistakes >= 1 && gameTrainingCount < 4) return 4; // 失誤=1 訓練<4 → 沙古門獸(virus)
+    if(gameCareMistakes >= 1) return 5;                          // 失誤=1 訓練≥4 → 水母獸(data)
+    if(gameTrainingCount < 4) return 3;                          // 失誤=0 訓練<4 → 加尼獸(data)
+    return 2;                                                     // 失誤=0 訓練≥4 → 哥瑪獸(vaccine)
   }
   if(row >= 2 && row <= 5) return getChildEvoResultV7(row); // 成長期→成熟期
   if(row >= 6 && row <= 12){ // 成熟期→完全體（分組隨機）
@@ -2757,6 +2800,7 @@ function startEggPhase(version = "V1") {
   gameCareMistakes = 0;
   callFirstShownTime = 0;
   callMistakeRecorded = false;
+  babyIICallEverShown = false;
   if(callBlinkTimer){ clearInterval(callBlinkTimer); callBlinkTimer = null; }
   resetAllBonuses();
   
@@ -5431,7 +5475,9 @@ function getSlotPreviewData(idx){
       gameAge: data.gameAge || 0,
       birthTimestamp: data.birthTimestamp || 0,
       eggStartTime: data.eggStartTime || 0,
-      isDead: data.isDead || false
+      isDead: data.isDead || false,
+      gameAffinity: data.gameAffinity ?? 0,
+      gameHunger: data.gameHunger ?? 5
     };
   } catch(e){ return null; }
 }
@@ -5511,11 +5557,16 @@ function renderSlotCards(){
         </div>
         <div class="slot-preview-row">
           <canvas class="slot-mini-canvas" id="slotMiniCanvas${i}"></canvas>
-          ${isDead ? ``
-            : `<div class="slot-status-icons">
-                 <canvas class="slot-status-icon" id="slotSleepIcon${i}" title="睡眠中"></canvas>
-                 <canvas class="slot-status-icon" id="slotSickIcon${i}" title="生病"></canvas>
-                 <canvas class="slot-status-icon" id="slotPoopIcon${i}" title="有大便"></canvas>
+          ${isDead ? `<div class="slot-info-panel" style="justify-content:center;color:#ff5555;">已離世</div>`
+            : `<div class="slot-info-panel">
+                 <div class="slot-info-row">
+                   <span class="slot-info-val">${Math.floor(preview.gameAge / 1440)}</span>歲
+                   <span style="margin-left:6px;">❤️<span class="slot-info-val">${preview.gameHunger}</span></span>
+                 </div>
+                 <div class="slot-info-row">
+                   ${preview.hasPoop ? '<img class="slot-info-icon-img" src="BG/fecesIcon.png">' : ''}
+                   ${preview.isSick ? '<img class="slot-info-icon-img" src="BG/sick.png" style="margin-left:4px;">' : ''}
+                 </div>
                </div>`
           }
         </div>
@@ -5644,8 +5695,6 @@ function drawSlotMiniPreview(slotIndex, preview){
   const py = Math.floor((80 - dstH) / 2);
   ctx.drawImage(img, 0, 0, srcW, srcH, px, py, dstW, dstH);
 
-  // 狀態圖標
-  updateSlotStatusIcons(slotIndex, preview);
 }
 
 function getSpriteImage(version, row){
@@ -5683,36 +5732,6 @@ function getEggImageForVersion(ver){
   return null;
 }
 
-function updateSlotStatusIcons(slotIndex, preview){
-  const sleepCanvas = document.getElementById('slotSleepIcon' + slotIndex);
-  const sickCanvas = document.getElementById('slotSickIcon' + slotIndex);
-  const poopCanvas = document.getElementById('slotPoopIcon' + slotIndex);
-
-  drawStatusIcon(sleepCanvas, preview.isSleeping, 'sleep');
-  drawStatusIcon(sickCanvas, preview.isSick, 'sick');
-  drawStatusIcon(poopCanvas, preview.hasPoop, 'poop');
-}
-
-function drawStatusIcon(canvas, show, type){
-  if(!canvas) return;
-  if(show){
-    canvas.parentElement.classList.add('show');
-  } else {
-    canvas.parentElement.classList.remove('show');
-  }
-  canvas.width = 24; canvas.height = 24;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, 24, 24);
-  if(show){
-    ctx.fillStyle = '#1a1a30';
-    ctx.fillRect(0, 0, 24, 24);
-    ctx.font = '14px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = (type === 'sleep') ? '#8888ff' : (type === 'sick') ? '#ff6666' : '#886633';
-    ctx.fillText((type === 'sleep') ? '🛏' : (type === 'sick') ? '💊' : '💩', 12, 17);
-  }
-}
-
 function addSlot(){
   if(slotCount >= MAX_SLOTS) return;
   slotCount++;
@@ -5740,7 +5759,7 @@ function saveGameState(){
       currentRow: (battleActive && battleAdversityEvoRow >= 0) ? battleOriginalRow : currentRow,
       gameHpBonus, gameAtkBonus, gameSpdBonus,
       gameCritBonus, gameDodgeBonus, gameAffBonus,
-      totalTrainingCount, gameAgeLastDay,
+      totalTrainingCount, gameTrainingCount, gameAgeLastDay,
       stageStartDay, stageTrainingPointsUsed,
       trainingHpCount, trainingAtkCount, trainingSpdCount,
       trainingCritCount, trainingDodgeCount, trainingAffCount,
@@ -5785,9 +5804,6 @@ function resolveOfflineBabyEvolution(data){
     if(currentRow === 0){
       currentRow = 1;
       markDigidexObtained(1);
-    }
-    if(babyIICallEverShown && gameCareMistakes === 0){
-      gameCareMistakes = 1;
     }
     evoAnimPending = true;
     markDigidexObtained(getEvolutionRow(1));
@@ -5996,7 +6012,7 @@ function loadGameState(slotIndex){
       gameDodgeBonus = data.gameDodgeBonus ?? 0;
       gameAffBonus = data.gameAffBonus ?? 0;
       totalTrainingCount = data.totalTrainingCount ?? 0;
-      gameAgeLastDay = data.gameAgeLastDay ?? 0;
+      gameTrainingCount = data.gameTrainingCount ?? 0;
       stageStartDay = data.stageStartDay ?? 0;
       stageTrainingPointsUsed = data.stageTrainingPointsUsed ?? 0;
       trainingHpCount = data.trainingHpCount ?? 0;
@@ -6088,7 +6104,7 @@ function loadGameState(slotIndex){
       gameDodgeBonus = data.gameDodgeBonus ?? 0;
       gameAffBonus = data.gameAffBonus ?? 0;
       totalTrainingCount = data.totalTrainingCount ?? 0;
-      gameAgeLastDay = data.gameAgeLastDay ?? 0;
+      gameTrainingCount = data.gameTrainingCount ?? 0;
       stageStartDay = data.stageStartDay ?? 0;
       stageTrainingPointsUsed = data.stageTrainingPointsUsed ?? 0;
       trainingHpCount = data.trainingHpCount ?? 0;
@@ -6141,6 +6157,7 @@ let gameCritBonus = 0;     // 暴擊訓練加成
 let gameDodgeBonus = 0;    // 閃避訓練加成
 let gameAffBonus = 0;      // 親密度訓練加成
 let totalTrainingCount = 0;// 全生命周期累計訓練成功次數
+let gameTrainingCount = 0; // V6/V7 當前階段訓練次數（進化條件判斷用）
 let gameAgeLastDay = 0;    // 上次加訓練點的日數 floor(gameAge/1440)
 let stageStartDay = 0;     // 當前階段開始的日數
 let stageTrainingPointsUsed = 0; // 當前階段已消耗訓練點
@@ -6275,6 +6292,7 @@ function rebornAsEgg() {
   gameCareMistakes = 0;
   callFirstShownTime = 0;
   callMistakeRecorded = false;
+  babyIICallEverShown = false;
   birthTimestamp = 0;
   gameAgeLastDay = 0;
   stageStartDay = 0;
@@ -6402,6 +6420,7 @@ function tryTrainingSuccess(type){
   // 幼年期訓練不累積加成（純動畫，不長屬性不計數）
   if(!babyStage){
     totalTrainingCount += mult;
+    gameTrainingCount += mult;
     switch(type){
       case "hp": gameHpBonus += 0.8 * mult; trainingHpCount += mult; break;
       case "atk": gameAtkBonus += 0.1 * mult; trainingAtkCount += mult; break;
@@ -6517,10 +6536,11 @@ function startNaturalEvoAnim(nextRow){
         }
         stageStartDay = Math.floor(gameAge / 1440);
         stageTrainingPointsUsed = 0;
+        gameTrainingCount = 0;
         trainingHpCount = 0; trainingAtkCount = 0; trainingSpdCount = 0;
         trainingCritCount = 0; trainingDodgeCount = 0; trainingAffCount = 0;
         // 進化到成長期，增加 12 訓練點
-        if(currentRow >= 2 && currentRow <= 3){ gameTrainingPoints += 12; updateNotifArea(true); }
+        if((DIGIMON_STATS[currentRow]?.stage || "") === "成長期"){ gameTrainingPoints += 12; updateNotifArea(true); }
         battlePlayerMaxHp = getTotalHp();
         battlePlayerHp = getTotalHp();
         updateStatsDisplay();
@@ -6546,6 +6566,7 @@ function startNaturalEvoAnim(nextRow){
               }
               // 進化慶祝：idle,happy,idle,happy + Happy.png（結束後自動恢復移動）
               saveGameState(); // 立即保存進化結果
+              updateEvoButton();
               startCelebration();
               showToast(ALL_NAMES[oldRow] + "進化為" + ALL_NAMES[currentRow] + "！");
             }
@@ -6671,7 +6692,7 @@ function dieAndReturnToEgg(){
 function resetAllBonuses(){
   gameHpBonus = 0; gameAtkBonus = 0; gameSpdBonus = 0;
   gameCritBonus = 0; gameDodgeBonus = 0; gameAffBonus = 0;
-  totalTrainingCount = 0; stageTrainingPointsUsed = 0;
+  totalTrainingCount = 0; gameTrainingCount = 0; stageTrainingPointsUsed = 0;
   trainingHpCount = 0; trainingAtkCount = 0; trainingSpdCount = 0;
   trainingCritCount = 0; trainingDodgeCount = 0; trainingAffCount = 0;
   gameTrainingPoints = 12; gameAgeLastDay = 0; stageStartDay = 0;
@@ -6710,6 +6731,7 @@ function updateStatsDisplay(){
   const sdGold = document.getElementById("sdGold");
   if(sdGold) sdGold.textContent = gameGold;
   updateCallButton();
+  updateEvoButton();
 }
 
 function updateCallButton(){
@@ -6724,7 +6746,6 @@ function updateCallButton(){
   if(gameHunger === 0){
     if(callFirstShownTime === 0){
       callFirstShownTime = Date.now();
-      if(currentRow <= 1) babyIICallEverShown = true; // 幼年期/II 記錄 CALL 曾閃爍
     }
     // 閃爍：每秒 1 次（500ms 開/關切換）
     if(!callBlinkTimer){
@@ -6738,6 +6759,79 @@ function updateCallButton(){
     btn.style.display = "none";
     callFirstShownTime = 0;
     callMistakeRecorded = false;
+  }
+}
+
+// ========== 手動進化按鈕 ==========
+function updateEvoButton(){
+  const btn = document.getElementById("evoBtn");
+  if(!btn) return;
+  // 進化動畫中隱藏
+  if(evoAnimActive){ btn.style.display = "none"; return; }
+  // 蛋階段隱藏
+  if(currentRow < 1){ btn.style.display = "none"; return; }
+
+  const stage = DIGIMON_STATS[currentRow]?.stage || "";
+  // 完全體 / 究極體 → 隱藏（無自然進化路線）
+  if(stage === "完全體" || stage === "究極體"){ btn.style.display = "none"; return; }
+
+  const currentDay = Math.floor(gameAge / 1440);
+  const daysInStage = currentDay - stageStartDay;
+  let ready = false;
+  let label = "";
+
+  if(stage === "幼年期Ⅱ"){
+    // 幼年期Ⅱ: 15分鐘 → 成長期
+    if(gameAge >= 15){
+      ready = true;
+    } else {
+      const remain = 15 - gameAge;
+      label = `${remain}分`;
+    }
+  } else if(stage === "成長期"){
+    // 成長期: 2天 → 成熟期
+    if(daysInStage >= 2){
+      ready = true;
+    } else {
+      label = `${2 - daysInStage}天`;
+    }
+  } else if(stage === "成熟期"){
+    // 成熟期: 4天 → 完全體
+    if(daysInStage >= 4){
+      ready = true;
+    } else {
+      label = `${4 - daysInStage}天`;
+    }
+  }
+
+  btn.style.display = "flex";
+  if(ready){
+    btn.className = "evo-btn ready";
+    btn.textContent = "EVO";
+  } else {
+    btn.className = "evo-btn waiting";
+    btn.textContent = label;
+  }
+}
+
+function manualEvolution(){
+  if(evoAnimActive) return;
+  const stage = DIGIMON_STATS[currentRow]?.stage || "";
+  if(currentRow < 1) return; // 蛋階段
+  if(stage === "完全體" || stage === "究極體") return;
+
+  const currentDay = Math.floor(gameAge / 1440);
+  const daysInStage = currentDay - stageStartDay;
+
+  // 檢查條件
+  if(stage === "幼年期Ⅱ" && gameAge >= 15){
+    startNaturalEvoAnim(getEvolutionRow(1));
+  } else if(stage === "成長期" && daysInStage >= 2){
+    startNaturalEvoAnim(getNextEvoRow(currentRow));
+  } else if(stage === "成熟期" && daysInStage >= 4){
+    startNaturalEvoAnim(getNextEvoRow(currentRow));
+  } else {
+    showToast("進化條件尚未滿足");
   }
 }
 
@@ -7188,8 +7282,8 @@ const EVO_PATHS_V6 = {
   1: [{ fromRow: 0, fromName: "泡沫獸", conds: ["5分鐘後自動"] }],
   // 幼年期II→成長期 (4 種結果，依失誤和訓練次數)
   2: [{ fromRow: 1, fromName: "年糕獸", conds: ["失誤=0", "訓練≥4次"] }],
-  3: [{ fromRow: 1, fromName: "年糕獸", conds: ["失誤=1"] }],
-  4: [{ fromRow: 1, fromName: "年糕獸", conds: ["失誤≥2"] }],
+  3: [{ fromRow: 1, fromName: "年糕獸", conds: ["失誤=1", "訓練≥4次"] }],
+  4: [{ fromRow: 1, fromName: "年糕獸", conds: ["失誤=1", "訓練<4次"] }],
   5: [{ fromRow: 1, fromName: "年糕獸", conds: ["失誤=0", "訓練<4次"] }],
   // 成長期→成熟期
   6:  [{ fromRow: 2, fromName: "甲蟲獸", conds: ["速度加成最高", "失誤≤2"] },
@@ -7251,8 +7345,8 @@ const EVO_PATHS_V7 = {
   // 幼年期II→成長期 (4 種結果，依失誤和訓練次數)
   2: [{ fromRow: 1, fromName: "普卡獸", conds: ["失誤=0", "訓練≥4次"] }],   // 哥瑪獸(疫苗)
   3: [{ fromRow: 1, fromName: "普卡獸", conds: ["失誤=0", "訓練<4次"] }],  // 加尼獸(數據)
-  4: [{ fromRow: 1, fromName: "普卡獸", conds: ["失誤≥2"] }],              // 沙古門獸(病毒)
-  5: [{ fromRow: 1, fromName: "普卡獸", conds: ["失誤=1"] }],              // 水母獸(資料)
+  4: [{ fromRow: 1, fromName: "普卡獸", conds: ["失誤=1", "訓練<4次"] }],  // 沙古門獸(病毒)
+  5: [{ fromRow: 1, fromName: "普卡獸", conds: ["失誤=1", "訓練≥4次"] }],  // 水母獸(資料)
   // 成長期→成熟期 (分組映射，實際由 getChildEvoResultV7 決定)
   6:  [{ fromRow: 2, fromName: "哥瑪獸", conds: ["訓練≥6次", "攻擊加成最高"] },
        { fromRow: 5, fromName: "水母獸", conds: ["訓練≥6次", "攻擊加成最高"] }],
@@ -8187,7 +8281,7 @@ function renderSelfBattleCards() {
   const container = document.getElementById("selfBattleCardList");
   const selected = window._selfBattleSelectedSlot ?? -1;
   let html = "";
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < slotCount; i++) {
     if (i === activeSlotIndex) continue; // 跳過自己
     const key = getSlotSaveKey(i);
     const raw = localStorage.getItem(key);
@@ -8414,6 +8508,7 @@ function runEvoAnim(){
         const s = getBattlePlayerStats();
         stageStartDay = Math.floor(gameAge / 1440);
         stageTrainingPointsUsed = 0;
+        gameTrainingCount = 0;
         trainingHpCount = 0; trainingAtkCount = 0; trainingSpdCount = 0;
         trainingCritCount = 0; trainingDodgeCount = 0; trainingAffCount = 0;
         battlePlayerMaxHp = getBattlePlayerTotalHp();
@@ -10101,7 +10196,6 @@ document.getElementById("debugBtn").onclick = () => {
   // 預填當前值
   document.getElementById("debugMistakes").value = gameCareMistakes;
   document.getElementById("debugWeight").value = gameWeight;
-  document.getElementById("debugTraining").value = 0;
   refreshChildSelect();
   refreshPerfectSelect();
   document.getElementById("debugOverlay").classList.add("open");
@@ -10114,32 +10208,20 @@ document.getElementById("debugOverlay").onclick = () => {
 document.getElementById("debugCloseBtn").onclick = () => {
   document.getElementById("debugOverlay").classList.remove("open");
 };
-// 套用設定：育成失誤 & 體重 & 訓練增量
+// 套用設定：育成失誤 & 體重
 document.getElementById("debugApplyBtn").onclick = () => {
   const m = parseInt(document.getElementById("debugMistakes").value, 10);
   const w = parseInt(document.getElementById("debugWeight").value, 10);
-  const t = parseInt(document.getElementById("debugTraining").value, 10);
   if(!isNaN(m) && m >= 0) gameCareMistakes = m;
   if(!isNaN(w) && w >= 1){
     const minW = DIGIMON_STATS[currentRow] ? DIGIMON_STATS[currentRow].minWeight : 5;
     gameWeight = Math.max(minW, w);
   }
-  if(!isNaN(t)){
-    // 四捨五入到最近的 12 倍數
-    const delta = Math.round(t / 12) * 12;
-    gameTrainingPoints = Math.max(0, gameTrainingPoints + delta);
-    if(delta !== 0){
-      showToast("訓練點數" + (delta >= 0 ? "+" : "") + delta + "，目前：" + gameTrainingPoints);
-    }
-  }
   document.getElementById("debugMistakes").value = gameCareMistakes;
   document.getElementById("debugWeight").value = gameWeight;
-  document.getElementById("debugTraining").value = 0; // 重置輸入
   updateStatsDisplay();
   document.getElementById("debugOverlay").classList.remove("open");
-  if(!(!isNaN(t) && Math.round(t / 12) * 12 !== 0)){
-    showToast("已套用：失誤=" + gameCareMistakes + "，體重=" + gameWeight + "kg");
-  }
+  showToast("已套用：失誤=" + gameCareMistakes + "，體重=" + gameWeight + "kg");
 };
 // 刷新成長期下拉選單
 function refreshChildSelect(){
@@ -10708,6 +10790,54 @@ function activateSlot(slotIndex){
     criticalPhase = "play";
     stopAllTimers();
     
+    // === 雙層保險第二層：進入新槽位前重置核心狀態（loadGameState 會再覆蓋正確值） ===
+    gameAge = 0;
+    gameHunger = 5;
+    gameWeight = 5;
+    gameAffinity = 0;
+    gameTrainingPoints = 12;
+    gameCareMistakes = 0;
+    gameTotalBattles = 0;
+    gameBattleWins = 0;
+    callFirstShownTime = 0;
+    callMistakeRecorded = false;
+    isDead = false;
+    deathReason = "";
+    isSleeping = false;
+    lightsOff = false;
+    isEggPhase = true;
+    eggStartTime = Date.now();
+    birthTimestamp = 0;
+    poopsOnScreen = 0;
+    poopCountdown = 0;
+    babyHasPooped = false;
+    isSick = false;
+    sickStartTime = 0;
+    hungerZeroStartTime = 0;
+    gameHpBonus = 0;
+    gameAtkBonus = 0;
+    gameSpdBonus = 0;
+    gameCritBonus = 0;
+    gameDodgeBonus = 0;
+    gameAffBonus = 0;
+    totalTrainingCount = 0;
+    gameTrainingCount = 0;
+    trainingHpCount = 0;
+    trainingAtkCount = 0;
+    trainingSpdCount = 0;
+    trainingCritCount = 0;
+    trainingDodgeCount = 0;
+    trainingAffCount = 0;
+    gameAgeLastDay = 0;
+    stageStartDay = 0;
+    stageTrainingPointsUsed = 0;
+    gameGold = 0;
+    autoFeedEnabled = false;
+    cultivatedRows = new Set();
+    eightPoopsStartTime = 0;
+    eightPoopsMistakeRecorded = false;
+    try { if(typeof ctx !== 'undefined' && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height); } catch(ec){}
+    
     // 載入存檔
     loadGameState(slotIndex);
     // 檢查死亡狀態：顯示重新育成按鈕並渲染死亡畫面
@@ -10758,7 +10888,7 @@ function activateSlot(slotIndex){
     gameTrainingPoints = 0;
     gameHpBonus = 0; gameAtkBonus = 0; gameSpdBonus = 0;
     gameCritBonus = 0; gameDodgeBonus = 0; gameAffBonus = 0;
-    totalTrainingCount = 0;
+    totalTrainingCount = 0; gameTrainingCount = 0;
     trainingHpCount = 0; trainingAtkCount = 0; trainingSpdCount = 0;
     trainingCritCount = 0; trainingDodgeCount = 0; trainingAffCount = 0;
     gameCareMistakes = 0;
@@ -10930,6 +11060,54 @@ function returnToLauncher(){
     
     // === 7. 重置狀態 ===
     activeSlotIndex = -1;
+    
+    // === 7.5 退出核心遊戲狀態（雙層保險第一層：防止返回後殘留導致進入其他槽位時看到舊數據） ===
+    gameAge = 0;
+    gameHunger = 5;
+    gameWeight = 5;
+    gameAffinity = 0;
+    gameTrainingPoints = 12;
+    gameCareMistakes = 0;
+    gameTotalBattles = 0;
+    gameBattleWins = 0;
+    callFirstShownTime = 0;
+    callMistakeRecorded = false;
+    isDead = false;
+    deathReason = "";
+    isSleeping = false;
+    lightsOff = false;
+    isEggPhase = true;
+    eggStartTime = Date.now();
+    birthTimestamp = 0;
+    poopsOnScreen = 0;
+    poopCountdown = 0;
+    babyHasPooped = false;
+    isSick = false;
+    sickStartTime = 0;
+    hungerZeroStartTime = 0;
+    gameHpBonus = 0;
+    gameAtkBonus = 0;
+    gameSpdBonus = 0;
+    gameCritBonus = 0;
+    gameDodgeBonus = 0;
+    gameAffBonus = 0;
+    totalTrainingCount = 0;
+    gameTrainingCount = 0;
+    trainingHpCount = 0;
+    trainingAtkCount = 0;
+    trainingSpdCount = 0;
+    trainingCritCount = 0;
+    trainingDodgeCount = 0;
+    trainingAffCount = 0;
+    gameAgeLastDay = 0;
+    stageStartDay = 0;
+    stageTrainingPointsUsed = 0;
+    gameGold = 0;
+    autoFeedEnabled = false;
+    cultivatedRows = new Set();
+    eightPoopsStartTime = 0;
+    eightPoopsMistakeRecorded = false;
+    try { if(typeof ctx !== 'undefined' && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height); } catch(ec){}
     
     // === 8. 保存與渲染 ===
     try { saveLauncherMeta(); } catch(es){}
@@ -11364,17 +11542,12 @@ setInterval(() => {
     startNaturalEvoAnim(1);
     return;
   }
-  // 滾球獸(row 1) 15分鐘後依「CALL 是否曾閃爍」決定 +1 或 0
+  // 滾球獸(row 1) 15分鐘後依實際失誤次數決定進化路線
   if(currentRow === 1 && gameAge >= 15 && !evoAnimActive){
-    // CALL 曾閃爍過 → 玩家有照顧機會但忽略 → +1 → 貝塔獸(row 3)
-    // CALL 從未閃爍 → 完美照顧 → 0 → 亞古獸(row 2)
-    if(babyIICallEverShown && gameCareMistakes === 0){
-      gameCareMistakes = 1;
-      showToast("幼年期Ⅱ曾閃爍呼叫，記錄 1 次失誤 → 貝塔獸");
-      saveGameState();
-      updateStatsDisplay();
-    } else if(!babyIICallEverShown && gameCareMistakes === 0){
-      showToast("幼年期Ⅱ完美照顧 → 亞古獸");
+    if(gameCareMistakes === 0){
+      showToast("幼年期完美照顧！");
+    } else {
+      showToast("幼年期失誤 " + gameCareMistakes + " 次 → 進化路線調整");
     }
     startNaturalEvoAnim(getEvolutionRow(1));
     return;
@@ -11389,18 +11562,25 @@ setInterval(() => {
     }
   }
   updateNotifArea(true);
+  updateEvoButton();
 }, 60000);
 // 飢餓：每 30 分鐘 -1 個心（10個心共 5 小時耗盡）
 setInterval(() => { if(activeSlotIndex < 0) return; if(!isEggPhase){ gameHunger = Math.max(0, gameHunger - 1); updateCallButton(); updateNotifArea(true); } }, 1800000);
 // 育成失誤檢查：CALL 出現超過 10 分鐘計 1 次，同個飢餓周期不重複計算
 setInterval(() => {
   if(activeSlotIndex < 0) return;
-  // 幼年期(row 0,1)不靠時間計 CALL 失誤，統一在幼年期Ⅱ進化時依 flag 決定
-  if(!isEggPhase && currentRow > 1 && callFirstShownTime > 0 && !callMistakeRecorded && gameHunger === 0){
-    const mistakeTimeout = 600000; // 統一 10 分鐘
+  // 幼年期(row 0,1) CALL 超過 5 分鐘計 1 次失誤，累計上限 2 次（每次 CALL 周期重置）
+  // 成長期以後 CALL 超過 10 分鐘計 1 次失誤
+  if(!isEggPhase && callFirstShownTime > 0 && !callMistakeRecorded && gameHunger === 0){
+    const mistakeTimeout = (currentRow <= 1) ? 300000 : 600000; // 幼年期 5 分鐘 / 其他 10 分鐘
     if(Date.now() - callFirstShownTime >= mistakeTimeout){
       gameCareMistakes++;
       callMistakeRecorded = true;
+      // 幼年期允許累計第 2 次失誤：重置計時器讓下一輪開始
+      if(currentRow <= 1 && gameCareMistakes < 2){
+        callFirstShownTime = Date.now();
+        callMistakeRecorded = false;
+      }
     }
   }
   // 大便滿 8 個 → 立即生病 + 育成失誤 +1（不重複計算）
