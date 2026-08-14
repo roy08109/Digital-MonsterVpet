@@ -8051,12 +8051,13 @@ function continueQuickBattle3v3Round(result, outgoingSide){
     }
   }
 
+  const enemyFighter = getBattleEnemyFighter();
+  battleEnemyVersion = enemyFighter.version;
+  battleEnemyRow = enemyFighter.row;
   const ps = getBattlePlayerStats();
-  const es = getEnemyStats(getBattleEnemyFighter().row);
+  const es = getEnemyStats(enemyFighter.row);
   const pAttrColor = getAttrColor(ps.attr, es.attr);
   const eAttrColor = getAttrColor(es.attr, ps.attr);
-  battleEnemyVersion = getBattleEnemyFighter().version;
-  battleEnemyRow = getBattleEnemyFighter().row;
   battlePlayerMaxHp = getBattlePlayerTotalHp();
   battlePlayerHp = Math.min(getBattlePlayerFighter().currentHp, battlePlayerMaxHp);
   battleEnemyMaxHp = getBattleEnemyFighter().maxHp;
@@ -10549,8 +10550,10 @@ function updateNotifArea(isCheck){
     prio = 1; text = "暴龍生病了";
   } else if(typeof gameHunger !== "undefined" && gameHunger === 0 && typeof isEggPhase !== "undefined" && !isEggPhase){
     prio = 2; text = "暴龍肚餓了";
+  } else if(typeof poopsOnScreen !== "undefined" && poopsOnScreen > 0 && typeof isEggPhase !== "undefined" && !isEggPhase){
+    prio = 3; text = "有大便！請清理 💩 (×" + poopsOnScreen + ")";
   } else if(typeof gameTrainingPoints !== "undefined" && gameTrainingPoints > 0 && typeof currentRow !== "undefined" && currentRow >= 2){
-    prio = 3; text = "訓練點未用";
+    prio = 4; text = "訓練點未用";
   }
 
   if(prio > 0){
@@ -10750,6 +10753,7 @@ function activateSlot(slotIndex){
     cultivatedRows = new Set();
     eightPoopsStartTime = 0;
     eightPoopsMistakeRecorded = false;
+    currentNotifPriority = 0;
     try { if(typeof ctx !== 'undefined' && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height); } catch(ec){}
     
     // 載入存檔
@@ -10769,6 +10773,7 @@ function activateSlot(slotIndex){
     updateSleepByTime();
     syncLightsToSleepState();
     updateNotifArea(true);
+    updateCallButton(); // 立即同步 CALL 按鈕閃爍狀態
     // 即使圖片未完全加載，也先渲染一幀（蛋或精靈圖未加載時顯示佔位符）
     try {
       if(isEggPhase){
