@@ -6435,7 +6435,7 @@ function checkStageEvolution(){
   if(stage === "成長期" && daysInStage >= 2){
     console.log("[EvoCheck] → 觸發成熟期進化");
     triggerNaturalEvo();
-  } else if(stage === "成熟期" && daysInStage >= 4){
+  } else if(stage === "成熟期" && (daysInStage >= 4 || Math.floor(gameAge / 1440) >= 6)){
     console.log("[EvoCheck] → 觸發完全體進化");
     triggerNaturalEvo();
   } else if(stage === "完全體" && daysInStage >= 8){
