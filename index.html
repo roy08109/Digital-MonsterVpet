@@ -2408,6 +2408,7 @@ function updateBgByTime() {
 // ========== 高清像素背景生成與切換 ==========
 const HD_BG = {};
 const mainScreen = document.querySelector('.main-screen');
+const screenDeco = document.querySelector('.screen-deco');
 
 function generateHdBackgrounds() {
   // 時間段背景：直接使用 BG/ 資料夾內的 192×96 PNG 圖片
@@ -2454,11 +2455,14 @@ function generateHdBackgrounds() {
 function updateCssBackground(mode) {
   if (mode === "training") {
     mainScreen.style.backgroundImage = `url(${HD_BG["Training"]})`;
+    if (screenDeco) screenDeco.style.display = "none";   // 訓練模式隱藏 LCD 外殼
   } else if (mode === "battle") {
     mainScreen.style.backgroundImage = `url(${HD_BG["Battle"]})`;
+    if (screenDeco) screenDeco.style.display = "none";   // 對戰模式隱藏 LCD 外殼
   } else {
     // auto / eating / refusing → 時間段背景
     mainScreen.style.backgroundImage = `url(${HD_BG[currentBgName] || HD_BG["Noon"]})`;
+    if (screenDeco) screenDeco.style.display = "block";  // 一般模式顯示 LCD 外殼
   }
 }
 let currentRow = 2;    // 目前選擇的數碼獸 row
