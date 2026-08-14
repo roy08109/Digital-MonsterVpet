@@ -3384,7 +3384,7 @@ function restartAnimTimer(iv){
 }
 
 // === 排便系統 ===
-function randPoopInterval(){ return 6600 + Math.floor(Math.random() * 1201); } // 110~130分鐘 (6600~7800秒)
+function randPoopInterval(){ return 10800 + Math.floor(Math.random() * 7201); } // 180~300分鐘 (10800~18000秒)
 function randBabyPoopInterval(){ return 120 + Math.floor(Math.random() * 60); } // 2~3分鐘 (120~180秒)
 
 function resetPoopCountdown(){
@@ -5925,7 +5925,7 @@ function loadGameState(slotIndex){
     } else {
       gameAge = (data.gameAge || 0) + elapsed;
     }
-    gameHunger = Math.min(10, Math.max(0, (data.gameHunger ?? 5) - Math.floor(elapsed / 30)));
+    gameHunger = Math.min(10, Math.max(0, (data.gameHunger ?? 5) - Math.floor(elapsed / 60)));
     gameTrainingPoints = data.gameTrainingPoints ?? 12;
     gameAgeLastDay = data.gameAgeLastDay ?? 0;
     // 離線期間每天疊加 12 點訓練點
@@ -6040,7 +6040,7 @@ function loadGameState(slotIndex){
           if((data.gameHunger ?? 0) === 0){
             offlineCallShownTime = data.callFirstShownTime || data.hungerZeroStartTime || data.timestamp || 0;
           } else if(!autoFeedEnabled){
-            const minutesUntilZero = Math.max(0, (data.gameHunger ?? 0) * 30);
+            const minutesUntilZero = Math.max(0, (data.gameHunger ?? 0) * 60);
             if(elapsed >= minutesUntilZero){
               offlineCallShownTime = (data.timestamp || Date.now()) + minutesUntilZero * 60000;
             }
@@ -11502,8 +11502,8 @@ setInterval(() => {
   }
   updateNotifArea(true);
 }, 60000);
-// 飢餓：每 30 分鐘 -1 個心（10個心共 5 小時耗盡）
-setInterval(() => { if(activeSlotIndex < 0) return; if(isSleeping) return; if(!isEggPhase){ gameHunger = Math.max(0, gameHunger - 1); updateCallButton(); updateNotifArea(true); } }, 1800000);
+// 飢餓：每 1 小時 -1 個心（10個心共 10 小時耗盡）
+setInterval(() => { if(activeSlotIndex < 0) return; if(isSleeping) return; if(!isEggPhase){ gameHunger = Math.max(0, gameHunger - 1); updateCallButton(); updateNotifArea(true); } }, 3600000);
 // 育成失誤檢查：CALL 出現超過 10 分鐘計 1 次，同個飢餓周期不重複計算
 setInterval(() => {
   if(activeSlotIndex < 0) return;
