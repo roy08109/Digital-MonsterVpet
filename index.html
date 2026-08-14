@@ -417,6 +417,20 @@ body{
 }
 .dark-overlay.on{ display:block; }
 
+/* 32×16 外觀裝飾層：放大到與主顯示同尺寸，讓 LCD 外殼填滿屏幕 */
+.screen-deco{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:240px;      /* 比主畫布大一圈（左右各 +24px），作為 LCD 外殼 */
+  height:140px;     /* 比主畫布大一圈（上下各 +22px），作為 LCD 外殼 */
+  transform:translate(-50%,-50%);
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  pointer-events:none;   /* 不擋 canvas 的 click */
+  z-index:5;             /* canvas 之上、dark-overlay(10) 之下 */
+}
+
 /* 中間8個功能按鈕 */
 .btn-panel{
   display:grid;
@@ -1626,6 +1640,7 @@ canvas {
 <!-- 單個主顯示屏 -->
 <div class="screen-container">
   <canvas id="screen" class="main-screen" width="32" height="16"></canvas>
+  <img class="screen-deco" src="BG/outside.png" alt="" aria-hidden="true">
   <div class="dark-overlay" id="darkOverlay"></div>
 </div>
 
