@@ -6532,8 +6532,6 @@ function startNaturalEvoAnim(nextRow){
         stageStartDay = Math.floor(gameAge / 1440);
         stageTrainingPointsUsed = 0;
         gameTrainingCount = 0;
-        trainingHpCount = 0; trainingAtkCount = 0; trainingSpdCount = 0;
-        trainingCritCount = 0; trainingDodgeCount = 0; trainingAffCount = 0;
         // 進化到成長期，增加 12 訓練點
         if((DIGIMON_STATS[currentRow]?.stage || "") === "成長期"){ gameTrainingPoints += 12; updateNotifArea(true); }
         battlePlayerMaxHp = getTotalHp();
@@ -8435,8 +8433,6 @@ function runEvoAnim(){
         stageStartDay = Math.floor(gameAge / 1440);
         stageTrainingPointsUsed = 0;
         gameTrainingCount = 0;
-        trainingHpCount = 0; trainingAtkCount = 0; trainingSpdCount = 0;
-        trainingCritCount = 0; trainingDodgeCount = 0; trainingAffCount = 0;
         battlePlayerMaxHp = getBattlePlayerTotalHp();
         battlePlayerHp = getBattlePlayerTotalHp();
         updateBattleHpDisplay();
