@@ -7733,6 +7733,9 @@ function resetQuickBattle3v3State(){
   battleQuick3v3EnemyTeam = [];
   battleQuick3v3PlayerIdx = 0;
   battleQuick3v3EnemyIdx = 0;
+  // 對戰結束後恢復對戰主選單，避免下次進入停在 3V3 面板
+  document.getElementById("bmQuickBattle3v3Panel").style.display = "none";
+  document.getElementById("bmBattleMainMenu").style.display = "block";
 }
 function getBattleSlotSnapshot(slotIdx){
   if(slotIdx === activeSlotIndex){
@@ -10736,7 +10739,6 @@ function activateSlot(slotIndex){
     isDead = false;
     deathReason = "";
     isSleeping = false;
-    lightsOff = false;
     isEggPhase = true;
     eggStartTime = Date.now();
     birthTimestamp = 0;
@@ -11010,7 +11012,6 @@ function returnToLauncher(){
     isDead = false;
     deathReason = "";
     isSleeping = false;
-    lightsOff = false;
     isEggPhase = true;
     eggStartTime = Date.now();
     birthTimestamp = 0;
