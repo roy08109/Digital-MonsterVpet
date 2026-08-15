@@ -1,121 +1,93 @@
 from PIL import Image
 import os
 
-# V8 = Pendulum Color Version 3 Nightmare Soldiers
 SRC = r"c:/Users/roy/CodeBuddy/Digital-MonsterVpet/Digital-MonsterVpet/sprites/V8/V8.png"
 OUT_DIR = r"c:/Users/roy/CodeBuddy/Digital-MonsterVpet/Digital-MonsterVpet/sprites/V8"
 os.makedirs(OUT_DIR, exist_ok=True)
 
 img = Image.open(SRC).convert("RGBA")
 pix = img.load()
-w, h = img.size
-print(f"V8 原圖尺寸: {w} x {h}, mode={img.mode}")
+W, H = img.size
+TILE = 16
+STEP = TILE + 1  # 17
+print(f"V8 原圖: {W}x{H}")
 
-# 1) 找出所有完全同色的列/行（洋紅色分隔線）
-sep_rows = [y for y in range(h) if len({pix[x, y] for x in range(w)}) <= 1]
-sep_cols = [x for x in range(w) if len({pix[x, y] for y in range(h)}) <= 1]
+# 1) 找所有「整列/行同色」的分隔線位置
+sep_rows = [y for y in range(H) if len({pix[x, y] for x in range(W)}) <= 1]
+sep_cols = [x for x in range(W) if len({pix[x, y] for y in range(H)}) <= 1]
 
-# 2) 找出所有 16px tile 起始位置
-def get_starts(sep_list):
-    out = []
-    for a, b in zip(sep_list, sep_list[1:]):
-        if b - a - 1 == 16:
-            out.append(a + 1)
-    return out
-
-all_col_starts = get_starts(sep_cols)
-all_row_starts = get_starts(sep_rows)
-
-# 3) 自動選取最大的連續網格
-def find_largest_grid(col_starts, row_starts):
-    best_cols = []
-    best_rows = []
-    for i, cs in enumerate(col_starts):
-        group = [cs]
-        for j in range(i+1, len(col_starts)):
-            if col_starts[j] - group[-1] == 17:
-                group.append(col_starts[j])
-            elif col_starts[j] - group[-1] > 17:
+# 2) 找 positions 中最長的等 step 距離子序列（長度 ≥ min_len）
+def longest_eq(positions, step=STEP, min_len=4):
+    best = []
+    for i, p in enumerate(positions):
+        run = [p]
+        for j in range(i + 1, len(positions)):
+            if positions[j] - run[-1] == step:
+                run.append(positions[j])
+            elif positions[j] - run[-1] > step:
                 break
-        if len(group) > len(best_cols):
-            best_cols = group[:]
-    for i, rs in enumerate(row_starts):
-        group = [rs]
-        for j in range(i+1, len(row_starts)):
-            if row_starts[j] - group[-1] == 17:
-                group.append(row_starts[j])
-            elif row_starts[j] - group[-1] > 17:
-                break
-        if len(group) > len(best_rows):
-            best_rows = group[:]
-    return best_cols, best_rows
+        if len(run) >= min_len and len(run) > len(best):
+            best = run[:]
+    return best
 
-COL_STARTS, ROW_STARTS = find_largest_grid(all_col_starts, all_row_starts)
+# 行方向：用 dense_rows 而不是 sep_rows（避免標題/裝飾誤判）
+dense_rows = []
+y = 0
+while y < H:
+    if len({pix[x, y] for x in range(W)}) > 1:
+        end = y
+        while end < H and len({pix[x, end] for x in range(W)}) > 1:
+            end += 1
+        if end - y == TILE:
+            dense_rows.append(y)
+            y = end + 1
+            continue
+    y += 1
 
-num_rows = len(ROW_STARTS)
-num_cols = len(COL_STARTS)
-print(f"檢測到主網格: {num_rows} 行 x {num_cols} 列 = {num_rows * num_cols} tile")
-print(f"列起點: {COL_STARTS}")
-print(f"行起點（前 5 + 後 3）: {ROW_STARTS[:5]} ... {ROW_STARTS[-3:]}")
-
-if num_rows == 0 or num_cols == 0:
-    print("錯誤：無法找到有效的 tile 網格！")
+row_sub = longest_eq(dense_rows, STEP, 8)
+print(f"row 17-步距子序列: {len(row_sub)} 個, 從 y={row_sub[0]} 到 y={row_sub[-1]}")
+if len(row_sub) < 32:
+    print(f"錯誤: 至少需 32 行，目前 {len(row_sub)}")
     exit(1)
+rows = row_sub[:32]
 
-# 4) 去底（洋紅色 / 白底）
-MAGENTA = (255, 0, 255)
-def clean(tile):
-    p = tile.load()
-    for y in range(16):
-        for x in range(16):
+# 列方向：用 sep_cols 等步距子序列 + 向前推一個虛擬 sep
+col_sub = longest_eq(sep_cols, STEP, 4)
+print(f"col 17-步距子序列: {len(col_sub)} 個, 從 x={col_sub[0]} 到 x={col_sub[-1]}")
+if len(col_sub) < 11:
+    print(f"錯誤: 至少需 11 個 col sep，目前 {len(col_sub)}")
+    exit(1)
+# tile 起點 = 虛擬前置 sep+1 加上 子序列 sep+1，取前 12 個
+cols = [col_sub[0] - STEP + 1] + [s + 1 for s in col_sub]
+cols = cols[:12]
+print(f"col 起點: {cols}")
+
+print(f"網格: 32 行 x 12 列 (tile {TILE}x{TILE})")
+print(f"row 起點: {rows[0]}..{rows[-1]}, col 起點: {cols[0]}..{cols[-1]}")
+
+# 洋紅 / 白底去背
+MAG = (255, 0, 255)
+def clean(t):
+    p = t.load()
+    for y in range(TILE):
+        for x in range(TILE):
             r, g, b, a = p[x, y]
-            if (r, g, b) == MAGENTA or (a > 0 and (r, g, b) == (255, 255, 255)):
+            if (r, g, b) == MAG or (a > 0 and (r, g, b) == (255, 255, 255)):
                 p[x, y] = (0, 0, 0, 0)
-    return tile
 
-# 5) 擷取所有 tile
-all_tiles = []
-for rs in ROW_STARTS:
-    row = []
-    for cs in COL_STARTS:
-        t = img.crop((cs, rs, cs + 16, rs + 16)).convert("RGBA")
-        row.append(clean(t))
-    all_tiles.append(row)
-
-# 6) 提取 egg（通常在第 0 行第 0 列）
-if len(all_tiles) > 0 and len(all_tiles[0]) > 0:
-    egg_tile = all_tiles[0][0]
-    egg_pix = egg_tile.load()
-    has_content = any(egg_pix[x, y][3] > 0 for y in range(16) for x in range(16))
-    if has_content:
-        egg_tile.save(os.path.join(OUT_DIR, "V8_egg.png"))
-        print("[V8_egg.png] 已保存")
-
-# 7) 每行存一張 V8_XX.png（00-31）
+# 輸出 V8_00.png ~ V8_31.png（每張 203x16：12 個 16x16 tile，tile 間 1px 透明 gap）
+# 與 index.html 的 PITCH = CELL_SIZE + GAP = 17 對齊（frame c 位於 x = c*17）
 GAP = 1
-for r in range(num_rows):
-    row_tiles = all_tiles[r]
-    rw = num_cols * 16 + (num_cols - 1) * GAP
-    ri = Image.new("RGBA", (rw, 16), (0, 0, 0, 0))
-    for c, t in enumerate(row_tiles):
-        ri.paste(t, (c * (16 + GAP), 0), t)
-    fname = os.path.join(OUT_DIR, f"V8_{r:02d}.png")
-    ri.save(fname)
-    print(f"[V8_{r:02d}.png] {num_cols} 幀已保存")
+out_w = 12 * TILE + 11 * GAP  # 12*16 + 11*1 = 203
+for r in range(32):
+    out = Image.new("RGBA", (out_w, TILE), (0, 0, 0, 0))
+    for c in range(12):
+        x = cols[c]
+        y = rows[r]
+        t = img.crop((x, y, x + TILE, y + TILE))
+        clean(t)
+        out.paste(t, (c * (TILE + GAP), 0), t)
+    out.save(os.path.join(OUT_DIR, f"V8_{r:02d}.png"))
+    print(f"[V8_{r:02d}.png] 已保存 {out.size}")
 
-# 8) 拼成完整網格圖（預覽）
-gw = num_cols * 16 + (num_cols - 1) * GAP
-gh = num_rows * 16 + (num_rows - 1) * GAP
-grid = Image.new("RGBA", (gw, gh), (255, 0, 255, 255))
-for r in range(num_rows):
-    for c, t in enumerate(all_tiles[r]):
-        grid.paste(t, (c * (16 + GAP), r * (16 + GAP)), t)
-pg = grid.load()
-for y in range(gh):
-    for x in range(gw):
-        if pg[x, y] == (255, 0, 255, 255):
-            pg[x, y] = (0, 0, 0, 0)
-grid.save(os.path.join(OUT_DIR, "all_grid.png"))
-print(f"[all_grid.png] {gw}x{gh} 完整網格預覽")
-
-print("完成！")
+print("完成!")
