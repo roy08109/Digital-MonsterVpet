@@ -6484,6 +6484,55 @@ function applyBattleExp(enemyStage){
   return leveledUp;
 }
 
+// 3V3：給指定槽位的龍加經驗（active 槽位用全局變量，其他槽位讀寫存檔）
+function grantExpToSlot(slotIdx, expAmount){
+  if(slotIdx === activeSlotIndex){
+    const cap = getStageLevelCap();
+    if(gameLevel >= cap || gameLevel >= 100) return false;
+    gameExp += expAmount;
+    let leveledUp = false;
+    while(gameLevel < cap && gameLevel < 100 && gameExp >= getExpToNextLevel(gameLevel)){
+      gameExp -= getExpToNextLevel(gameLevel);
+      gameLevel++;
+      gainTrainingPointsForLevelUp(gameLevel);
+      leveledUp = true;
+    }
+    if(gameLevel >= cap) gameExp = 0;
+    return leveledUp;
+  }
+  const raw = localStorage.getItem(getSlotSaveKey(slotIdx));
+  if(!raw) return false;
+  try {
+    const save = JSON.parse(raw);
+    const version = save.currentVersion || SLOT_VERSIONS[slotIdx] || "V1";
+    const stats = getStatsForVersion(version);
+    const s = stats && stats[save.currentRow];
+    const stage = s ? s.stage : "";
+    let cap = 100;
+    if(stage === "成長期") cap = 20;
+    else if(stage === "成熟期") cap = 60;
+    let level = save.gameLevel ?? 1;
+    let exp = save.gameExp ?? 0;
+    if(level >= cap || level >= 100) return false;
+    exp += expAmount;
+    let leveledUp = false;
+    while(level < cap && level < 100 && exp >= getExpToNextLevel(level)){
+      exp -= getExpToNextLevel(level);
+      level++;
+      if(level % 10 === 0) save.gameTrainingPoints = (save.gameTrainingPoints ?? 0) + 8;
+      else save.gameTrainingPoints = (save.gameTrainingPoints ?? 0) + 1;
+      leveledUp = true;
+    }
+    if(level >= cap) exp = 0;
+    save.gameLevel = level;
+    save.gameExp = exp;
+    localStorage.setItem(getSlotSaveKey(slotIdx), JSON.stringify(save));
+    return leveledUp;
+  } catch(e){
+    return false;
+  }
+}
+
 // === 排便系統 ===
 let poopsOnScreen = 0;           // 當前糞便數量 (0~8)
 let poopCountdown = 0;           // 距離下一攤屎的秒數
@@ -8878,7 +8927,27 @@ function finishQuickBattle3v3Match(playerWon){
   battleEnemyOffsetX = 0;
   battleResult = "";
   battleEnemyRow = -1;
-  showToast(playerWon ? "⚔ 3V3 勝利！" : "3V3 戰敗…");
+
+  if(playerWon){
+    // 整場 3V3 勝利：3 隻龍（不管是否出過場）每隻都獲得完整階段經驗
+    const expPerDragon = getExpForEnemyStage(battleQuick3v3Stage);
+    const _beforeLevel = gameLevel;
+    let activeLeveled = false;
+    for(const fighter of battleQuick3v3PlayerTeam){
+      const leveled = grantExpToSlot(fighter.slotIdx, expPerDragon);
+      if(leveled && fighter.slotIdx === activeSlotIndex){
+        activeLeveled = true;
+      }
+    }
+    if(activeLeveled){
+      showToast("升級！ Lv." + _beforeLevel + " → Lv." + gameLevel);
+    }
+    saveGameState();
+    showToast("⚔ 3V3 勝利！");
+  } else {
+    showToast("3V3 戰敗…");
+  }
+
   resetQuickBattle3v3State();
   gameMode = "auto";
   updateCssBackground("auto");
@@ -10102,13 +10171,17 @@ function endBattle(result){
     gameTotalBattles++;
     if(result === "win"){
       gameBattleWins++;
-      // 經驗獎勵：依擊敗敵方階段獲得經驗，升級時增加訓練點
-      const _enemyStats = getEnemyStats(battleEnemyRow);
-      if(_enemyStats){
-        const _beforeLevel = gameLevel;
-        const _leveled = applyBattleExp(_enemyStats.stage);
-        if(_leveled){
-          showToast("升級！ Lv." + _beforeLevel + " → Lv." + gameLevel);
+      // 3V3 模式下，經驗統一在 finishQuickBattle3v3Match 結算（輸贏皆然）
+      // 這裡跳過以避免每回合重複加經驗、以及戰敗時仍加經驗的問題
+      if(!battleQuick3v3Active){
+        // 經驗獎勵：依擊敗敵方階段獲得經驗，升級時增加訓練點
+        const _enemyStats = getEnemyStats(battleEnemyRow);
+        if(_enemyStats){
+          const _beforeLevel = gameLevel;
+          const _leveled = applyBattleExp(_enemyStats.stage);
+          if(_leveled){
+            showToast("升級！ Lv." + _beforeLevel + " → Lv." + gameLevel);
+          }
         }
       }
       // PVE 模式：勝利獲得金幣獎勵
