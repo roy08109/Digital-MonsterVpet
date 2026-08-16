@@ -1997,7 +1997,7 @@ canvas {
 <!-- 設定面板 -->
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-panel" onclick="event.stopPropagation()">
-    <h3>⚙ 系統設定</h3>
+    <h3 id="settingsTitle" style="cursor:default;user-select:none;">⚙ 系統設定</h3>
 
     <!-- 音量設定 -->
     <div class="settings-row">
@@ -2029,8 +2029,8 @@ canvas {
       <input type="text" id="trainerNameInput" maxlength="12" placeholder="輸入名稱" class="setting-input" oninput="saveSetting('trainerName', this.value.trim().substring(0,12))">
     </div>
 
-    <!-- 開發密碼解鎖 -->
-    <div class="settings-row">
+    <!-- 開發密碼解鎖（預設隱藏，點擊標題 5 次才顯示） -->
+    <div class="settings-row" id="devPasswordRow" style="display:none;">
       <div>
         <div class="setting-label">🔐 開發密碼</div>
         <div class="setting-desc">輸入密碼解鎖測試模式</div>
@@ -11426,12 +11426,30 @@ document.getElementById("settingsCloseBtn").onclick = () => {
   document.getElementById("settingsOverlay").classList.remove("open");
 };
 
+// 點擊設定標題 5 次，切換顯示開發密碼輸入框
+let settingsTitleClickCount = 0;
+let settingsTitleClickTimer = null;
+document.getElementById("settingsTitle").onclick = () => {
+  settingsTitleClickCount++;
+  if(settingsTitleClickTimer){ clearTimeout(settingsTitleClickTimer); }
+  settingsTitleClickTimer = setTimeout(() => { settingsTitleClickCount = 0; }, 2000);
+  if(settingsTitleClickCount >= 5){
+    settingsTitleClickCount = 0;
+    const row = document.getElementById("devPasswordRow");
+    if(row){
+      const willShow = row.style.display === "none";
+      row.style.display = willShow ? "" : "none";
+      showToast(willShow ? "🔐 開發密碼入口已顯示" : "🔐 開發密碼入口已隱藏");
+    }
+  }
+};
+
 // 開發密碼確認
 document.getElementById("devPasswordConfirmBtn").onclick = () => {
   const pw = document.getElementById("devPasswordInput").value;
   if(pw === "721137"){
-    localStorage.setItem("digivpet_devmode", "1");
     document.getElementById("debugBtn").style.display = "";
+    document.getElementById("devPasswordRow").style.display = "none";
     document.getElementById("settingsOverlay").classList.remove("open");
     showToast("✅ 測試模式已解鎖！");
   } else {
@@ -11649,11 +11667,6 @@ function clearNotifTimer(){
 }
 
 initSleepHourSelect();
-
-// 檢查開發模式是否已解鎖
-if(localStorage.getItem("digivpet_devmode") === "1"){
-  document.getElementById("debugBtn").style.display = "";
-}
 
 // ========== 啟動 ==========
 if("serviceWorker" in navigator){
