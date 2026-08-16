@@ -6910,25 +6910,6 @@ function triggerNaturalEvo(){
   const nxt = getNextEvoRow(currentRow);
   console.log(`[triggerNaturalEvo] currentRow=${currentRow} nextRow=${nxt}`);
   if(nxt >= 0){
-    const prevStage = DIGIMON_STATS[currentRow].stage;
-    const nextStage = DIGIMON_STATS[nxt].stage;
-    console.log(`[triggerNaturalEvo] ${prevStage}→${nextStage} row${currentRow}→row${nxt}`);
-    // 成熟期→完全體：戰鬥條件達到則給予完美進化獎勵（需在動畫前應用，使HP計算生效）
-    if(prevStage === "成熟期" && nextStage === "完全體"){
-      let battleOk = false;
-      if(currentVersion === "V2"){
-        battleOk = gameBattleWins >= 15; // V2：戰鬥勝利≥15
-      } else if(currentVersion === "V3"){
-        battleOk = gameTotalBattles > 15 && (gameBattleWins / gameTotalBattles) > 0.8; // V3：复用 V1 條件
-      } else if(currentVersion === "V4" || currentVersion === "V5" || currentVersion === "V6" || currentVersion === "V7" || currentVersion === "V8" || currentVersion === "V9" || currentVersion === "V10"){
-        battleOk = gameTotalBattles > 15 && (gameBattleWins / gameTotalBattles) > 0.8; // V4/V5/V6/V7/V8/V9/V10：复用 V1 條件
-      } else {
-        battleOk = gameTotalBattles > 15 && (gameBattleWins / gameTotalBattles) > 0.8; // V1
-      }
-      if(battleOk){
-        gameHpBonus += 10; gameAtkBonus += 5; gameSpdBonus += 3;
-      }
-    }
     // 委託給進化動畫（內部處理 row 切換、stageStartDay、cultivatedRows 等）
     startNaturalEvoAnim(nxt);
   }
@@ -7609,19 +7590,19 @@ const EVO_PATHS_V1 = {
   ],
   // 機械暴龍獸(11) ← 暴龍獸(4) / 惡魔獸(6) / 飛龍獸(9)
   11: [
-    { fromRow: 4, fromName: "暴龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 6, fromName: "惡魔獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 9, fromName: "飛龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 4, fromName: "暴龍獸", conds: ["6歲必定進化"] },
+    { fromRow: 6, fromName: "惡魔獸", conds: ["6歲必定進化"] },
+    { fromRow: 9, fromName: "飛龍獸", conds: ["6歲必定進化"] },
   ],
   // 豆豆獸(12) ← 巨龍獸(5) / 火焰獸(7) / 海龍獸(8)
   12: [
-    { fromRow: 5, fromName: "巨龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 7, fromName: "火焰獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 8, fromName: "海龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 5, fromName: "巨龍獸", conds: ["6歲必定進化"] },
+    { fromRow: 7, fromName: "火焰獸", conds: ["6歲必定進化"] },
+    { fromRow: 8, fromName: "海龍獸", conds: ["6歲必定進化"] },
   ],
   // 熊仔獸(13) ← 鼻涕獸(10)
   13: [
-    { fromRow: 10, fromName: "鼻涕獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 10, fromName: "鼻涕獸", conds: ["6歲必定進化"] },
   ],
   // 究極病毒種(14) ← 機械暴龍獸(11) [逆境進化: 對戰血量<40%]
   14: [
@@ -7721,19 +7702,19 @@ const EVO_PATHS_V3 = {
   ],
   // 安杜路獸(11) ← 獨角馬獸(4) / 奧加獸(6) / 鑽地獸(9)
   11: [
-    { fromRow: 4, fromName: "獨角馬獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 6, fromName: "奧加獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 9, fromName: "鑽地獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 4, fromName: "獨角馬獸", conds: ["6歲必定進化"] },
+    { fromRow: 6, fromName: "奧加獸", conds: ["6歲必定進化"] },
+    { fromRow: 9, fromName: "鑽地獸", conds: ["6歲必定進化"] },
   ],
   // 炮彈獸(12) ← 人馬獸(5) / 猛鬼獸(7) / 貝殼獸(8)
   12: [
-    { fromRow: 5, fromName: "人馬獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 7, fromName: "猛鬼獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 8, fromName: "貝殼獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 5, fromName: "人馬獸", conds: ["6歲必定進化"] },
+    { fromRow: 7, fromName: "猛鬼獸", conds: ["6歲必定進化"] },
+    { fromRow: 8, fromName: "貝殼獸", conds: ["6歲必定進化"] },
   ],
   // 悟空獸(13) ← 大便獸(10)
   13: [
-    { fromRow: 10, fromName: "大便獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 10, fromName: "大便獸", conds: ["6歲必定進化"] },
   ],
   // 高級安杜路獸(14) ← 安杜路獸(11) [逆境進化]
   14: [
@@ -7764,17 +7745,17 @@ const EVO_PATHS_V4 = {
     { fromRow: 3, fromName: "巴魯獸", conds: ["失誤≥4 或 無訓練"] },
   ],
   11: [
-    { fromRow: 4, fromName: "角龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 6, fromName: "獅子獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 9, fromName: "毛人獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 4, fromName: "角龍獸", conds: ["6歲必定進化"] },
+    { fromRow: 6, fromName: "獅子獸", conds: ["6歲必定進化"] },
+    { fromRow: 9, fromName: "毛人獸", conds: ["6歲必定進化"] },
   ],
   12: [
-    { fromRow: 5, fromName: "巨雞獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 7, fromName: "古加獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 8, fromName: "西拉獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 5, fromName: "巨雞獸", conds: ["6歲必定進化"] },
+    { fromRow: 7, fromName: "古加獸", conds: ["6歲必定進化"] },
+    { fromRow: 8, fromName: "西拉獸", conds: ["6歲必定進化"] },
   ],
   13: [
-    { fromRow: 10, fromName: "亞伯獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 10, fromName: "亞伯獸", conds: ["6歲必定進化"] },
   ],
   // 暗龍獸(14) ← 機械飛龍獸(11) [逆境進化]
   14: [{ fromRow: 11, fromName: "機械飛龍獸", conds: ["逆境進化", "血量<40%", "同屬性進化"] }],
@@ -7799,17 +7780,17 @@ const EVO_PATHS_V5 = {
     { fromRow: 3, fromName: "基刹獸", conds: ["失誤≥4 或 無訓練"] },
   ],
   11: [
-    { fromRow: 4, fromName: "黑暗巨龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 6, fromName: "邪龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 9, fromName: "三頭龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 4, fromName: "黑暗巨龍獸", conds: ["6歲必定進化"] },
+    { fromRow: 6, fromName: "邪龍獸", conds: ["6歲必定進化"] },
+    { fromRow: 9, fromName: "三頭龍獸", conds: ["6歲必定進化"] },
   ],
   12: [
-    { fromRow: 5, fromName: "獨眼龍獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 7, fromName: "大角獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
-    { fromRow: 8, fromName: "黃蜂獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 5, fromName: "獨眼龍獸", conds: ["6歲必定進化"] },
+    { fromRow: 7, fromName: "大角獸", conds: ["6歲必定進化"] },
+    { fromRow: 8, fromName: "黃蜂獸", conds: ["6歲必定進化"] },
   ],
   13: [
-    { fromRow: 10, fromName: "爛泥獸", conds: ["6歲必定進化", "戰鬥>15+勝率>80%", "→完美:+10HP+5攻+3速"] },
+    { fromRow: 10, fromName: "爛泥獸", conds: ["6歲必定進化"] },
   ],
   // 機械邪龍獸(14) ← 鋼鐵巨龍獸(11) [逆境進化]
   14: [{ fromRow: 11, fromName: "鋼鐵巨龍獸", conds: ["逆境進化", "血量<40%", "同屬性進化"] }],
