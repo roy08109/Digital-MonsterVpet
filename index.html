@@ -1569,6 +1569,10 @@ canvas {
 .slot-info-val {
   color: #eee; font-weight: bold; font-size: 11px;
 }
+.slot-info-lv {
+  color: #ffcc00; font-weight: bold; font-size: 11px;
+  letter-spacing: 0.5px;
+}
 .slot-card-empty-text {
   display: flex; align-items: center; justify-content: center;
   height: 80px; color: #66ccff; font-size: 14px;
@@ -2787,10 +2791,10 @@ const BABY_SLEEP_SEC = 180;   // 幼年期睡 3 分鐘
 let babyHasPooped = false;    // 幼年期只排一次屎
 
 // ========== 多槽位機器選擇系統 ==========
-const MAX_SLOTS = 6;
+const MAX_SLOTS = 8;
 const SLOT_VERSIONS = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10'];
 const LAUNCHER_KEY = 'digimon_launcher_meta';
-let activeSlotIndex = -1;  // -1 = 在啟動頁，0~5 = 在遊戲中
+let activeSlotIndex = -1;  // -1 = 在啟動頁，0~7 = 在遊戲中
 let slotCount = 1;         // 當前激活的槽位數量
 let slotLastAutoSave = 0;  // 上次自動存檔時間戳
 let launcherLoaded = false; // 是否已初始化啟動頁
@@ -5766,7 +5770,8 @@ function getSlotPreviewData(idx){
       eggStartTime: data.eggStartTime || 0,
       isDead: data.isDead || false,
       gameAffinity: data.gameAffinity ?? 0,
-      gameHunger: data.gameHunger ?? 5
+      gameHunger: data.gameHunger ?? 5,
+      gameLevel: data.gameLevel ?? 1
     };
   } catch(e){ return null; }
 }
@@ -5849,6 +5854,7 @@ function renderSlotCards(){
           ${isDead ? `<div class="slot-info-panel" style="justify-content:center;color:#ff5555;">已離世</div>`
             : `<div class="slot-info-panel">
                  <div class="slot-info-row">
+                   <span class="slot-info-lv">LV${preview.gameLevel}</span>
                    <span class="slot-info-val">${Math.floor(preview.gameAge / 1440)}</span>歲
                    <span style="margin-left:6px;">❤️<span class="slot-info-val">${preview.gameHunger}</span></span>
                  </div>
