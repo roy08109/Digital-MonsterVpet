@@ -1614,6 +1614,66 @@ canvas {
 }
 #mainGameArea { display: none; }
 
+/* === 對戰經驗結算視圖 === */
+.battle-exp-overlay{
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.75); z-index:120; border-radius:12px;
+  display:flex; align-items:center; justify-content:center; padding:16px;
+}
+.battle-exp-card{
+  width:100%; max-width:300px; max-height:100%;
+  background:linear-gradient(180deg,#1a1a2e,#16213e);
+  border:2px solid rgba(255,204,0,0.4); border-radius:12px;
+  padding:14px; display:flex; flex-direction:column; gap:10px;
+  box-shadow:0 0 20px rgba(255,204,0,0.2); overflow-y:auto;
+}
+.battle-exp-title{
+  text-align:center; font-size:15px; font-weight:900; color:#ffcc00;
+  text-shadow:0 0 8px rgba(255,204,0,0.5); letter-spacing:1px;
+}
+.battle-exp-list{ display:flex; flex-direction:column; gap:10px; }
+.battle-exp-item{
+  background:rgba(255,255,255,0.06); border-radius:10px; padding:10px;
+  border:1px solid rgba(255,255,255,0.1);
+}
+.battle-exp-head{
+  display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;
+}
+.battle-exp-left{ display:flex; align-items:center; gap:8px; min-width:0; }
+.battle-exp-sprite{
+  width:40px; height:40px; flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.35); border-radius:8px;
+  border:1px solid rgba(255,255,255,0.12);
+}
+.battle-exp-sprite canvas{ image-rendering:pixelated; }
+.battle-exp-name{ font-size:13px; font-weight:700; color:#e0e0ff; }
+.battle-exp-lv{ font-size:12px; font-weight:700; color:#ffcc00; }
+.battle-exp-bar{
+  height:12px; background:rgba(0,0,0,0.45); border-radius:6px; overflow:hidden;
+  border:1px solid rgba(255,255,255,0.12);
+}
+.battle-exp-bar-fill{
+  height:100%; width:0%;
+  background:linear-gradient(90deg,#22cc66,#66ff99);
+  border-radius:6px; transition:width 0.6s ease-out;
+}
+.battle-exp-foot{
+  display:flex; justify-content:space-between; align-items:center; margin-top:6px;
+  min-height:16px;
+}
+.battle-exp-amount{ font-size:11px; color:#7ec8ff; }
+.battle-exp-gain{ font-size:11px; font-weight:700; color:#4eff4e; }
+.battle-exp-lvup{
+  font-size:10px; font-weight:900; color:#ff6600;
+  animation:adversityFlash 0.5s ease-in-out infinite alternate;
+}
+.battle-exp-ok{
+  padding:10px; background:#c42222; color:#fff; border:none; border-radius:8px;
+  font-size:15px; font-weight:700; cursor:pointer;
+}
+.battle-exp-ok:hover{ background:#e53030; }
+
 </style>
 </head>
 <body>
@@ -1779,13 +1839,8 @@ canvas {
     </div>
     <div id="bmQuickBattle3v3Panel" class="self-battle-panel" style="display:none;">
       <div class="self-battle-title">⚔ 快速對戰3V3（電腦）</div>
-      <div class="qb3v3-desc">先選擇自己龍的出戰順序，再選擇電腦隊伍階段，之後直接開打。</div>
+      <div class="qb3v3-desc">選擇 3 隻「同一階段」的自己龍作為出戰順序，點開始後自動開打。</div>
       <div class="qb3v3-order-box" id="qb3v3OrderBox"></div>
-      <div class="qb3v3-stage-row">
-        <button type="button" class="qb3v3-stage-btn" id="qb3v3StageChild" onclick="setQuickBattle3v3Stage('成長期')">成長期</button>
-        <button type="button" class="qb3v3-stage-btn" id="qb3v3StageAdult" onclick="setQuickBattle3v3Stage('成熟期')">成熟期</button>
-        <button type="button" class="qb3v3-stage-btn" id="qb3v3StagePerfect" onclick="setQuickBattle3v3Stage('完全體')">完全體</button>
-      </div>
       <div id="qb3v3CardList"></div>
       <button class="self-battle-confirm-btn" id="qb3v3StartBtn" onclick="startQuickBattle3v3()" disabled>⚔ 開始 3V3 對戰</button>
       <button class="self-battle-close-btn" onclick="closeQuickBattle3v3Menu();">返回</button>
@@ -1830,6 +1885,15 @@ canvas {
         <div class="bm-map-row-body" id="bmRowBody_desert" style="display:none;"></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 對戰經驗結算視圖 -->
+<div id="battleExpOverlay" class="battle-exp-overlay" style="display:none;">
+  <div class="battle-exp-card">
+    <div class="battle-exp-title">🏆 對戰勝利 · 經驗結算</div>
+    <div id="battleExpList" class="battle-exp-list"></div>
+    <button class="battle-exp-ok" onclick="closeBattleExpResult()">確定</button>
   </div>
 </div>
 
@@ -4040,6 +4104,12 @@ let battleEnemyEvoStep = 0;           // 0-16 垂直滾動步數
 let battleEnemyEvoNextRow = -1;        // 敵方進化目標 row
 let battleEnemyEvoCallback = null;     // 敵方動畫完成回調
 let battleEnemyVersion = "V1";          // 跨版本對戰：敵方所屬版本
+let battleEnemyLevel = 1;                // 敵方等級（用於對戰顯示）
+let battleEnemyHpBonus = 0;              // 敵方隨機訓練加成：HP
+let battleEnemyAtkBonus = 0;             // 敵方隨機訓練加成：攻擊
+let battleEnemySpdBonus = 0;             // 敵方隨機訓練加成：速度
+let battleEnemyCritBonus = 0;            // 敵方隨機訓練加成：暴擊
+let battleEnemyDodgeBonus = 0;           // 敵方隨機訓練加成：閃避
 let battleEvoExclaimImg = new Image();
 let battleEvoEffectImg = new Image();
 
@@ -6533,6 +6603,21 @@ function grantExpToSlot(slotIdx, expAmount){
   }
 }
 
+// 讀取指定槽位當前等級/經驗（active 槽位用全局變量，其他槽位讀存檔）
+function getSlotLevelExp(slotIdx){
+  if(slotIdx === activeSlotIndex){
+    return { level: gameLevel, exp: gameExp };
+  }
+  try {
+    const raw = localStorage.getItem(getSlotSaveKey(slotIdx));
+    if(!raw) return { level: 1, exp: 0 };
+    const save = JSON.parse(raw);
+    return { level: save.gameLevel ?? 1, exp: save.gameExp ?? 0 };
+  } catch(e){
+    return { level: 1, exp: 0 };
+  }
+}
+
 // === 排便系統 ===
 let poopsOnScreen = 0;           // 當前糞便數量 (0~8)
 let poopCountdown = 0;           // 距離下一攤屎的秒數
@@ -8289,13 +8374,13 @@ function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef){
   const atkr = isPlayerAtk ? getBattlePlayerStats(attackerRow) : getEnemyStats(attackerRow);
   const defr = isPlayerDef ? getBattlePlayerStats(defenderRow) : getEnemyStats(defenderRow);
   // 閃避優先判定（防禦方用總閃避）
-  const defDodge = isPlayerDef ? getBattlePlayerTotalDodge() : (isSelfEnemyDef ? ((defr.dodgeRate || 0) + battleSelfEnemyDodgeBonus) : defr.dodgeRate);
+  const defDodge = isPlayerDef ? getBattlePlayerTotalDodge() : (isSelfEnemyDef ? ((defr.dodgeRate || 0) + battleSelfEnemyDodgeBonus) : Math.min(0.30, (defr.dodgeRate || 0) + battleEnemyDodgeBonus));
   if(Math.random() < defDodge) return { dodged: true, dmg: 0, msg: defr.name + " 閃避了攻擊！" };
   // 基礎傷害（攻擊方用總攻擊）
-  let dmg = isPlayerAtk ? getBattlePlayerTotalAtk() : (isSelfEnemyAtk ? ((atkr.atk || 0) + battleSelfEnemyAtkBonus) : atkr.atk);
+  let dmg = isPlayerAtk ? getBattlePlayerTotalAtk() : (isSelfEnemyAtk ? ((atkr.atk || 0) + battleSelfEnemyAtkBonus) : (atkr.atk || 0) + battleEnemyAtkBonus);
   let msgExtra = "";
   // 暴擊（攻擊方用總暴擊）
-  const atkCrit = isPlayerAtk ? getBattlePlayerTotalCrit() : (isSelfEnemyAtk ? ((atkr.critRate || 0) + battleSelfEnemyCritBonus) : atkr.critRate);
+  const atkCrit = isPlayerAtk ? getBattlePlayerTotalCrit() : (isSelfEnemyAtk ? ((atkr.critRate || 0) + battleSelfEnemyCritBonus) : Math.min(0.35, (atkr.critRate || 0) + battleEnemyCritBonus));
   let isCrit = false;
   if(Math.random() < atkCrit){
     dmg = Math.round(dmg * CRIT_MULT);
@@ -8372,6 +8457,37 @@ function getBattlePlayerFighter(){
 }
 function getBattleEnemyFighter(){
   return battleQuick3v3Active ? battleQuick3v3EnemyTeam[battleQuick3v3EnemyIdx] : null;
+}
+function getBattlePlayerLevel(){
+  const fighter = getBattlePlayerFighter();
+  if(fighter && fighter.slotIdx !== undefined){
+    return getSlotLevelExp(fighter.slotIdx).level;
+  }
+  return gameLevel;
+}
+function rollEnemyTrainingBonus(level){
+  battleEnemyHpBonus = 0;
+  battleEnemyAtkBonus = 0;
+  battleEnemySpdBonus = 0;
+  battleEnemyCritBonus = 0;
+  battleEnemyDodgeBonus = 0;
+  const points = Math.max(0, level - 1); // LV8 → 7點
+  for(let i = 0; i < points; i++){
+    const r = Math.random();
+    if(r < 0.20) battleEnemyHpBonus += 0.8;      // 對齊玩家 HP 訓練 +0.8
+    else if(r < 0.40) battleEnemyAtkBonus += 0.1; // 對齊玩家 ATK 訓練 +0.1
+    else if(r < 0.60) battleEnemySpdBonus += 0.04;
+    else if(r < 0.80) battleEnemyCritBonus += 0.001;
+    else battleEnemyDodgeBonus += 0.001;
+  }
+}
+function rollEnemyLevel(){
+  const lv = Math.max(1, getBattlePlayerLevel() + Math.floor(Math.random() * 4) - 1); // 玩家等級 ±偏移(-1~+2)
+  rollEnemyTrainingBonus(lv);
+  return lv;
+}
+function formatBattleNameHtml(name, attr, attrColor, level){
+  return name + '(<span style="color:' + attrColor + '">' + (ATTR_CN[attr] || attr || "—") + '</span>) <span style="background:linear-gradient(180deg,#ffe08a,#f0a828);color:#4a2c00;padding:1px 6px;border-radius:8px;font-weight:800;font-size:10px;border:1px solid #7a4a00;box-shadow:0 0 5px rgba(255,200,60,0.45);">Lv.' + level + '</span>';
 }
 function getBattlePlayerVersion(){
   const fighter = getBattlePlayerFighter();
@@ -8552,10 +8668,6 @@ function renderQuickBattle3v3Panel(){
   const list = document.getElementById("qb3v3CardList");
   const startBtn = document.getElementById("qb3v3StartBtn");
   if(orderBox) orderBox.innerHTML = getQuickBattle3v3OrderText();
-  ["成長期","成熟期","完全體"].forEach(stage => {
-    const btn = document.getElementById(getQuickBattle3v3StageButtonId(stage));
-    if(btn) btn.classList.toggle("active", battleQuick3v3Stage === stage);
-  });
   let html = "";
   const total = Math.max(slotCount || 0, activeSlotIndex + 1);
   for(let i = 0; i < total; i++){
@@ -8621,7 +8733,7 @@ function renderQuickBattle3v3Panel(){
       }
     });
   }
-  if(startBtn) startBtn.disabled = !(battleQuick3v3SelectedSlots.length === 3 && !!battleQuick3v3Stage);
+  if(startBtn) startBtn.disabled = !(battleQuick3v3SelectedSlots.length === 3);
 }
 function openQuickBattle3v3Menu(){
   saveGameState();
@@ -8692,19 +8804,19 @@ function startQuickBattle3v3(){
     showToast("請先選擇 3 隻龍的出戰順序");
     return;
   }
-  if(!battleQuick3v3Stage){
-    showToast("請選擇對戰階段");
-    return;
-  }
   const team = [];
+  let autoStage = "";
   for(const slotIdx of battleQuick3v3SelectedSlots){
     const snapshot = getBattleSlotSnapshot(slotIdx);
     if(!snapshot || snapshot.isDead || snapshot.row === undefined || snapshot.row < 2){
       showToast("所選龍資料不足，請重新選擇");
       return;
     }
-    if(snapshot.stage !== battleQuick3v3Stage){
-      showToast("3 隻自己龍都必須是「" + battleQuick3v3Stage + "」");
+    // 自動檢查是否同階段：以第一隻龍的階段為準
+    if(!autoStage){
+      autoStage = snapshot.stage;
+    } else if(snapshot.stage !== autoStage){
+      showToast("3 隻自己龍必須是同一階段");
       return;
     }
     const stats = getStatsForVersion(snapshot.version)[snapshot.row];
@@ -8727,6 +8839,7 @@ function startQuickBattle3v3(){
       adversityTries: 0
     });
   }
+  battleQuick3v3Stage = autoStage;
   const enemyTeam = buildQuickBattle3v3EnemyTeam(battleQuick3v3Stage);
   if(enemyTeam.length !== 3){
     showToast("找不到可用的 3V3 對手");
@@ -8823,17 +8936,27 @@ function continueQuickBattle3v3Round(result, outgoingSide){
   const enemyFighter = getBattleEnemyFighter();
   battleEnemyVersion = enemyFighter.version;
   battleEnemyRow = enemyFighter.row;
-  const ps = getBattlePlayerStats();
   const es = getEnemyStats(enemyFighter.row);
+  // 只有「新敵人上場」(我方獲勝) 才重新隨機敵方等級與訓練加成，並滿血登場；
+  // 敵方擊敗我方、我方換新龍時，敵人不變，等級與訓練加成不變，並保留勝者剩餘血量
+  if(result === "win"){
+    battleEnemyLevel = rollEnemyLevel();
+    enemyFighter.maxHp = (es.hp || 0) + battleEnemyHpBonus;
+    enemyFighter.currentHp = enemyFighter.maxHp;
+    battleEnemyMaxHp = enemyFighter.maxHp;
+    battleEnemyHp = enemyFighter.maxHp;
+  } else {
+    battleEnemyMaxHp = enemyFighter.maxHp;
+    battleEnemyHp = Math.max(1, enemyFighter.currentHp);
+  }
+  const ps = getBattlePlayerStats();
   const pAttrColor = getAttrColor(ps.attr, es.attr);
   const eAttrColor = getAttrColor(es.attr, ps.attr);
   battlePlayerMaxHp = getBattlePlayerTotalHp();
   battlePlayerHp = Math.min(getBattlePlayerFighter().currentHp, battlePlayerMaxHp);
-  battleEnemyMaxHp = getBattleEnemyFighter().maxHp;
-  battleEnemyHp = Math.min(getBattleEnemyFighter().currentHp, battleEnemyMaxHp);
   updateBattleHpDisplay();
-  document.getElementById("battlePlayerName").innerHTML = ps.name + '(<span style="color:' + pAttrColor + '">' + (ATTR_CN[ps.attr] || ps.attr || "—") + '</span>)';
-  document.getElementById("battleEnemyName").innerHTML = '<span style="font-size:9px;background:#2266aa;color:#fff;border-radius:3px;padding:0 3px;margin-right:2px;">3V3</span><span style="font-size:9px;background:#333;color:#aaa;border-radius:3px;padding:0 3px;margin-right:2px;">' + battleEnemyVersion + '</span>' + es.name + '(<span style="color:' + eAttrColor + '">' + (ATTR_CN[es.attr] || es.attr || "—") + '</span>)';
+  document.getElementById("battlePlayerName").innerHTML = formatBattleNameHtml(ps.name, ps.attr, pAttrColor, getBattlePlayerLevel());
+  document.getElementById("battleEnemyName").innerHTML = formatBattleNameHtml(es.name, es.attr, eAttrColor, battleEnemyLevel);
   document.getElementById("battleMsg").textContent = ((outgoingSide === "enemy") ? es.name : ps.name) + " 上場！";
 
   if(outgoingSide === "enemy"){
@@ -8931,27 +9054,38 @@ function finishQuickBattle3v3Match(playerWon){
   if(playerWon){
     // 整場 3V3 勝利：3 隻龍（不管是否出過場）每隻都獲得完整階段經驗
     const expPerDragon = getExpForEnemyStage(battleQuick3v3Stage);
-    const _beforeLevel = gameLevel;
-    let activeLeveled = false;
+    const entries = [];
     for(const fighter of battleQuick3v3PlayerTeam){
+      const before = getSlotLevelExp(fighter.slotIdx);
       const leveled = grantExpToSlot(fighter.slotIdx, expPerDragon);
-      if(leveled && fighter.slotIdx === activeSlotIndex){
-        activeLeveled = true;
-      }
-    }
-    if(activeLeveled){
-      showToast("升級！ Lv." + _beforeLevel + " → Lv." + gameLevel);
+      const after = getSlotLevelExp(fighter.slotIdx);
+      entries.push({
+        slotIdx: fighter.slotIdx,
+        version: fighter.version,
+        row: fighter.row,
+        name: fighter.name,
+        levelBefore: before.level,
+        expBefore: before.exp,
+        gained: expPerDragon,
+        levelAfter: after.level,
+        expAfter: after.exp,
+        leveledUp: leveled
+      });
     }
     saveGameState();
-    showToast("⚔ 3V3 勝利！");
+    window._pendingExpView = { entries };
   } else {
     showToast("3V3 戰敗…");
   }
 
   resetQuickBattle3v3State();
-  gameMode = "auto";
-  updateCssBackground("auto");
-  startAutoPlay();
+  if(window._pendingExpView){
+    const entries = window._pendingExpView.entries;
+    window._pendingExpView = null;
+    showBattleExpResult(entries);
+    return;
+  }
+  finalizeBattleReturn();
 }
 
 // ========== 自家對戰 ==========
@@ -9215,7 +9349,7 @@ function runEvoAnim(){
         battlePlayerHp = getBattlePlayerTotalHp();
         updateBattleHpDisplay();
         const advAttrColor = getAttrColor(s.attr, getEnemyStats(battleEnemyRow).attr);
-        document.getElementById("battlePlayerName").innerHTML = s.name + '(<span style="color:' + advAttrColor + '">' + (ATTR_CN[s.attr] || s.attr || "—") + '</span>) ⚡';
+        document.getElementById("battlePlayerName").innerHTML = formatBattleNameHtml(s.name, s.attr, advAttrColor, getBattlePlayerLevel()) + ' ⚡';
         document.getElementById("adversityEvoBanner").style.display = "block";
         document.getElementById("battleMsg").textContent = s.name + " 逆境進化！！";
         clearInterval(interval);
@@ -9295,20 +9429,19 @@ function runEnemyEvoAnim(){
           const enemy = getBattleEnemyFighter();
           if(enemy){
             enemy.row = battleEnemyEvoNextRow;
-            enemy.maxHp = s.hp;
+            enemy.maxHp = (s.hp || 0) + battleEnemyHpBonus;
           }
         }
         if(battleIsSelfBattle){
           battleEnemyMaxHp = s.hp + battleSelfEnemyHpBonus;
           battleEnemyHp = s.hp + battleSelfEnemyHpBonus;
         } else {
-          battleEnemyMaxHp = s.hp;
-          battleEnemyHp = s.hp;
+          battleEnemyMaxHp = (s.hp || 0) + battleEnemyHpBonus;
+          battleEnemyHp = (s.hp || 0) + battleEnemyHpBonus;
         }
         updateBattleHpDisplay();
         const eAttrColor = getAttrColor(s.attr, (getBattlePlayerStats() || {}).attr);
-        const selfEvoTag = battleIsSelfBattle ? '<span style="font-size:9px;background:#e67e22;color:#fff;border-radius:3px;padding:0 3px;margin-right:2px;">自家</span>' : '';
-        document.getElementById("battleEnemyName").innerHTML = selfEvoTag + '<span style="font-size:9px;background:#333;color:#aaa;border-radius:3px;padding:0 3px;margin-right:2px;">' + battleEnemyVersion + '</span>' + s.name + '(<span style="color:' + eAttrColor + '">' + (ATTR_CN[s.attr] || s.attr || "—") + '</span>)';
+        document.getElementById("battleEnemyName").innerHTML = formatBattleNameHtml(s.name, s.attr, eAttrColor, battleEnemyLevel);
         document.getElementById("battleMsg").textContent = s.name + (battleIsSelfBattle ? " 自家" : " 敵方") + "逆境進化！！";
         clearInterval(interval);
         setTimeout(() => {
@@ -9603,6 +9736,8 @@ function drawTeamSprites(container, team, reverse){
 
 function startBattle(targetSlotIdx){
   if(!battleQuick3v3Active && isDead){ showToast("數碼獸已離世，無法戰鬥..."); return; }
+  // 普通/自家對戰入口：清除 PVE 殘留標誌，避免勝利後不顯示經驗結算
+  window._pveActive = false;
   // targetSlotIdx >= 0 表示自家對戰模式
   const isSelfBattle = (targetSlotIdx !== undefined && targetSlotIdx >= 0);
   if(flushingMode) stopFlushing(); // 中斷清潔動畫
@@ -9712,14 +9847,23 @@ function startBattle(targetSlotIdx){
   }
 
   battleEnemyRow = enemyRow;
+  // 敵方等級：自家對戰用目標槽位等級，其餘用玩家等級 ±偏移
+  battleEnemyLevel = isSelfBattle ? getSlotLevelExp(targetSlotIdx).level : rollEnemyLevel();
   if(battleQuick3v3Active){
     const fighter = getBattlePlayerFighter();
     const enemy = getBattleEnemyFighter();
     battlePlayerMaxHp = getBattlePlayerTotalHp();
     if(fighter) fighter.maxHp = battlePlayerMaxHp;
     battlePlayerHp = fighter ? Math.min(fighter.currentHp, battlePlayerMaxHp) : battlePlayerMaxHp;
-    battleEnemyMaxHp = enemy ? (enemy.maxHp || (es.hp || 0)) : (es.hp || 0);
-    battleEnemyHp = enemy ? Math.min(enemy.currentHp, battleEnemyMaxHp) : battleEnemyMaxHp;
+    if(enemy){
+      enemy.maxHp = (enemy.maxHp || (es.hp || 0)) + battleEnemyHpBonus;
+      enemy.currentHp = enemy.maxHp;
+      battleEnemyMaxHp = enemy.maxHp;
+      battleEnemyHp = enemy.maxHp;
+    } else {
+      battleEnemyMaxHp = (es.hp || 0) + battleEnemyHpBonus;
+      battleEnemyHp = battleEnemyMaxHp;
+    }
   } else {
     battlePlayerMaxHp = getBattlePlayerTotalHp();
     battlePlayerHp = getBattlePlayerTotalHp();
@@ -9728,8 +9872,8 @@ function startBattle(targetSlotIdx){
     battleEnemyMaxHp = (es.hp || 0) + battleSelfEnemyHpBonus;
     battleEnemyHp = (es.hp || 0) + battleSelfEnemyHpBonus;
   } else if(!battleQuick3v3Active) {
-    battleEnemyMaxHp = es.hp;
-    battleEnemyHp = es.hp;
+    battleEnemyMaxHp = (es.hp || 0) + battleEnemyHpBonus;
+    battleEnemyHp = (es.hp || 0) + battleEnemyHpBonus;
   }
 
   // 清空對戰記錄
@@ -9749,9 +9893,9 @@ function startBattle(targetSlotIdx){
   battleResult = "";
   battleMsg = "";
   setBattleActive(true);
-  // 按鈕顯示：快速對戰（電腦）自動開始，隱藏 🔄/攻擊/退出；自家/3V3 保留攻擊/退出
+  // 按鈕顯示：快速對戰（電腦）與 3V3 自動開始，隱藏 🔄/攻擊/退出；自家保留攻擊/退出
   const battleBtnsEl = document.getElementById("battleBtns");
-  if(isSelfBattle || battleQuick3v3Active){
+  if(isSelfBattle){
     battleBtnsEl.style.display = "";
     document.getElementById("battleRefreshBtn").style.display = "none";
   } else {
@@ -9778,11 +9922,10 @@ function startBattle(targetSlotIdx){
 
   const pAttrColor = getAttrColor(ps.attr, es.attr);
   const eAttrColor = getAttrColor(es.attr, ps.attr);
-  document.getElementById("battlePlayerName").innerHTML = ps.name + '(<span style="color:' + pAttrColor + '">' + (ATTR_CN[ps.attr] || ps.attr || "—") + '</span>)';
-  const selfTag = isSelfBattle ? '<span style="font-size:9px;background:#e67e22;color:#fff;border-radius:3px;padding:0 3px;margin-right:2px;">自家</span>' : (battleQuick3v3Active ? '<span style="font-size:9px;background:#2266aa;color:#fff;border-radius:3px;padding:0 3px;margin-right:2px;">3V3</span>' : '');
-  document.getElementById("battleEnemyName").innerHTML = selfTag + '<span style="font-size:9px;background:#333;color:#aaa;border-radius:3px;padding:0 3px;margin-right:2px;">' + battleEnemyVersion + '</span>' + es.name + '(<span style="color:' + eAttrColor + '">' + (ATTR_CN[es.attr] || es.attr || "—") + '</span>)';
+  document.getElementById("battlePlayerName").innerHTML = formatBattleNameHtml(ps.name, ps.attr, pAttrColor, getBattlePlayerLevel());
+  document.getElementById("battleEnemyName").innerHTML = formatBattleNameHtml(es.name, es.attr, eAttrColor, battleEnemyLevel);
   if(battleQuick3v3Active){
-    document.getElementById("battleMsg").textContent = "第 " + (battleQuick3v3PlayerIdx + 1) + " 隻 VS 第 " + (battleQuick3v3EnemyIdx + 1) + " 隻，點擊攻擊開始！";
+    document.getElementById("battleMsg").textContent = "第 " + (battleQuick3v3PlayerIdx + 1) + " 隻 VS 第 " + (battleQuick3v3EnemyIdx + 1) + " 隻，自動開戰！";
   } else {
     document.getElementById("battleMsg").textContent = "點擊攻擊開始對戰！";
   }
@@ -9802,8 +9945,8 @@ function startBattle(targetSlotIdx){
   updateBattleTeamSprites();
   renderBattleScene();
 
-  // 快速對戰（電腦）：點擊後馬上開始（自動戰鬥，不需再點攻擊）
-  if(!isSelfBattle && !battleQuick3v3Active){
+  // 快速對戰（電腦）與 3V3：點擊後馬上開始（自動戰鬥，不需再點攻擊）
+  if(!isSelfBattle){
     setTimeout(() => handleBattleAttack(), 400);
   }
 }
@@ -9838,11 +9981,12 @@ function refreshBattleEnemy(){
     }
   }
   battleEnemyRow = sameStageIndices[Math.floor(Math.random() * sameStageIndices.length)];
+  battleEnemyLevel = rollEnemyLevel();
 
   const ps = getBattlePlayerStats();
   const es = getEnemyStats(battleEnemyRow);
-  battleEnemyMaxHp = es.hp;
-  battleEnemyHp = es.hp;
+  battleEnemyMaxHp = (es.hp || 0) + battleEnemyHpBonus;
+  battleEnemyHp = (es.hp || 0) + battleEnemyHpBonus;
   // 重置敵方逆境
   battleEnemyOriginalRow = battleEnemyRow;
   battleEnemyAdversityEvoRow = -1;
@@ -9855,8 +9999,8 @@ function refreshBattleEnemy(){
   // 重設UI
   const pAttrColor = getAttrColor(ps.attr, es.attr);
   const eAttrColor = getAttrColor(es.attr, ps.attr);
-  document.getElementById("battlePlayerName").innerHTML = ps.name + '(<span style="color:' + pAttrColor + '">' + (ATTR_CN[ps.attr] || ps.attr || "—") + '</span>)';
-  document.getElementById("battleEnemyName").innerHTML = '<span style="font-size:9px;background:#333;color:#aaa;border-radius:3px;padding:0 3px;margin-right:2px;">' + battleEnemyVersion + '</span>' + es.name + '(<span style="color:' + eAttrColor + '">' + (ATTR_CN[es.attr] || es.attr || "—") + '</span>)';
+  document.getElementById("battlePlayerName").innerHTML = formatBattleNameHtml(ps.name, ps.attr, pAttrColor, getBattlePlayerLevel());
+  document.getElementById("battleEnemyName").innerHTML = formatBattleNameHtml(es.name, es.attr, eAttrColor, battleEnemyLevel);
   updateBattleHpDisplay();
   document.getElementById("battleMsg").textContent = "敵人已刷新！點擊攻擊開始對戰！";
   document.getElementById("battleAttackBtn").disabled = false;
@@ -9911,7 +10055,7 @@ function beginBattle(){
   // 速度決定先後手（玩家使用總速度含訓練加成，相同時隨機）
   // 速度優勢：≥對方1.25倍 → 5:4連擊；≥對方1.35倍 → 4:3連擊；≥對方1.5倍 → 3:2交替連擊；≥對方2倍 → 全程2:1連擊
   const playerSpd = getBattlePlayerTotalSpd();
-  const enemySpd = (es.spd || 10) + (battleIsSelfBattle ? battleSelfEnemySpdBonus : 0);
+  const enemySpd = (es.spd || 10) + (battleIsSelfBattle ? battleSelfEnemySpdBonus : battleEnemySpdBonus);
   if(playerSpd > enemySpd){
     if(playerSpd >= enemySpd * 2){
       battleOrder = ["player", "player", "enemy"];
@@ -10177,10 +10321,27 @@ function endBattle(result){
         // 經驗獎勵：依擊敗敵方階段獲得經驗，升級時增加訓練點
         const _enemyStats = getEnemyStats(battleEnemyRow);
         if(_enemyStats){
-          const _beforeLevel = gameLevel;
+          const expGained = getExpForEnemyStage(_enemyStats.stage);
+          const before = getSlotLevelExp(activeSlotIndex);
           const _leveled = applyBattleExp(_enemyStats.stage);
-          if(_leveled){
-            showToast("升級！ Lv." + _beforeLevel + " → Lv." + gameLevel);
+          const after = getSlotLevelExp(activeSlotIndex);
+          const snapshot = getBattleSlotSnapshot(activeSlotIndex);
+          // 快速對戰（1V1）勝利展示經驗結算；PVE 維持現狀不展示
+          if(!window._pveActive){
+            window._pendingExpView = {
+              entries: [{
+                slotIdx: activeSlotIndex,
+                version: snapshot ? snapshot.version : currentVersion,
+                row: snapshot ? snapshot.row : currentRow,
+                name: (snapshot && snapshot.name) || "數碼獸",
+                levelBefore: before.level,
+                expBefore: before.exp,
+                gained: expGained,
+                levelAfter: after.level,
+                expAfter: after.exp,
+                leveledUp: _leveled
+              }]
+            };
           }
         }
       }
@@ -10440,21 +10601,94 @@ function showBattleResult(result){
       return;
     }
 
-    gameMode = "auto";
-    battleResult = "";
-    battleEnemyRow = -1;
-    // 清除自家對戰狀態
-    battleIsSelfBattle = false;
-    battleSelfEnemySlotIdx = -1;
-    battleSelfEnemyHpBonus = 0;
-    battleSelfEnemyAtkBonus = 0;
-    battleSelfEnemySpdBonus = 0;
-    battleSelfEnemyCritBonus = 0;
-    battleSelfEnemyDodgeBonus = 0;
-    battleSelfEnemyAffBonus = 0;
-    updateCssBackground("auto");
-    startAutoPlay();
+    // 勝利且有經驗結算 → 展示經驗視圖，等用戶按「確定」再回到自動模式
+    if(window._pendingExpView){
+      const entries = window._pendingExpView.entries;
+      window._pendingExpView = null;
+      showBattleExpResult(entries);
+      return;
+    }
+
+    finalizeBattleReturn();
   }, 2000);
+}
+
+// === 對戰經驗結算視圖 ===
+function showBattleExpResult(entries){
+  const overlay = document.getElementById("battleExpOverlay");
+  const list = document.getElementById("battleExpList");
+  if(!overlay || !list){
+    finalizeBattleReturn();
+    return;
+  }
+  list.innerHTML = "";
+  for(const e of entries){
+    const maxExp = getExpToNextLevel(e.levelAfter);
+    const pct = maxExp > 0 ? Math.min(100, (e.expAfter / maxExp) * 100) : 100;
+    const item = document.createElement("div");
+    item.className = "battle-exp-item";
+    const lvText = e.levelAfter > e.levelBefore
+      ? ("Lv." + e.levelBefore + " → Lv." + e.levelAfter)
+      : ("Lv." + e.levelBefore);
+    const lvUpBadge = e.leveledUp ? '<span class="battle-exp-lvup">LEVEL UP!</span>' : '';
+    const gainText = e.gained > 0 ? ('<span class="battle-exp-gain">+' + e.gained + ' EXP</span>') : '';
+    item.innerHTML =
+      '<div class="battle-exp-head">' +
+        '<span class="battle-exp-left">' +
+          '<span class="battle-exp-sprite"></span>' +
+          '<span class="battle-exp-name"></span>' +
+        '</span>' +
+        '<span class="battle-exp-lv">' + lvText + '</span>' +
+      '</div>' +
+      '<div class="battle-exp-bar"><div class="battle-exp-bar-fill" data-pct="' + pct.toFixed(1) + '"></div></div>' +
+      '<div class="battle-exp-foot">' +
+        '<span class="battle-exp-amount">' + e.expAfter + ' / ' + maxExp + '</span>' +
+        '<span>' + gainText + lvUpBadge + '</span>' +
+      '</div>';
+    const spriteBox = item.querySelector(".battle-exp-sprite");
+    if(spriteBox){
+      spriteBox.appendChild(createMiniSprite(e.row, 40, e.version));
+    }
+    item.querySelector(".battle-exp-name").textContent = e.name;
+    list.appendChild(item);
+  }
+  document.getElementById("returnBtn").style.display = "none";
+  overlay.style.display = "flex";
+  // 觸發經驗條動畫（0 → 目標百分比）
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      list.querySelectorAll(".battle-exp-bar-fill").forEach(fill => {
+        fill.style.width = fill.getAttribute("data-pct") + "%";
+      });
+    });
+  });
+}
+
+function closeBattleExpResult(){
+  const overlay = document.getElementById("battleExpOverlay");
+  if(overlay) overlay.style.display = "none";
+  document.getElementById("returnBtn").style.display = "";
+  finalizeBattleReturn();
+}
+
+// 回到自動模式（對戰結束後統一收尾）
+function finalizeBattleReturn(){
+  gameMode = "auto";
+  battleResult = "";
+  battleEnemyRow = -1;
+  window._pveActive = false;
+  // 清除自家對戰狀態
+  battleIsSelfBattle = false;
+  battleSelfEnemySlotIdx = -1;
+  battleSelfEnemyHpBonus = 0;
+  battleSelfEnemyAtkBonus = 0;
+  battleSelfEnemySpdBonus = 0;
+  battleSelfEnemyCritBonus = 0;
+  battleSelfEnemyDodgeBonus = 0;
+  battleSelfEnemyAffBonus = 0;
+  saveGameState();
+  updateCssBackground("auto");
+  startAutoPlay();
 }
 
 // ========== 圖鑑 ==========
@@ -12987,6 +13221,7 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx) {
   battleEnemyVersion = (enemyVersion !== undefined) ? enemyVersion : window._pveEnemyVersion;
   battleEnemyRow = (enemyRow !== undefined) ? enemyRow : window._pveEnemyRow;
   const es = getEnemyStats(battleEnemyRow);
+  rollEnemyTrainingBonus(0); // PVE 暫無隨機訓練加成，清零避免殘留
 
   // 設置背景（使用 PVE 地圖對應背景或傳入值）
   if (bgIdx !== undefined) {
