@@ -6856,24 +6856,17 @@ function getTotalCrit(){ return Math.min(0.35, (DIGIMON_STATS[currentRow].critRa
 function getTotalDodge(){ return Math.min(0.30, (DIGIMON_STATS[currentRow].dodgeRate || 0) + gameDodgeBonus); }
 function getTotalAffinity(){ return Math.min(100, (DIGIMON_STATS[currentRow].bondInitial || 0) + gameAffBonus); }
 
-function getStageMaxPoints(){
-  const s = DIGIMON_STATS[currentRow].stage;
-  if(s === "成長期") return 24;
-  if(s === "成熟期") return 48;
-  if(s === "完全體") return 96;
-  return 0;
-}
-
 function tryTrainingSuccess(type){
   const babyStage = (currentRow <= 1);
   const mult = trainingMultiplier || 1;
   const cap = {"crit":0.35,"dodge":0.30,"affinity":100}[type] || null;
   const cur = type==="hp"?getTotalHp():type==="atk"?getTotalAtk():type==="spd"?getTotalSpd():type==="crit"?getTotalCrit():type==="dodge"?getTotalDodge():getTotalAffinity();
-  if(cap !== null && cur >= cap) return {success:false,reason:"cap"};
+  if(cap !== null && cur >= cap){
+    showToast("已到上限訓練不會增加");
+    return {success:false,reason:"cap"};
+  }
   if(!babyStage && gameTrainingPoints < mult) return {success:false,reason:"no_points"};
-  const sMax = getStageMaxPoints();
-  if(!babyStage && sMax > 0 && stageTrainingPointsUsed + mult > sMax) return {success:false,reason:"stage_cap"};
-  if(!babyStage){ gameTrainingPoints -= mult; stageTrainingPointsUsed += mult; updateNotifArea(true); }
+  if(!babyStage){ gameTrainingPoints -= mult; updateNotifArea(true); }
   // 幼年期訓練不累積加成（純動畫，不長屬性不計數）
   if(!babyStage){
     totalTrainingCount += mult;
