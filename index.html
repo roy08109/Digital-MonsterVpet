@@ -1540,7 +1540,7 @@ canvas {
 }
 .slot-cards-container {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   justify-items: center;
   max-width: 100%;
@@ -1550,11 +1550,17 @@ canvas {
 }
 .slot-card {
   width: 100%; max-width: 260px;
+  min-width: 0;
   background: linear-gradient(180deg, #1e1e3a 0%, #141428 100%);
   border: 2px solid #333; border-radius: 12px;
   padding: 14px 12px 10px; cursor: pointer;
   transition: all 0.25s; position: relative;
   box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+@media (max-width: 480px) {
+  .slot-cards-container {
+    grid-template-columns: 1fr;
+  }
 }
 .slot-card:hover {
   border-color: #ffcc00; transform: translateY(-2px);
