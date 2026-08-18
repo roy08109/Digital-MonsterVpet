@@ -555,11 +555,37 @@ body{
   font-size:11px;
 }
 .battle-side .battle-side-hp.low{ color:#eddd31; }
+.battle-side .battle-side-stats{
+  margin-top:3px;
+  color:#cccccc;
+  font-size:10px;
+  line-height:1.4;
+  white-space:nowrap;
+}
 .battle-vs-text{
   color:#ffcc00;
   font-size:13px;
   font-weight:900;
   margin:0 6px;
+}
+.battle-side-items{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:4px;
+  margin-bottom:3px;
+}
+.battle-item-icon{
+  width:32px;
+  height:32px;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  border:2px solid transparent;
+  border-radius:3px;
+  box-sizing:border-box;
+  background:
+    linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)) padding-box,
+    linear-gradient(to right, #ff3b30, #ff9500, #ffcc00, #34c759, #00c7be, #007aff, #af52de) border-box;
 }
 .battle-msg{
   text-align:center;
@@ -1557,11 +1583,6 @@ canvas {
   transition: all 0.25s; position: relative;
   box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
-@media (max-width: 480px) {
-  .slot-cards-container {
-    grid-template-columns: 1fr;
-  }
-}
 .slot-card:hover {
   border-color: #ffcc00; transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(255,204,0,0.2);
@@ -1793,13 +1814,23 @@ canvas {
   <div class="battle-info" id="battleInfo">
     <div class="battle-vs-row">
       <div class="battle-side enemy">
+        <div class="battle-side-items">
+          <canvas class="battle-item-icon" id="battleEnemyFoodIcon" width="16" height="16" title="食物：維他命"></canvas>
+          <canvas class="battle-item-icon" id="battleEnemySkillIcon" width="16" height="16" title="技能：先制"></canvas>
+        </div>
         <div class="battle-side-name" id="battleEnemyName"></div>
         <div class="battle-side-hp" id="battleEnemyHpText"></div>
+        <div class="battle-side-stats" id="battleEnemyStats"></div>
       </div>
       <div class="battle-vs-text">⚔ VS</div>
       <div class="battle-side player">
+        <div class="battle-side-items">
+          <canvas class="battle-item-icon" id="battlePlayerFoodIcon" width="16" height="16" title="食物：維他命"></canvas>
+          <canvas class="battle-item-icon" id="battlePlayerSkillIcon" width="16" height="16" title="技能：先制"></canvas>
+        </div>
         <div class="battle-side-name" id="battlePlayerName"></div>
         <div class="battle-side-hp" id="battlePlayerHpText"></div>
+        <div class="battle-side-stats" id="battlePlayerStats"></div>
       </div>
     </div>
   </div>
@@ -2702,6 +2733,8 @@ let attackRowImagesV8 = new Array(32); // V8_Attack/V8_00_at.png ~ V8_31_at.png
 let attackRowImagesV9 = new Array(32);  // V9_Attack/V9_00_at.png ~ V9_31_at.png
 let attackRowImagesV10 = new Array(32); // V10_Attack/V10_00_at.png ~ V10_31_at.png
 let meatImage = new Image();
+let vitaminImage = new Image();      // 食物圖（維他命）
+let strikeFirstImage = new Image();  // 技能圖（先制）
 let bgImages = {};
 let currentBgName = "Noon";
 
@@ -4122,8 +4155,42 @@ const EVO_COLOR_IMGS = ["BG/Card core.png","BG/Card Star.png","BG/4-leaf clover.
 let battleActive = false;             // 對戰進行中
 function setBattleActive(val){
   battleActive = val;
+  // 對戰時隱藏底部功能按鈕欄（狀態/食物/訓練/對戰/清理/睡眠/治療/圖鑑）
+  const panel = document.getElementById('btnPanel');
+  if(panel) panel.style.display = val ? 'none' : '';
   document.querySelectorAll('.func-btn').forEach(btn => {
     btn.classList.toggle('battle-grayed', val);
+  });
+  if(val) drawBattleItemIcons();
+}
+
+// 繪製對戰資訊兩側（敵方/我方）上方的食物圖＋技能圖（16×16 縮放為 28×28）
+function drawBattleItemIcons(){
+  const slots = [
+    { food: 'battleEnemyFoodIcon', skill: 'battleEnemySkillIcon' },
+    { food: 'battlePlayerFoodIcon', skill: 'battlePlayerSkillIcon' }
+  ];
+  slots.forEach(slot => {
+    const foodCanvas = document.getElementById(slot.food);
+    if(foodCanvas){
+      const ctx = foodCanvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, 16, 16);
+      // vitamin.png 為 64×16（4 幀），取第一幀
+      if(vitaminImage && vitaminImage.complete && vitaminImage.naturalWidth > 0){
+        ctx.drawImage(vitaminImage, 0, 0, 16, 16, 0, 0, 16, 16);
+      }
+    }
+    const skillCanvas = document.getElementById(slot.skill);
+    if(skillCanvas){
+      const ctx = skillCanvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, 16, 16);
+      // Strike first.png 為 16×16 單幀
+      if(strikeFirstImage && strikeFirstImage.complete && strikeFirstImage.naturalWidth > 0){
+        ctx.drawImage(strikeFirstImage, 0, 0, 16, 16, 0, 0, 16, 16);
+      }
+    }
   });
 }
 let battleEnemyRow = -1;              // 敵方數碼獸 row
@@ -5821,6 +5888,260 @@ function loadLauncherMeta(){
 function hasSlotData(idx){
   return localStorage.getItem(getSlotSaveKey(idx)) !== null;
 }
+
+// 究極體 → 完全體 rollback（與 loadGameState 讀檔規則一致）
+function applyVersionRollback(ver, row){
+  if(ver === "V4") return ({14:11, 15:13, 16:12})[row] ?? row;
+  if(ver === "V5") return ({14:11, 16:13, 17:12})[row] ?? row;
+  if(ver === "V6") return ({22:13, 23:14, 24:19, 25:20, 26:15, 27:18, 28:16, 29:17, 30:21, 31:19})[row] ?? row;
+  if(ver === "V7" || ver === "V9" || ver === "V10") return ({22:14, 23:13, 24:18, 25:16, 26:14, 29:14, 30:13, 31:15})[row] ?? row;
+  if(ver === "V8") return ({22:14, 23:16, 24:18, 25:19, 26:15, 27:17, 28:20, 29:21, 30:19, 31:14})[row] ?? row;
+  if(row >= 14 && row <= 16) return row - 3;
+  return row;
+}
+
+// 重置訓練相關存檔欄位（蛋孵化 / 完全體回歸蛋時使用，對齊 resetAllBonuses）
+function resetSlotTrainingData(data){
+  data.gameHpBonus = 0;
+  data.gameAtkBonus = 0;
+  data.gameSpdBonus = 0;
+  data.gameCritBonus = 0;
+  data.gameDodgeBonus = 0;
+  data.gameAffBonus = 0;
+  data.totalTrainingCount = 0;
+  data.gameTrainingCount = 0;
+  data.gameAgeLastDay = 0;
+  data.stageTrainingPointsUsed = 0;
+  data.trainingHpCount = 0;
+  data.trainingAtkCount = 0;
+  data.trainingSpdCount = 0;
+  data.trainingCritCount = 0;
+  data.trainingDodgeCount = 0;
+  data.trainingAffCount = 0;
+  data.gameTrainingPoints = 0;
+  data.gameLevel = 1;
+  data.gameExp = 0;
+}
+
+// 離線自然進化結算（依賴已切換好的全局 currentVersion / DIGIMON_STATS / gameCareMistakes）
+function settleOfflineEvolution(row, age, stageStartDay, hunger, careMistakes, babyMistakeRecorded){
+  const ageDay = Math.floor(age / 1440);
+  let cur = row;
+  let startDay = stageStartDay;
+  let returnToEgg = false;
+
+  // 幼年期Ⅰ → 幼年期Ⅱ（5分鐘；飢餓0時記一次育成失誤，須在 getEvolutionRow(1) 之前）
+  if(cur === 0 && age >= 5){
+    if(hunger === 0 && !babyMistakeRecorded){
+      careMistakes++;
+      babyMistakeRecorded = true;
+    }
+    gameCareMistakes = careMistakes;
+    if(age >= 15){
+      cur = getEvolutionRow(1);
+      startDay = ageDay;
+    } else {
+      cur = 1;
+      startDay = 0;
+    }
+  } else if(cur === 1 && age >= 15){
+    // 幼年期Ⅱ → 成長期（15分鐘）
+    gameCareMistakes = careMistakes;
+    cur = getEvolutionRow(1);
+    startDay = ageDay;
+  }
+
+  // 成長期/成熟期/完全體 跨階段連鎖
+  let guard = 0;
+  while(guard++ < 6 && cur >= 2){
+    const st = DIGIMON_STATS[cur] ? DIGIMON_STATS[cur].stage : '';
+    const day = Math.floor(age / 1440);
+    const daysIn = day - startDay;
+    if(st === '成長期' && daysIn >= 2){
+      gameCareMistakes = careMistakes;
+      cur = getNextEvoRow(cur);
+      startDay = day;
+    } else if(st === '成熟期' && (daysIn >= 4 || day >= 6)){
+      gameCareMistakes = careMistakes;
+      cur = getNextEvoRow(cur);
+      startDay = day;
+    } else if(st === '完全體' && daysIn >= 8){
+      returnToEgg = true;
+      cur = -1;
+      startDay = 0;
+      break;
+    } else {
+      break;
+    }
+    if(cur < 0) break;
+  }
+
+  return { row: cur, stageStartDay: startDay, careMistakes, babyMistakeRecorded, returnToEgg };
+}
+
+// 選擇頁專用：無副作用離線結算，把存檔更新到「現在」，再供預覽讀取
+function settleSlotOffline(idx){
+  const key = getSlotSaveKey(idx);
+  const raw = localStorage.getItem(key);
+  if(!raw) return;
+  let data;
+  try { data = JSON.parse(raw); } catch(e){ return; }
+  if(!data || typeof data !== 'object') return;
+
+  const ver = data.currentVersion || SLOT_VERSIONS[idx] || 'V1';
+  const stats = getStatsForVersion(ver);
+  const now = Date.now();
+
+  // 備份全局，臨時切換到該槽位版本（復用 getNextEvoRow / getEvolutionRow）
+  const savedStats = DIGIMON_STATS;
+  const savedVer = currentVersion;
+  const savedCare = gameCareMistakes;
+  const savedTotalTrain = totalTrainingCount;
+  const savedTrain = gameTrainingCount;
+  const savedAtk = gameAtkBonus, savedHp = gameHpBonus, savedSpd = gameSpdBonus;
+  const savedCrit = gameCritBonus, savedDodge = gameDodgeBonus, savedAff = gameAffBonus;
+  const savedWeight = gameWeight;
+  const savedWins = gameBattleWins;
+
+  DIGIMON_STATS = stats;
+  currentVersion = ver;
+  gameCareMistakes = data.gameCareMistakes ?? 0;
+  totalTrainingCount = data.totalTrainingCount ?? 0;
+  gameTrainingCount = data.gameTrainingCount ?? 0;
+  gameAtkBonus = data.gameAtkBonus ?? 0;
+  gameHpBonus = data.gameHpBonus ?? 0;
+  gameSpdBonus = data.gameSpdBonus ?? 0;
+  gameCritBonus = data.gameCritBonus ?? 0;
+  gameDodgeBonus = data.gameDodgeBonus ?? 0;
+  gameAffBonus = data.gameAffBonus ?? 0;
+  gameWeight = data.gameWeight ?? 0;
+  gameBattleWins = data.gameBattleWins ?? 0;
+
+  try {
+    const lastTs = data.timestamp || now;
+    const elapsedMin = Math.floor((now - lastTs) / 60000);
+
+    let isEgg = !!data.isEggPhase;
+    let eggStart = data.eggStartTime || 0;
+    let row = (data.currentRow !== undefined) ? data.currentRow : 2;
+    let age = data.gameAge || 0;
+    let hunger = data.gameHunger ?? 5;
+    let isDead = !!data.isDead;
+    let isSick = !!data.isSick;
+    let sickStart = data.sickStartTime || 0;
+    let birthTs = data.birthTimestamp || 0;
+    let stageStartDay = data.stageStartDay ?? 0;
+    let careMistakes = data.gameCareMistakes ?? 0;
+    let babyMistakeRecorded = !!data.babyMistakeRecorded;
+
+    // 1) 蛋孵化
+    if(isEgg && eggStart > 0){
+      if((now - eggStart) >= 60000){
+        isEgg = false;
+        row = 0;
+        birthTs = eggStart + 60000;
+        age = Math.floor((now - birthTs) / 60000);
+        stageStartDay = 0;
+        hunger = 0;
+        data.gameWeight = stats[0] ? stats[0].weight : 0;
+        data.gameAffinity = (stats[0] && stats[0].bondInitial) ? stats[0].bondInitial : 10;
+        resetSlotTrainingData(data);
+      } else {
+        data.timestamp = now;
+        localStorage.setItem(key, JSON.stringify(data));
+        return; // 仍是蛋，無需其餘結算
+      }
+    }
+
+    // 2) 年齡
+    if(!isEgg){
+      if(birthTs > 0){
+        age = Math.floor((now - birthTs) / 60000);
+      } else {
+        age = (data.gameAge || 0) + elapsedMin;
+      }
+    }
+
+    // 3) 飢餓（每60分鐘 -1 心）
+    hunger = Math.min(10, Math.max(0, (data.gameHunger ?? 5) - Math.floor(elapsedMin / 60)));
+
+    // 4) 死亡判定（生病 / 飢餓歸零 ≥24h）
+    if(!isDead){
+      if(isSick && sickStart > 0 && now - sickStart >= DEATH_SICK_TIMEOUT){
+        isDead = true;
+        data.deathReason = "生病過久，數碼獸不幸離世了...";
+      } else if(hunger === 0 && (data.gameHunger ?? 5) <= 0){
+        const hzStart = data.hungerZeroStartTime || data.timestamp || 0;
+        if(hzStart > 0 && now - hzStart >= DEATH_HUNGER_TIMEOUT){
+          isDead = true;
+          data.deathReason = "飢餓過久，數碼獸不幸離世了...";
+        } else {
+          data.hungerZeroStartTime = hzStart;
+        }
+      }
+    }
+
+    // 5) 究極體 rollback（僅對戰逆境進化可達，讀檔退回完全體）
+    if(!isDead && !isEgg){
+      row = applyVersionRollback(ver, row);
+    }
+
+    // 6) 離線進化（含幼年期 + 跨階段連鎖 + 完全體回歸蛋）
+    if(!isDead && !isEgg && row >= 0){
+      const r = settleOfflineEvolution(row, age, stageStartDay, hunger, careMistakes, babyMistakeRecorded);
+      row = r.row;
+      stageStartDay = r.stageStartDay;
+      careMistakes = r.careMistakes;
+      babyMistakeRecorded = r.babyMistakeRecorded;
+      if(r.returnToEgg){
+        isEgg = true;
+        row = 0;
+        eggStart = now;
+        birthTs = 0;
+        age = 0;
+        stageStartDay = 0;
+        hunger = 0;
+        isSick = false;
+        sickStart = 0;
+        isDead = false;
+        data.deathReason = "";
+        data.hungerZeroStartTime = 0;
+        careMistakes = 0;
+        babyMistakeRecorded = false;
+        data.gameWeight = 0;
+        data.gameAffinity = 0;
+        resetSlotTrainingData(data);
+      }
+    }
+
+    // 7) 寫回最新狀態
+    data.currentRow = row;
+    data.isEggPhase = isEgg;
+    data.eggStartTime = eggStart;
+    data.gameAge = age;
+    data.gameHunger = hunger;
+    data.isDead = isDead;
+    data.isSick = isSick;
+    data.sickStartTime = sickStart;
+    data.birthTimestamp = birthTs;
+    data.stageStartDay = stageStartDay;
+    data.gameCareMistakes = careMistakes;
+    data.babyMistakeRecorded = babyMistakeRecorded;
+    data.timestamp = now;
+    localStorage.setItem(key, JSON.stringify(data));
+  } finally {
+    // 恢復全局
+    DIGIMON_STATS = savedStats;
+    currentVersion = savedVer;
+    gameCareMistakes = savedCare;
+    totalTrainingCount = savedTotalTrain;
+    gameTrainingCount = savedTrain;
+    gameAtkBonus = savedAtk; gameHpBonus = savedHp; gameSpdBonus = savedSpd;
+    gameCritBonus = savedCrit; gameDodgeBonus = savedDodge; gameAffBonus = savedAff;
+    gameWeight = savedWeight;
+    gameBattleWins = savedWins;
+  }
+}
 function getSlotPreviewData(idx){
   // 提取預覽數據：空槽位返回 null
   if(!hasSlotData(idx)) return null;
@@ -5903,6 +6224,7 @@ function renderSlotCards(){
   if(!container) return;
   container.innerHTML = '';
   for(let i = 0; i < slotCount; i++){
+    settleSlotOffline(i);   // 先結算到最新，再讀取
     const preview = getSlotPreviewData(i);
     const card = document.createElement('div');
     card.className = 'slot-card' + (preview ? '' : ' slot-card-empty');
@@ -6777,7 +7099,7 @@ function onDigimonDied(reason) {
   
   // 關閉所有功能面板
   trainingMode = false;
-  battleActive = false;
+  setBattleActive(false);
   flushingMode = false;
   curingMode = false;
   evoAnimActive = false;
@@ -6804,7 +7126,7 @@ function rebornAsEgg() {
 
   // 關閉所有面板
   trainingMode = false;
-  battleActive = false;
+  setBattleActive(false);
   flushingMode = false;
   curingMode = false;
   evoAnimActive = false;
@@ -8440,6 +8762,57 @@ function updateBattleHpDisplay(){
   const ePct = battleEnemyMaxHp > 0 ? battleEnemyHp / battleEnemyMaxHp : 1;
   if(pHpEl) pHpEl.className = pPct <= 0.4 ? "battle-side-hp low" : "battle-side-hp";
   if(eHpEl) eHpEl.className = ePct <= 0.4 ? "battle-side-hp low" : "battle-side-hp";
+  updateBattleStatsDisplay();
+}
+
+// 數字格式化：整數不帶小數，非整數保留 1 位小數
+function fmtBattleNum(v){
+  const r = Math.round(v * 10) / 10;
+  return (r % 1 === 0) ? String(r) : r.toFixed(1);
+}
+
+// 速度優勢顏色：比對方快 20% 起綠，40% 藍，60% 紫，80% 金，100% 紅
+function spdAdvColor(advPct){
+  if(advPct >= 100) return "#ff3b30"; // 紅
+  if(advPct >= 80)  return "#ffcc00"; // 金
+  if(advPct >= 60)  return "#af52de"; // 紫
+  if(advPct >= 40)  return "#007aff"; // 藍
+  if(advPct >= 20)  return "#34c759"; // 綠
+  return "";
+}
+// 速度數值 HTML：比對方快時以優勢顏色標示
+function fmtSpdHtml(spd, advPct){
+  const c = spdAdvColor(advPct);
+  const v = fmtBattleNum(spd);
+  return c ? ('<span style="color:' + c + ';font-weight:700">' + v + '</span>') : v;
+}
+
+// 對戰資訊：顯示雙方「攻擊力 / 速度 / 爆擊率 / 閃避率」總值
+function updateBattleStatsDisplay(){
+  const isSelf = battleIsSelfBattle;
+  const es = getEnemyStats(battleEnemyRow);
+  // 我方總屬性（含訓練加成）
+  const pAtk = getBattlePlayerTotalAtk();
+  const pSpd = getBattlePlayerTotalSpd();
+  const pCrit = getBattlePlayerTotalCrit();
+  const pDodge = getBattlePlayerTotalDodge();
+  // 敵方總屬性（含對戰加成；自家對戰用 self 加成）
+  const eAtk = (es.atk || 0) + (isSelf ? battleSelfEnemyAtkBonus : battleEnemyAtkBonus);
+  const eSpd = (es.spd || 10) + (isSelf ? battleSelfEnemySpdBonus : battleEnemySpdBonus);
+  const eCrit = Math.min(0.35, (es.critRate || 0) + (isSelf ? battleSelfEnemyCritBonus : battleEnemyCritBonus));
+  const eDodge = Math.min(0.30, (es.dodgeRate || 0) + (isSelf ? battleSelfEnemyDodgeBonus : battleEnemyDodgeBonus));
+
+  const pEl = document.getElementById("battlePlayerStats");
+  const eEl = document.getElementById("battleEnemyStats");
+  // 速度優勢比例：相對於對方快百分之多少（誰快誰上色）
+  const pAdv = eSpd > 0 ? ((pSpd - eSpd) / eSpd * 100) : 0;
+  const eAdv = pSpd > 0 ? ((eSpd - pSpd) / pSpd * 100) : 0;
+  if(pEl) pEl.innerHTML =
+    "攻 " + fmtBattleNum(pAtk) + "　速 " + fmtSpdHtml(pSpd, pAdv) + "<br>" +
+    "暴 " + (pCrit * 100).toFixed(1) + "%　閃 " + (pDodge * 100).toFixed(1) + "%";
+  if(eEl) eEl.innerHTML =
+    "攻 " + fmtBattleNum(eAtk) + "　速 " + fmtSpdHtml(eSpd, eAdv) + "<br>" +
+    "暴 " + (eCrit * 100).toFixed(1) + "%　閃 " + (eDodge * 100).toFixed(1) + "%";
 }
 
 
@@ -11870,7 +12243,7 @@ function activateSlot(slotIndex){
   if(hasData){
     // 重置所有瞬時狀態（避免上一個槽位的狀態殘留）
     trainingMode = false;
-    battleActive = false;
+    setBattleActive(false);
     battleMode = false;
     flushingMode = false;
     curingMode = false;
@@ -12007,7 +12380,7 @@ function activateSlot(slotIndex){
     lightsOff = false;
     isEggPhase = false;
     trainingMode = false;
-    battleActive = false;
+    setBattleActive(false);
     battleMode = false;
     flushingMode = false;
     evoAnimActive = false;
@@ -12101,7 +12474,7 @@ function returnToLauncher(){
     
     // === 1. 重置全部旗標 ===
     trainingMode = false;
-    battleActive = false;
+    setBattleActive(false);
     battleMode = false;
     flushingMode = false;
     curingMode = false;
@@ -12251,7 +12624,7 @@ buildFunctionButtons();
 initLauncher();
 
 let loadedCount = 0;
-const TOTAL_IMAGES = 18 + 17 + 17 + BG_NAMES.length + 1 + 15 + 1 + 17 + 1 + 3 + 3 + 4 + 1 + 1 + 2 + 1 + 17 + 1 + 17 + 17 + 17 + 17 + 17 + 1 + 1 + 1 + 1 + 32 + 1 + 1; // +V4/V5 rows(17+17) + V3/V4/V5 atk(17+17+17) + V4/V5 proj(1+1) + V4/V5 eggs(1+1) + V6 rows(32) + V6 proj(1) + V6 egg(1)
+const TOTAL_IMAGES = 18 + 17 + 17 + BG_NAMES.length + 1 + 15 + 1 + 17 + 1 + 3 + 3 + 4 + 1 + 1 + 2 + 1 + 17 + 1 + 17 + 17 + 17 + 17 + 17 + 1 + 1 + 1 + 1 + 32 + 1 + 1 + 2; // +V4/V5 rows(17+17) + V3/V4/V5 atk(17+17+17) + V4/V5 proj(1+1) + V4/V5 eggs(1+1) + V6 rows(32) + V6 proj(1) + V6 egg(1) + 對戰食物圖(1) + 對戰技能圖(1)
 function onImageLoaded(){
   loadedCount++;
   if(loadedCount >= TOTAL_IMAGES) {
@@ -12488,6 +12861,12 @@ for(let r = 0; r < 32; r++){
 meatImage.src = "Food/meat.png";
 meatImage.onload = onImageLoaded;
 meatImage.onerror = onImageError;
+vitaminImage.src = "Food/vitamin.png";
+vitaminImage.onload = onImageLoaded;
+vitaminImage.onerror = onImageError;
+strikeFirstImage.src = "Player skills/Strike first.png";
+strikeFirstImage.onload = onImageLoaded;
+strikeFirstImage.onerror = onImageError;
 
 // 訓練用圖片
 powerImage.src = "BG/Power.png";
