@@ -1328,6 +1328,10 @@ canvas {
 }
 .bm-quest-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
 .bm-quest-empty { text-align: center; color: #888; padding: 24px 0; font-size: 14px; }
+.evo-task-row { cursor: pointer; justify-content: space-between; }
+.evo-task-left { display: flex; align-items: center; gap: 10px; }
+.evo-task-name { color: #ffcc00; font-size: 16px; font-weight: bold; }
+.evo-task-rate { color: #8fd8ff; font-size: 16px; font-weight: bold; min-width: 52px; text-align: right; }
 .bm-enc-name { 
   color: #ffcc00; 
   font-size: 16px; 
@@ -1812,6 +1816,39 @@ canvas {
   animation:adversityFlash 0.6s ease-in-out infinite alternate;
 }
 
+/* === 進化任務結算視圖 === */
+.evo-result-head{
+  text-align:center; font-size:12px; color:#8fd8ff;
+  letter-spacing:0.5px; margin-bottom:2px;
+}
+.evo-result-row{
+  display:flex; justify-content:space-between; align-items:center;
+  background:rgba(255,255,255,0.06); border-radius:10px; padding:8px 10px;
+  border:1px solid rgba(255,255,255,0.1);
+}
+.evo-result-row.evo-result-target{
+  border:1px solid rgba(255,204,0,0.6);
+  background:rgba(255,204,0,0.10);
+}
+.evo-result-left{ display:flex; align-items:center; gap:8px; min-width:0; }
+.evo-result-sprite{
+  width:28px; height:28px; flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.35); border-radius:6px;
+  border:1px solid rgba(255,255,255,0.12);
+}
+.evo-result-sprite canvas{ image-rendering:pixelated; }
+.evo-result-name{ font-size:13px; font-weight:700; color:#e0e0ff; }
+.evo-result-badge{
+  font-size:9px; font-weight:900; color:#fff;
+  background:#ff6600; border-radius:4px; padding:1px 4px;
+}
+.evo-result-right{ display:flex; align-items:center; gap:6px; }
+.evo-result-rate{ font-size:12px; font-weight:700; color:#ffcc00; }
+.evo-result-up{ font-size:12px; font-weight:900; color:#4eff4e; min-width:34px; text-align:right; }
+.evo-result-down{ font-size:12px; font-weight:900; color:#ff6b6b; min-width:34px; text-align:right; }
+.evo-result-zero{ font-size:12px; font-weight:700; color:#888; min-width:34px; text-align:right; }
+
 </style>
 </head>
 <body>
@@ -2025,6 +2062,15 @@ canvas {
     <div id="battleExpGold" class="battle-exp-gold" style="display:none;"></div>
     <div id="battleExpAttrBonus" class="battle-exp-attr-bonus" style="display:none;"></div>
     <button class="battle-exp-ok" onclick="closeBattleExpResult()">確定</button>
+  </div>
+</div>
+
+<!-- 進化任務結算視圖 -->
+<div id="evoTaskResultOverlay" class="battle-exp-overlay" style="display:none;">
+  <div class="battle-exp-card">
+    <div class="battle-exp-title">⭐ 進化任務 · 完成</div>
+    <div id="evoTaskResultList" class="battle-exp-list"></div>
+    <button class="battle-exp-ok" onclick="closeEvoTaskResult()">確定</button>
   </div>
 </div>
 
@@ -2503,12 +2549,35 @@ const CHILD_EVO_POOL = {
   V10: { 2: [6,7,12],     3: [8,9,12],    4: [10,11,12],  5: [6,7,12] },
 };
 
+// 進化任務進化率：惰性初始化為均分，儲存於 evoTaskRates
+function getEvoRates(ver, row){
+  const key = ver + "|" + row;
+  if(!evoTaskRates[key]){
+    const pool = CHILD_EVO_POOL[ver] || CHILD_EVO_POOL.V1;
+    const cands = pool[row] || [];
+    const obj = {};
+    cands.forEach(t => obj[t] = +(100 / cands.length).toFixed(2));
+    evoTaskRates[key] = obj;
+  }
+  return evoTaskRates[key];
+}
+
 function pickChildEvoResult(row){
   const ver = currentVersion || "V1";
   const pool = CHILD_EVO_POOL[ver] || CHILD_EVO_POOL.V1;
   const cands = pool[row];
   if(!cands || cands.length === 0) return 4; // 兜底（理論上不會發生）
-  return cands[Math.floor(Math.random() * cands.length)];
+  // 依進化任務進化率加權隨機（無記錄時均分，行為等同舊版）
+  const rates = getEvoRates(ver, row);
+  let total = 0;
+  for(const c of cands) total += (rates[c] || 0);
+  if(total <= 0) return cands[Math.floor(Math.random() * cands.length)];
+  let r = Math.random() * total;
+  for(const c of cands){
+    r -= (rates[c] || 0);
+    if(r <= 0) return c;
+  }
+  return cands[cands.length - 1];
 }
 
 // V6 成長期→成熟期（機率進化）
@@ -3119,6 +3188,7 @@ function startEggPhase(version = "V1") {
   babyIICallEverShown = false;
   if(callBlinkTimer){ clearInterval(callBlinkTimer); callBlinkTimer = null; }
   resetAllBonuses();
+  evoTaskRates = {}; // 進化任務進化率隨新蛋重置
   
   // 重置生病狀態
   isSick = false;
@@ -6443,6 +6513,7 @@ function saveGlobalGold(){
 let battleMainQuestFighter = null; // 主線任務出戰龍（跨槽位 fighter）
 let mainQuestPendingId = null;     // 正在選龍的主線任務 id
 let mainQuestSelectedSlot = -1;    // 選龍面板選中的槽位
+let evoTaskRates = {};             // 進化任務進化率：{ "V1|2": {4:20,5:20,6:20,7:20,10:20}, ... }
 function saveGameState(){
   try {
     if(activeSlotIndex < 0) return;
@@ -6475,6 +6546,7 @@ function saveGameState(){
       birthTimestamp: birthTimestamp || undefined,
       cultivatedRows: Array.from(cultivatedRows),
       autoFeedEnabled,
+      evoRates: evoTaskRates,
       timestamp: Date.now()
     });
     localStorage.setItem(slotKey, jsonStr);
@@ -6770,6 +6842,7 @@ function loadGameState(slotIndex){
       autoFeedEnabled = data.autoFeedEnabled ?? false;
       eightPoopsStartTime = data.eightPoopsStartTime ?? 0;
       eightPoopsMistakeRecorded = data.eightPoopsMistakeRecorded ?? false;
+      evoTaskRates = data.evoRates || {};
       // 離線期間大便生病檢查：存檔時已有≥8個大便且未記錄失誤 → 立即生病
       if(!isSick && poopsOnScreen >= 8 && !eightPoopsMistakeRecorded){
         gameCareMistakes++;
@@ -6865,6 +6938,15 @@ function loadGameState(slotIndex){
       hungerZeroStartTime = hzStart;
     }
     resolveOfflineBabyEvolution(data);
+    // 糾正歷史 bug：成長期 stageStartDay 正常應為 0（成長期從 age≈15 分鐘開始）。
+    // 舊版離線補進化曾把 stageStartDay 設成當前日齡，導致成長期卡住不進化。
+    if(currentRow >= 2){
+      const _st = DIGIMON_STATS[currentRow] ? DIGIMON_STATS[currentRow].stage : '';
+      if(_st === "成長期" && stageStartDay > 0){
+        console.warn('[loadGameState] 糾正異常成長期 stageStartDay:', stageStartDay, '→ 0');
+        stageStartDay = 0;
+      }
+    }
     // 離線期間的階段進化檢查（含跨階段連鎖，進化完成後自動遞歸）
     if(!isDead && currentRow >= 2) checkStageEvolution();
   } catch(e){ /* 忽略讀檔錯誤 */ }
@@ -6930,8 +7012,14 @@ function getStageLevelCapForStage(stage){
   return 100;
 }
 function getStageLevelCap(){
-  const s = (DIGIMON_STATS[currentRow] && DIGIMON_STATS[currentRow].stage) || "";
-  return getStageLevelCapForStage(s);
+  const s = DIGIMON_STATS[currentRow];
+  if(!s || !s.stage){
+    // 版本與 currentRow 不匹配（如切換版本時 row 未對齊），保守用成長期上限 20，
+    // 防止錯誤升級到 21+ 級「成長期」這種超出 cap 的狀態
+    console.warn('[getStageLevelCap] currentRow=' + currentRow + ' 在當前版本無對應 stats，使用保守成長期上限 20');
+    return 20;
+  }
+  return getStageLevelCapForStage(s.stage);
 }
 function getExpForEnemyStage(stage){
   if(stage === "成長期") return 10;
@@ -6978,10 +7066,23 @@ function grantExpToSlot(slotIdx, expAmount){
   if(!raw) return false;
   try {
     const save = JSON.parse(raw);
-    const version = save.currentVersion || SLOT_VERSIONS[slotIdx] || "V1";
+    // 補齊缺失的 currentVersion：若存檔是早期版本創建（無 currentVersion 欄位），
+    // fallback 到槽位預設版本，避免因用錯版本查 stage 導致 cap 算錯（成長期卻升到 21+）
+    let version = save.currentVersion;
+    if(!version){
+      version = SLOT_VERSIONS[slotIdx] || "V1";
+      save.currentVersion = version;
+      try { localStorage.setItem(getSlotSaveKey(slotIdx), JSON.stringify(save)); } catch(e){}
+      console.warn('[grantExpToSlot] 補齊缺失的 currentVersion=', version, ' slotIdx=', slotIdx);
+    }
     const stats = getStatsForVersion(version);
     const s = stats && stats[save.currentRow];
-    const stage = s ? s.stage : "";
+    if(!s || !s.stage){
+      // 版本與 currentRow 仍不匹配（槽位預設版本與實際 row 不對應），保守不升級
+      console.warn('[grantExpToSlot] 版本/row 不匹配或 stage 缺失，跳過升級', { slotIdx, version, currentRow: save.currentRow, expAmount });
+      return false;
+    }
+    const stage = s.stage;
     let cap = 100;
     if(stage === "成長期") cap = 20;
     else if(stage === "成熟期") cap = 60;
@@ -7365,7 +7466,10 @@ function startNaturalEvoAnim(nextRow){
           digidexOwnedHistory[ver].add(oldRow);
           saveDigidexHistory();
         }
-        stageStartDay = Math.floor(gameAge / 1440);
+        // 幼年期→成長期：成長期正常從 age≈15 分鐘（day 0）開始。
+        // 離線補進化時 gameAge 已很大，若直接用 floor(gameAge/1440) 會把 stageStartDay
+        // 設成當前日齡（如 2），導致成長期要等到 4 歲才進化。此處改為 0。
+        stageStartDay = (oldRow <= 1 && evoAnimNextRow >= 2) ? 0 : Math.floor(gameAge / 1440);
         stageTrainingPointsUsed = 0;
         if(!(oldRow === 0 && evoAnimNextRow === 1)) gameTrainingCount = 0; // row0→row1 保留訓練次數
         battlePlayerMaxHp = getTotalHp();
@@ -10660,22 +10764,22 @@ function renderBattleScene(){
       if(battleProjectileDir === 0){
         // 敵方火球：翻轉朝右
         ctx2.save();
-        ctx2.translate(battleProjectileX * S + 16 * S, 9 * S);
+        ctx2.translate(battleProjectileX * S + 16 * S, 8 * S);
         ctx2.scale(-1, 1);
         ctx2.drawImage(fireImg, 0, 0, 16, 8, 0, 0, 16 * S, 8 * S);
         ctx2.restore();
         if(battleIsCrit){
           ctx2.save();
-          ctx2.translate(battleProjectileX * S + 16 * S, 17 * S);
+          ctx2.translate(battleProjectileX * S + 16 * S, 16 * S);
           ctx2.scale(-1, 1);
           ctx2.drawImage(fireImg, 0, 0, 16, 8, 0, 0, 16 * S, 8 * S);
           ctx2.restore();
         }
       } else {
         // 我方火球：正常朝左（上方）
-        ctx2.drawImage(fireImg, 0, 0, 16, 8, battleProjectileX * S, 9 * S, 16 * S, 8 * S);
+        ctx2.drawImage(fireImg, 0, 0, 16, 8, battleProjectileX * S, 8 * S, 16 * S, 8 * S);
         if(battleIsCrit){
-          ctx2.drawImage(fireImg, 0, 0, 16, 8, battleProjectileX * S, 17 * S, 16 * S, 8 * S);
+          ctx2.drawImage(fireImg, 0, 0, 16, 8, battleProjectileX * S, 16 * S, 16 * S, 8 * S);
         }
       }
     }
@@ -10837,11 +10941,49 @@ function endBattle(result){
           }
         }
       }
+      // 進化任務勝利：目標 +5%，其餘候選平均下降，總和恆為 100%
+      if(window._evoTask){
+        const t = window._evoTask;
+        window._evoTask = null;
+        const rates = getEvoRates(t.ver, t.childRow);
+        const pool = CHILD_EVO_POOL[t.ver] || CHILD_EVO_POOL.V1;
+        const cands = pool[t.childRow] || [];
+        const others = cands.filter(x => x !== t.targetRow);
+        const before = {};
+        cands.forEach(c => before[c] = +(rates[c] || 0));
+        rates[t.targetRow] = +((rates[t.targetRow] || 0) + 5).toFixed(2);
+        if(others.length > 0){
+          const step = 5 / others.length;
+          others.forEach(o => rates[o] = +Math.max(0, (rates[o] || 0) - step).toFixed(2));
+        }
+        const sum = cands.reduce((a, x) => a + (rates[x] || 0), 0);
+        if(Math.abs(sum - 100) > 0.01){
+          rates[t.targetRow] = +Math.max(0, (rates[t.targetRow] - (sum - 100))).toFixed(2);
+        }
+        saveGameState();
+        // 準備進化任務結算頁資料（勝利後展示）
+        const _pStats = getStatsForVersion(t.ver)[t.childRow];
+        window._pendingEvoResult = {
+          ver: t.ver,
+          playerName: _pStats ? _pStats.name : "數碼獸",
+          rows: cands.map(c => {
+            const cs = getStatsForVersion(t.ver)[c];
+            return {
+              row: c,
+              name: cs ? cs.name : ("???" + c),
+              before: before[c] || 0,
+              after: +(rates[c] || 0),
+              isTarget: c === t.targetRow
+            };
+          })
+        };
+      }
     }
   }
   // 非勝利（失敗/逃跑）時清除主線任務對戰狀態
   if(result !== "win"){
     window._mainQuestId = null;
+    window._evoTask = null;
   }
   // 無論勝負，清除主線任務出戰龍 fighter
   battleMainQuestFighter = null;
@@ -11086,6 +11228,11 @@ function showBattleResult(result){
         window._pveEnemyName = null;
         battleResult = "";
         battleEnemyRow = -1;
+        // 進化任務勝利 → 展示進化任務結算頁
+        if(result === "win" && window._pendingEvoResult){
+          showEvoTaskResult();
+          return;
+        }
         // 主線任務勝利 → 展示結算頁（經驗 + 金幣）
         if(result === "win" && window._pendingExpView){
           const pv = window._pendingExpView;
@@ -11203,6 +11350,55 @@ function closeBattleExpResult(){
   finalizeBattleReturn();
 }
 
+// === 進化任務結算視圖 ===
+function showEvoTaskResult(){
+  const data = window._pendingEvoResult;
+  window._pendingEvoResult = null;
+  const overlay = document.getElementById("evoTaskResultOverlay");
+  const list = document.getElementById("evoTaskResultList");
+  if(!overlay || !list || !data){
+    finalizeBattleReturn();
+    return;
+  }
+  list.innerHTML = "";
+  const head = document.createElement("div");
+  head.className = "evo-result-head";
+  head.textContent = data.playerName + " 的進化方向";
+  list.appendChild(head);
+  for(const r of data.rows){
+    const diff = +(r.after - r.before).toFixed(2);
+    const diffStr = (diff > 0 ? "+" : "") + diff;
+    const diffCls = diff > 0 ? "evo-result-up" : (diff < 0 ? "evo-result-down" : "evo-result-zero");
+    const item = document.createElement("div");
+    item.className = "evo-result-row" + (r.isTarget ? " evo-result-target" : "");
+    item.innerHTML =
+      '<span class="evo-result-left">' +
+        '<span class="evo-result-sprite"></span>' +
+        '<span class="evo-result-name"></span>' +
+        (r.isTarget ? '<span class="evo-result-badge">目標</span>' : '') +
+      '</span>' +
+      '<span class="evo-result-right">' +
+        '<span class="evo-result-rate">' + (+r.before.toFixed(2)) + '% → ' + (+r.after.toFixed(2)) + '%</span>' +
+        '<span class="' + diffCls + '">' + diffStr + '%</span>' +
+      '</span>';
+    const spriteBox = item.querySelector(".evo-result-sprite");
+    if(spriteBox){
+      spriteBox.appendChild(createMiniSprite(r.row, 28, data.ver));
+    }
+    item.querySelector(".evo-result-name").textContent = r.name;
+    list.appendChild(item);
+  }
+  document.getElementById("returnBtn").style.display = "none";
+  overlay.style.display = "flex";
+}
+
+function closeEvoTaskResult(){
+  const overlay = document.getElementById("evoTaskResultOverlay");
+  if(overlay) overlay.style.display = "none";
+  document.getElementById("returnBtn").style.display = "";
+  finalizeBattleReturn();
+}
+
 // 回到自動模式（對戰結束後統一收尾）
 function finalizeBattleReturn(){
   gameMode = "auto";
@@ -11299,9 +11495,10 @@ function showUnknownConditions(row){
     if(inPaths.length === 0){
       bodyHtml = `<div class="unk-hint">尚無進化路線資料</div>`;
     } else {
+      const merged = mergeEvoPaths(inPaths);
       let html = `<div class="evo-section"><div class="evo-section-title">━━ 進化條件 ━━</div>`;
-      for(const p of inPaths){
-        const condText = getEvoCondDisplay(currentDigidexVersion, p.fromRow) || p.conds.join(", ");
+      for(const p of merged){
+        const condText = getEvoCondDisplay(currentDigidexVersion, p.fromRow, row) || p.conds.join(", ");
         html += `<div class="evo-route"><div class="evo-r-row2"><span class="evo-src-name">${p.fromName}</span><canvas class="evo-src-sprite" data-ver="${currentDigidexVersion}" data-row="${p.fromRow}" width="16" height="16"></canvas><span>[${condText}]</span></div></div>`;
       }
       html += `</div>`;
@@ -11516,14 +11713,37 @@ function showDigidex(){
 }
 
 // 成長期→成熟期：把「來源名 [條件]」改為「來源名 [N% 概率進化]」
-function getEvoCondDisplay(ver, fromRow){
+function getEvoCondDisplay(ver, fromRow, targetRow){
   const pool = CHILD_EVO_POOL[ver] || CHILD_EVO_POOL.V1;
   const cands = pool[fromRow];
   if(cands && cands.length > 0){
-    const pct = (100 / cands.length).toFixed(1).replace(/\.0$/, '');
-    return `${pct}% 概率進化`;
+    let pct;
+    if(targetRow !== undefined && cands.includes(targetRow)){
+      const rates = getEvoRates(ver, fromRow);
+      pct = rates[targetRow] || 0;
+    } else {
+      pct = 100 / cands.length;
+    }
+    const pctStr = (+pct.toFixed(2)).toString();
+    return `${pctStr}% 概率進化`;
   }
   return null; // 非成長期→成熟期，沿用原條件文字
+}
+
+// 合併相同 fromRow 的 inPaths：同來源的多條訓練條件合併成一條（conds 取並集）
+// 解決「路加獸 [38.34% 概率進化]」之類因條件不同但顯示概率時重複的問題
+function mergeEvoPaths(inPaths){
+  const merged = [];
+  for(const p of inPaths){
+    const last = merged[merged.length - 1];
+    if(last && last.fromRow === p.fromRow){
+      const set = new Set([...last.conds, ...p.conds]);
+      last.conds = [...set];
+    } else {
+      merged.push({ fromRow: p.fromRow, fromName: p.fromName, conds: [...p.conds] });
+    }
+  }
+  return merged;
 }
 
 function buildEvoSection(row, ver){
@@ -11537,10 +11757,11 @@ function buildEvoSection(row, ver){
   // 所有其他階段 → 統一顯示從哪個 row 進化來 + 條件
   const inPaths = evoPaths[row] || [];
   if(inPaths.length === 0) return "";
+  const merged = mergeEvoPaths(inPaths);
   let html = `<div class="evo-section">
     <div class="evo-section-title">━━ 進化條件 ━━</div>`;
-  for(const p of inPaths){
-    const condText = getEvoCondDisplay(ver, p.fromRow) || p.conds.join(", ");
+  for(const p of merged){
+    const condText = getEvoCondDisplay(ver, p.fromRow, row) || p.conds.join(", ");
     html += `<div class="evo-route">
       <div class="evo-r-row2"><span class="evo-src-name">${p.fromName}</span><canvas class="evo-src-sprite" data-ver="${ver}" data-row="${p.fromRow}" width="16" height="16"></canvas><span>[${condText}]</span></div>
     </div>`;
@@ -13464,6 +13685,10 @@ function switchQuestCategory(cat) {
 function renderQuestList() {
   const listEl = document.getElementById("bmQuestList");
   if (!listEl) return;
+  if (currentQuestCategory === "evo") {
+    renderEvoTaskList(listEl);
+    return;
+  }
   if (currentQuestCategory !== "main") {
     listEl.innerHTML = '<div class="bm-quest-empty">敬請期待，功能開發中…</div>';
     return;
@@ -13513,6 +13738,88 @@ function renderQuestList() {
       ctx.drawImage(img, 0, 0, 16, 16, 0, 0, 32, 32);
     }
   });
+}
+
+// 進化任務列表：左 = 目標名 + 精靈圖，右 = 當前進化率
+function renderEvoTaskList(listEl){
+  const ver = currentVersion || "V1";
+  const s = getStatsForVersion(ver)[currentRow];
+  if(!s || s.stage !== "成長期"){
+    listEl.innerHTML = '<div class="bm-quest-empty">本階段無進化任務（需為「成長期」）。</div>';
+    return;
+  }
+  const pool = CHILD_EVO_POOL[ver] || CHILD_EVO_POOL.V1;
+  const cands = pool[currentRow] || [];
+  if(cands.length === 0){
+    listEl.innerHTML = '<div class="bm-quest-empty">本階段無進化任務。</div>';
+    return;
+  }
+  const rates = getEvoRates(ver, currentRow);
+  let html = '<div class="bm-quest-section">' + s.name + ' 進化任務（勝利目標 +5%，其餘平均下降）</div>';
+  for(const t of cands){
+    const ts = getStatsForVersion(ver)[t];
+    const name = ts ? ts.name : ("???" + t);
+    html +=
+      '<div class="bm-quest-card evo-task-row" onclick="startEvoTask(' + t + ')">' +
+        '<div class="evo-task-left">' +
+          '<span class="evo-task-name">' + name + '</span>' +
+          '<canvas class="qb3v3-card-sprite" width="32" height="32" data-version="' + ver + '" data-row="' + t + '"></canvas>' +
+        '</div>' +
+        '<span class="evo-task-rate">' + (+((rates[t] || 0).toFixed(2))) + '%</span>' +
+      '</div>';
+  }
+  listEl.innerHTML = html;
+  listEl.querySelectorAll('.qb3v3-card-sprite').forEach(function(c){
+    const v = c.dataset.version;
+    const r = parseInt(c.dataset.row, 10);
+    const img = getSpriteImage(v, r);
+    if(img && img.complete && img.naturalWidth > 0){
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0, 0, 16, 16, 0, 0, 32, 32);
+    }
+  });
+}
+
+// 點擊進化任務目標 → 隨機「克制你」的成長期敵人對戰
+function startEvoTask(targetRow){
+  const ver = currentVersion || "V1";
+  const s = getStatsForVersion(ver)[currentRow];
+  if(!s || s.stage !== "成長期"){
+    showToast("只限「成長期」階段進行進化任務");
+    return;
+  }
+  const pAttr = s.attr;
+  // 收集 V1~V10 所有成長期龍作為敵方候選
+  const children = [];
+  for(const v of SLOT_VERSIONS){
+    const stats = getStatsForVersion(v);
+    for(const r in stats){
+      const st = stats[r];
+      if(st && st.stage === "成長期"){
+        children.push({ ver: v, row: parseInt(r, 10), attr: st.attr, name: st.name });
+      }
+    }
+  }
+  // 優先選「克制你」的成長期（更難）；若無則退化為任意成長期
+  let enemyPool = children.filter(c => pAttr && attrBeats(c.attr, pAttr));
+  if(enemyPool.length === 0) enemyPool = children;
+  if(enemyPool.length === 0){
+    showToast("找不到可對戰的成長期敵人");
+    return;
+  }
+  const e = enemyPool[Math.floor(Math.random() * enemyPool.length)];
+  window._evoTask = { ver: ver, childRow: currentRow, targetRow: targetRow };
+  window._pveActive = true;
+  window._pveFromMenu = true;
+  window._pveEnemyVersion = e.ver;
+  window._pveEnemyRow = e.row;
+  window._pveMapGold = null;
+  pveCurrentEnemyVersion = e.ver;
+  pveCurrentEnemyRow = e.row;
+  pveCurrentEnemyName = pveGetEnemyName(e.row, e.ver);
+  closeBattleMenu();
+  startBattlePVE(e.ver, e.row, 0);
 }
 
 function startMainQuest(questId) {
