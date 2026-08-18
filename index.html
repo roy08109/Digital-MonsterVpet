@@ -1110,6 +1110,16 @@ body{
   font-size: 16px;
   margin-bottom: 6px;
 }
+.evo-src-sprite {
+  width: 22px;
+  height: 22px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  vertical-align: middle;
+  margin: 0 4px;
+  background: rgba(0,0,0,.35);
+  border-radius: 3px;
+}
 .evo-r-label {
   color: #ff8844;
   font-size: 13px;
@@ -1287,6 +1297,37 @@ canvas {
   border-radius: 6px; 
   background: #000; 
 }
+.bm-quest-cats { display: flex; gap: 6px; margin-bottom: 8px; }
+.bm-quest-cat { 
+  flex: 1; padding: 8px 0; text-align: center; cursor: pointer; 
+  color: #aaa; font-size: 14px; font-weight: bold; background: #1a1a2e; 
+  border: 1px solid #333; border-radius: 8px; transition: all .2s; user-select: none; 
+}
+.bm-quest-cat:hover { color: #ddd; background: #252540; }
+.bm-quest-cat.active { color: #ffcc00; border-color: #ffcc00; background: #222244; }
+.bm-quest-list { display: flex; flex-direction: column; gap: 8px; }
+.bm-quest-card { 
+  display: flex; align-items: center; gap: 12px;
+  background: #1e1e32; border: 1px solid #333; border-radius: 10px; 
+  padding: 10px 14px; text-align: left; transition: border-color .2s; 
+}
+.bm-quest-card:hover { border-color: #ffcc00; }
+.bm-quest-section { color: #6fd86f; font-size: 13px; font-weight: bold; padding: 4px 2px 0; }
+.bm-quest-title { color: #ffcc00; font-size: 16px; font-weight: bold; flex: 1; }
+.bm-quest-desc { color: #c8c8d8; font-size: 13px; line-height: 1.4; margin-bottom: 6px; }
+.bm-quest-meta { color: #8fd8ff; font-size: 12px; margin-bottom: 8px; }
+.bm-quest-footer { display: flex; justify-content: space-between; align-items: center; }
+.bm-quest-status { font-size: 13px; font-weight: bold; }
+.bm-quest-done { color: #6fd86f; }
+.bm-quest-ongoing { color: #ffcc00; }
+.bm-quest-lock { color: #999; }
+.bm-quest-btn { 
+  padding: 6px 16px; border: none; border-radius: 6px; cursor: pointer; 
+  background: linear-gradient(180deg,#ffd36b,#f0a828); color: #4a2c00; 
+  font-weight: bold; font-size: 14px; 
+}
+.bm-quest-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
+.bm-quest-empty { text-align: center; color: #888; padding: 24px 0; font-size: 14px; }
 .bm-enc-name { 
   color: #ffcc00; 
   font-size: 16px; 
@@ -1755,6 +1796,21 @@ canvas {
   font-size:15px; font-weight:700; cursor:pointer;
 }
 .battle-exp-ok:hover{ background:#e53030; }
+.battle-exp-gold{
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  padding:10px; border-radius:8px;
+  background:rgba(255,204,0,0.12); border:1px solid rgba(255,204,0,0.35);
+  font-size:14px; font-weight:700; color:#ffcc00;
+}
+.battle-exp-attr-bonus{
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  flex-wrap:wrap; text-align:center;
+  padding:10px; border-radius:8px;
+  background:rgba(255,102,0,0.14); border:1px solid rgba(255,102,0,0.5);
+  font-size:13px; font-weight:900; color:#ffb347; letter-spacing:0.5px;
+  text-shadow:0 0 6px rgba(255,140,0,0.6);
+  animation:adversityFlash 0.6s ease-in-out infinite alternate;
+}
 
 </style>
 </head>
@@ -1942,49 +1998,32 @@ canvas {
       <div id="selfBattleCardList"></div>
       <button class="self-battle-close-btn" onclick="closeSelfBattleMenu();">返回</button>
     </div>
+    <div id="bmMainQuestPanel" class="self-battle-panel" style="display:none;">
+      <div class="self-battle-title">⚔ 選擇出戰的龍</div>
+      <div class="qb3v3-desc" id="mainQuestSelectDesc">只有「成長期」的龍可以挑戰此任務。</div>
+      <div id="mainQuestDragonList"></div>
+      <button class="self-battle-confirm-btn" id="mainQuestStartBtn" onclick="confirmMainQuestDragon()" disabled>⚔ 開始對戰</button>
+      <button class="self-battle-close-btn" onclick="closeMainQuestPanel();">返回</button>
+    </div>
   </div>
   <!-- 任務地圖內容 -->
   <div class="bm-tab-content" id="bmContentMap" style="display:none;">
-    <div class="bm-map-list">
-      <div class="bm-map-row" data-map="hub">
-        <div class="bm-map-row-header" onclick="toggleMapRow('hub')">
-          <span>🏘 出發地</span><span class="bm-diff">⭐ 簡單</span>
-        </div>
-        <div class="bm-map-row-body" id="bmRowBody_hub" style="display:none;"></div>
-      </div>
-      <div class="bm-map-row" data-map="plain">
-        <div class="bm-map-row-header" onclick="toggleMapRow('plain')">
-          <span>🌿 平原</span><span class="bm-diff">⭐ 簡單</span>
-        </div>
-        <div class="bm-map-row-body" id="bmRowBody_plain" style="display:none;"></div>
-      </div>
-      <div class="bm-map-row" data-map="snow">
-        <div class="bm-map-row-header" onclick="toggleMapRow('snow')">
-          <span>❄️ 雪山</span><span class="bm-diff">⭐ 簡單</span>
-        </div>
-        <div class="bm-map-row-body" id="bmRowBody_snow" style="display:none;"></div>
-      </div>
-      <div class="bm-map-row" data-map="beach">
-        <div class="bm-map-row-header" onclick="toggleMapRow('beach')">
-          <span>🏖 海灘</span><span class="bm-diff">⭐ 簡單</span>
-        </div>
-        <div class="bm-map-row-body" id="bmRowBody_beach" style="display:none;"></div>
-      </div>
-      <div class="bm-map-row" data-map="desert">
-        <div class="bm-map-row-header" onclick="toggleMapRow('desert')">
-          <span>🏜 沙漠</span><span class="bm-diff">⭐ 簡單</span>
-        </div>
-        <div class="bm-map-row-body" id="bmRowBody_desert" style="display:none;"></div>
-      </div>
+    <div class="bm-quest-cats">
+      <button id="bmCat_main" class="bm-quest-cat active" onclick="switchQuestCategory('main')">主線</button>
+      <button id="bmCat_daily" class="bm-quest-cat" onclick="switchQuestCategory('daily')">日常</button>
+      <button id="bmCat_evo" class="bm-quest-cat" onclick="switchQuestCategory('evo')">進化</button>
     </div>
+    <div id="bmQuestList" class="bm-quest-list"></div>
   </div>
 </div>
 
 <!-- 對戰經驗結算視圖 -->
 <div id="battleExpOverlay" class="battle-exp-overlay" style="display:none;">
   <div class="battle-exp-card">
-    <div class="battle-exp-title">🏆 對戰勝利 · 經驗結算</div>
+    <div class="battle-exp-title">🏆 對戰勝利 · 結算</div>
     <div id="battleExpList" class="battle-exp-list"></div>
+    <div id="battleExpGold" class="battle-exp-gold" style="display:none;"></div>
+    <div id="battleExpAttrBonus" class="battle-exp-attr-bonus" style="display:none;"></div>
     <button class="battle-exp-ok" onclick="closeBattleExpResult()">確定</button>
   </div>
 </div>
@@ -1993,14 +2032,14 @@ canvas {
 <div class="stats-display" id="foodDisplay" style="display:none;">
   <div class="sd-title">食物選擇</div>
   <div id="foodList" style="padding:4px 0;">
-    <div class="food-item" id="foodItemMeat">
-      <span class="food-label" onclick="feedDigimon('meat')">🥩 1.肉</span>
+    <div class="food-item" id="foodItemMeat" onclick="feedDigimon('meat')">
+      <span class="food-label">🥩 1.肉</span>
       <span style="font-size:10px;color:#888;margin-right:6px;">一鍵</span>
       <div class="toggle-switch-sm" id="autoFeedToggle" onclick="toggleAutoFeed(event)"></div>
     </div>
-    <div class="food-item" id="foodItemVitamin">
-      <span class="food-label" onclick="feedDigimon('vitamin')">💊 2.維他命</span>
-      <span style="font-size:10px;color:#e8a33d;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;">攻擊+1 血量+3 速度+0.2 暴擊+0.01 閃避+0.01</span>
+    <div class="food-item" id="foodItemVitamin" onclick="feedDigimon('vitamin')">
+      <span class="food-label">💊 2.維他命</span>
+      <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">攻擊+1 血量+3 速度+0.2 暴擊+0.01 閃避+0.01</span><span style="color:#e8a33d;">(10💰)</span></span>
     </div>
   </div>
 </div>
@@ -2450,28 +2489,31 @@ function getEvolutionRowV6(row){
   return row; // 完全體/究極體→不變（究極體僅對戰逆境進化觸發）
 }
 
-// V6 成長期→成熟期（條件進化，基于訓練加成）
+// ========== 成長期 → 成熟期 機率進化候選池（等概率隨機） ==========
+const CHILD_EVO_POOL = {
+  V1:  { 2: [4,5,6,7,10], 3: [6,7,8,9,10] },
+  V2:  { 2: [4,5,6,10],   3: [7,8,9,10] },
+  V3:  { 2: [4,5,6,7,10], 3: [6,7,8,9,10] },
+  V4:  { 2: [4,5,6,10],   3: [7,8,9,10] },
+  V5:  { 2: [4,5,6,10],   3: [7,8,9,10] },
+  V6:  { 2: [6,9,11,12],  3: [7,8,9,11],  4: [7,8,10,11], 5: [6,9,11,12] },
+  V7:  { 2: [6,7,12],     3: [8,9,12],    4: [10,11,12],  5: [6,7,12] },
+  V8:  { 2: [6,7,11],     3: [8,9,11],    4: [10,11,12],  5: [9,11,13] },
+  V9:  { 2: [7,8,10],     3: [9,10,13],   4: [10,11,12],  5: [9,10],     6: [7,8,10] },
+  V10: { 2: [6,7,12],     3: [8,9,12],    4: [10,11,12],  5: [6,7,12] },
+};
+
+function pickChildEvoResult(row){
+  const ver = currentVersion || "V1";
+  const pool = CHILD_EVO_POOL[ver] || CHILD_EVO_POOL.V1;
+  const cands = pool[row];
+  if(!cands || cands.length === 0) return 4; // 兜底（理論上不會發生）
+  return cands[Math.floor(Math.random() * cands.length)];
+}
+
+// V6 成長期→成熟期（機率進化）
 function getChildEvoResultV6(row){
-  const stats = DIGIMON_STATS[row];
-  if(gameTrainingCount === 0 || gameCareMistakes >= 4) return 11; // 青蛙獸（懲罰）
-  const atk = stats.atk || 0;
-  const hp  = stats.hp  || 0;
-  const spd = stats.spd || 0;
-  // 取最大值決定方向
-  if(atk >= hp && atk >= spd){
-    // 攻擊型：疫苗→迪路獸(12), 資料→獨角獸(8), 病毒→獨角獸(8)
-    if(row === 2 || row === 5) return 12;
-    return 8;
-  }
-  if(hp >= atk && hp >= spd){
-    // 耐力型：疫苗→陸龜獸(9), 資料→陸龜獸(9), 病毒→古加獸(7)
-    if(row === 2 || row === 5 || row === 3) return 9;
-    return 7;
-  }
-  // 速度型/均衡：疫苗→比多獸(6), 資料→古加獸(7), 病毒→星星獸(10)
-  if(row === 2 || row === 5) return 6;
-  if(row === 3) return 7;
-  return 10;
+  return pickChildEvoResult(row);
 }
 
 // V7 进化路线（Pendulum Color Deep Savers，32隻）
@@ -2497,29 +2539,9 @@ function getEvolutionRowV7(row){
   return row; // 完全體/究極體→不變（究極體僅對戰逆境進化觸發）
 }
 
-// V7 成長期→成熟期（條件進化，基于訓練加成）
+// V7 成長期→成熟期（機率進化）
 function getChildEvoResultV7(row){
-  const stats = DIGIMON_STATS[row];
-  if(gameTrainingCount === 0 || gameCareMistakes >= 4) return 12; // 伊比德拉獸（懲罰）
-  const atk = gameAtkBonus;
-  const hp  = gameHpBonus;
-  const spd = gameSpdBonus;
-  const wt  = gameWeight;
-  // 攻擊型：哥瑪獸/水母獸→一角獸(6), 加尼獸→海龍獸(8), 沙古門獸→章魚獸(10)
-  if(atk >= hp && atk >= spd){
-    if(row === 2 || row === 5) return 6;
-    if(row === 3) return 8;
-    return 10;
-  }
-  // 耐力型：哥瑪獸/水母獸→魯卡獸(7), 加尼獸→腔棘魚獸(9), 沙古門獸→墨魚獸(11)
-  if(hp >= atk && hp >= spd){
-    if(row === 2 || row === 5) return 7;
-    if(row === 3) return 9;
-    return 11;
-  }
-  // 速度型：加尼獸/沙古門獸→伊比德拉獸(12), 其他默認→一角獸(6)
-  if(row === 3 || row === 4) return 12;
-  return 6;
+  return pickChildEvoResult(row);
 }
 
 // V8 进化路线（Pendulum Color Nightmare Soldiers，32隻）
@@ -2544,30 +2566,9 @@ function getEvolutionRowV8(row){
   return row; // 完全體/究極體→不變（究極體僅對戰逆境進化觸發）
 }
 
-// V8 成長期→成熟期（條件進化，基于訓練加成）
+// V8 成長期→成熟期（機率進化）
 function getChildEvoResultV8(row){
-  if(gameTrainingCount === 0 || gameCareMistakes >= 4) return 11; // 猛鬼獸（懲罰）
-  const atk = gameAtkBonus;
-  const hp  = gameHpBonus;
-  const spd = gameSpdBonus;
-  // 攻擊型：食夢獸→哈奴曼獸(6), 蠟燭獸→火焰獸(8), 路加獸→邪路加獸(13), 小惡魔獸→惡魔獸(10)
-  if(atk >= hp && atk >= spd){
-    if(row === 2) return 6;
-    if(row === 3) return 8;
-    if(row === 5) return 13;
-    return 10;
-  }
-  // 耐力型：食夢獸→加魯魯獸(7), 蠟燭獸/路加獸→巫師獸(9), 小惡魔獸→猛鬼獸(11)
-  if(hp >= atk && hp >= spd){
-    if(row === 2) return 7;
-    if(row === 3 || row === 5) return 9;
-    return 11;
-  }
-  // 速度型：食夢獸→加魯魯獸(7), 蠟燭獸→火焰獸(8), 路加獸→邪路加獸(13), 小惡魔獸→蜘蛛獸(12)
-  if(row === 2) return 7;
-  if(row === 3) return 8;
-  if(row === 5) return 13;
-  return 12;
+  return pickChildEvoResult(row);
 }
 
 // V9 Wind Guardians 進化路線（暫用 V7 邏輯，待日後完善）
@@ -2590,26 +2591,9 @@ function getEvolutionRowV9(row){
   return row;
 }
 
+// V9 成長期→成熟期（機率進化）
 function getChildEvoResultV9(row){
-  if(gameTrainingCount === 0 || gameCareMistakes >= 4) return 10;
-  const atk = gameAtkBonus;
-  const hp  = gameHpBonus;
-  const spd = gameSpdBonus;
-  if(atk >= hp && atk >= spd){
-    if(row === 2 || row === 6) return 7;  // 比丘獸/翼龍獸 → V龍獸(vaccine)
-    if(row === 3) return 9;               // 花拉獸 → 仙人掌獸(data)
-    if(row === 5) return 10;              // 巴魯獸 → 奇鳥獸(data)
-    return 11;                            // 蘑菇獸 → 枯木獸(virus)
-  }
-  if(hp >= atk && hp >= spd){
-    if(row === 2 || row === 6) return 8;  // 比丘獸/翼龍獸 → 巴多拉獸(vaccine)
-    if(row === 3) return 13;              // 花拉獸 → 烈風獸(vaccine)
-    if(row === 5) return 9;               // 巴魯獸 → 仙人掌獸(data)
-    return 12;                            // 蘑菇獸 → 紅蔬菜獸(virus)
-  }
-  if(row === 3 || row === 5) return 10;   // 花拉獸/巴魯獸 → 奇鳥獸(data)
-  if(row === 4) return 12;                // 蘑菇獸 → 紅蔬菜獸(virus)
-  return 7;                               // 比丘獸/翼龍獸 → V龍獸(vaccine)
+  return pickChildEvoResult(row);
 }
 
 // V10 Metal Empire 進化路線（暫用 V7 邏輯，待日後完善）
@@ -2631,24 +2615,9 @@ function getEvolutionRowV10(row){
   return row;
 }
 
+// V10 成長期→成熟期（機率進化）
 function getChildEvoResultV10(row){
-  const stats = DIGIMON_STATS[row];
-  if(gameTrainingCount === 0 || gameCareMistakes >= 4) return 12;
-  const atk = gameAtkBonus;
-  const hp  = gameHpBonus;
-  const spd = gameSpdBonus;
-  if(atk >= hp && atk >= spd){
-    if(row === 2 || row === 5) return 6;
-    if(row === 3) return 8;
-    return 10;
-  }
-  if(hp >= atk && hp >= spd){
-    if(row === 2 || row === 5) return 7;
-    if(row === 3) return 9;
-    return 11;
-  }
-  if(row === 3 || row === 4) return 12;
-  return 6;
+  return pickChildEvoResult(row);
 }
 
 // V2 进化路线
@@ -2665,40 +2634,9 @@ function getEvolutionRowV2(row){
   return row; // 完全體/究極體→不變
 }
 
-// V2 成長期→成熟期 进化逻辑
+// V2 成長期→成熟期（機率進化）
 function getChildEvoResultV2(row){
-  const cm = gameCareMistakes;
-  const tc = totalTrainingCount;
-  const wt = gameWeight;
-  const hpBonus = gameHpBonus;
-  const atkBonus = gameAtkBonus;
-  const spdBonus = gameSpdBonus;
-  // 優先度1: 鼻屎獸 (最壞結局: 失誤≥4 或 無任何訓練)
-  if(cm >= 4 || tc === 0) return 10;
-  // 優先度2: 天使獸 (黑暗進化: 失誤≥3)
-  if(cm >= 3) return 6;
-  // 優先度3: 火焰特化不適用V2，改為攻擊加成≥12→天使獸
-  if(atkBonus >= 12 && cm <= 2) return 6;
-
-  if(row === 2){ // 加布獸
-    // 比多獸: 訓練≥4 且 失誤=0
-    if(tc >= 8 && cm === 0) return 4;
-    // 加魯魯獸: 訓練≥4 且 失誤≤1
-    if(tc >= 8 && cm === 1) return 5;
-    // 天使獸: 無訓練 且 失誤≤1
-    if(tc === 0 && cm <= 1) return 6;
-    return 4;
-  }
-  if(row === 3){ // 艾力獸
-    // 雪人獸: 訓練≥4 且 失誤=0
-    if(tc >= 8 && cm === 0) return 7;
-    // 巴多拉獸: 訓練≥4 且 失誤≤1
-    if(tc >= 8 && cm === 1) return 8;
-    // 巨鯨獸: 無訓練 且 失誤≤1
-    if(tc === 0 && cm <= 1) return 9;
-    return 7;
-  }
-  return 4;
+  return pickChildEvoResult(row);
 }
 
 function getNextEvoRowV2(row){
@@ -6228,6 +6166,8 @@ function startAllTimers(){
 // ========== 啟動頁渲染 ==========
 function initLauncher(){
   loadLauncherMeta();
+  loadGlobalQuestDone();
+  loadGlobalGold();
   activeSlotIndex = -1;
   launcherLoaded = true;
   const launcher = document.getElementById('launcherScreen');
@@ -6472,7 +6412,37 @@ function addSlot(){
 // ========== 自動存檔 ==========
 const SAVE_KEY = "digimon_vpet_save";
 const DATA_VERSION = 4; // 數據版本：4 - 等級/經驗系統
+const GLOBAL_QUEST_KEY = "digimon_global_quest"; // 全域任務進度（所有暴龍機共享）
+const GLOBAL_GOLD_KEY = "digimon_global_gold"; // 全域金幣（所有暴龍機共享）
 let gameGold = 0;
+let gameMainQuestDone = []; // 已完成的主線任務 id（標記完成 + 防止重複發獎）
+// 讀取全域共享任務進度
+function loadGlobalQuestDone(){
+  try {
+    const raw = localStorage.getItem(GLOBAL_QUEST_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    gameMainQuestDone = Array.isArray(arr) ? arr : [];
+  } catch(e){ gameMainQuestDone = []; }
+}
+// 寫入全域共享任務進度
+function saveGlobalQuestDone(){
+  try { localStorage.setItem(GLOBAL_QUEST_KEY, JSON.stringify(gameMainQuestDone)); } catch(e){}
+}
+// 讀取全域共享金幣
+function loadGlobalGold(){
+  try {
+    const raw = localStorage.getItem(GLOBAL_GOLD_KEY);
+    const n = raw ? parseInt(raw, 10) : 0;
+    gameGold = (Number.isFinite(n) && n >= 0) ? n : 0;
+  } catch(e){ gameGold = 0; }
+}
+// 寫入全域共享金幣
+function saveGlobalGold(){
+  try { localStorage.setItem(GLOBAL_GOLD_KEY, String(gameGold)); } catch(e){}
+}
+let battleMainQuestFighter = null; // 主線任務出戰龍（跨槽位 fighter）
+let mainQuestPendingId = null;     // 正在選龍的主線任務 id
+let mainQuestSelectedSlot = -1;    // 選龍面板選中的槽位
 function saveGameState(){
   try {
     if(activeSlotIndex < 0) return;
@@ -6500,7 +6470,6 @@ function saveGameState(){
       gameTotalBattles, gameBattleWins,
       isSick, eightPoopsStartTime, eightPoopsMistakeRecorded,
       isDead, deathReason, sickStartTime, hungerZeroStartTime,
-      gameGold,
       gameLevel, gameExp,
       eggStartTime: isEggPhase ? eggStartTime : undefined,
       birthTimestamp: birthTimestamp || undefined,
@@ -6791,7 +6760,6 @@ function loadGameState(slotIndex){
       babyIICallEverShown = data.babyIICallEverShown ?? false;
       gameTotalBattles = data.gameTotalBattles ?? 0;
       gameBattleWins = data.gameBattleWins ?? 0;
-      gameGold = data.gameGold ?? 0;
       gameLevel = data.gameLevel ?? 1;
       gameExp = data.gameExp ?? 0;
       isSick = data.isSick ?? false;
@@ -6956,11 +6924,14 @@ function getExpToNextLevel(level){
   if(level <= 59) return 44;
   return 125;
 }
+function getStageLevelCapForStage(stage){
+  if(stage === "成長期") return 20;
+  if(stage === "成熟期") return 60;
+  return 100;
+}
 function getStageLevelCap(){
   const s = (DIGIMON_STATS[currentRow] && DIGIMON_STATS[currentRow].stage) || "";
-  if(s === "成長期") return 20;
-  if(s === "成熟期") return 60;
-  return 100;
+  return getStageLevelCapForStage(s);
 }
 function getExpForEnemyStage(stage){
   if(stage === "成長期") return 10;
@@ -7434,49 +7405,9 @@ function startNaturalEvoAnim(nextRow){
   }); // 結束 startPreEvoCelebration callback
 }
 
-// ========== 成长期→成熟期条件进化 ==========
+// ========== 成长期→成熟期概率进化 ==========
 function getChildEvoResult(row){
-  if(currentVersion === "V2") return getChildEvoResultV2(row);
-  if(currentVersion === "V6") return getChildEvoResultV6(row);
-  if(currentVersion === "V7") return getChildEvoResultV7(row);
-  if(currentVersion === "V8") return getChildEvoResultV8(row);
-  if(currentVersion === "V9") return getChildEvoResultV9(row);
-  if(currentVersion === "V10") return getChildEvoResultV10(row);
-  const cm = gameCareMistakes;
-  const tc = totalTrainingCount;
-  const atkBonus = gameAtkBonus;
-  const hpBonus = gameHpBonus;
-  const spdBonus = gameSpdBonus;
-  const wt = gameWeight;
-
-  // 优先级1: 鼻涕兽 (最坏结局: 失误≥4 或无任何训练)
-  if(cm >= 4 || tc === 0) return 10;
-  // 优先级2: 恶魔兽 (黑暗进化: 失误≥3)
-  if(cm >= 3) return 6;
-  // 优先级3: 火焰兽 (攻击特化, 两兽共享: 攻击加成≥12 且 失误≤2)
-  if(atkBonus >= 12 && cm <= 2) return 7;
-
-  // --- 亚古兽专属路线 ---
-  if(row === 2){
-    // 优先级4: 巨龙兽 (重量路线: 体重≥35 且 失误≤2)
-    if(wt >= 35 && cm <= 2) return 5;
-    // 优先级5: 暴龙兽 (完美进化: 训练≥8 且 失误≤1 且 体重<40)
-    if(tc >= 8 && cm <= 1 && wt < 40) return 4;
-    // 默认兜底: 暴龙兽
-    return 4;
-  }
-
-  // --- 贝塔兽专属路线 ---
-  if(row === 3){
-    // 优先级4: 海龙兽 (坦克路线: 体重≥35 且 HP加成≥8 且 失误≤2)
-    if(wt >= 35 && hpBonus >= 8 && cm <= 2) return 8;
-    // 优先级5: 飞龙兽 (速度路线: 速度加成≥5 且 失误≤1 且 训练≥8)
-    if(spdBonus >= 5 && cm <= 1 && tc >= 8) return 9;
-    // 默认兜底: 海龙兽
-    return 8;
-  }
-  // 兜底: 暴龍獸
-  return 4;
+  return pickChildEvoResult(row);
 }
 
 function getNextEvoRow(row){
@@ -8927,7 +8858,9 @@ function getEnemyTotalCount(ver){
 }
 
 function getBattlePlayerFighter(){
-  return battleQuick3v3Active ? battleQuick3v3PlayerTeam[battleQuick3v3PlayerIdx] : null;
+  if(battleQuick3v3Active) return battleQuick3v3PlayerTeam[battleQuick3v3PlayerIdx];
+  if(battleMainQuestFighter) return battleMainQuestFighter;
+  return null;
 }
 function getBattleEnemyFighter(){
   return battleQuick3v3Active ? battleQuick3v3EnemyTeam[battleQuick3v3EnemyIdx] : null;
@@ -8956,7 +8889,13 @@ function rollEnemyTrainingBonus(level){
   }
 }
 function rollEnemyLevel(){
-  const lv = Math.max(1, getBattlePlayerLevel() + Math.floor(Math.random() * 4) - 1); // 玩家等級 ±偏移(-1~+2)
+  let lv = Math.max(1, getBattlePlayerLevel() + Math.floor(Math.random() * 7) - 3); // 玩家等級 ±3
+  // 敵方等級不能超過其自身階段上限（成長期20 / 成熟期60 / 完全體·究極體100）
+  const es = getEnemyStats(battleEnemyRow);
+  if(es && es.stage){
+    const cap = getStageLevelCapForStage(es.stage);
+    if(lv > cap) lv = cap;
+  }
   rollEnemyTrainingBonus(lv);
   return lv;
 }
@@ -9674,6 +9613,23 @@ function getStatsForVersion(ver) {
   if (ver === "V9") return DIGIMON_STATS_V9;
   if (ver === "V10") return DIGIMON_STATS_V10;
   return DIGIMON_STATS_V1;
+}
+
+// 屬性克制：疫苗 > 病毒 > 資料 > 疫苗（a 克制 b）
+function attrBeats(a, b) {
+  if (!a || !b) return false;
+  if (a === "vaccine" && b === "virus") return true;
+  if (a === "virus" && b === "data") return true;
+  if (a === "data" && b === "vaccine") return true;
+  return false;
+}
+// 屬性顯示名稱
+function attrDisplayName(a) {
+  if (a === "vaccine") return "疫苗";
+  if (a === "virus") return "病毒";
+  if (a === "data") return "資料";
+  if (a === "free") return "自由";
+  return "無";
 }
 
 function getEvoPathsForVersion(ver) {
@@ -10806,8 +10762,10 @@ function endBattle(result){
     gameTotalBattles++;
     if(result === "win"){
       gameBattleWins++;
-      // 對戰勝利減 1 體重（不低於最低體重）
-      gameWeight = Math.max(DIGIMON_STATS[currentRow].minWeight, gameWeight - 1);
+      // 對戰勝利減 1 體重（不低於最低體重）；主線任務跨槽位出戰時該槽位無體重存檔，跳過
+      if(!battleMainQuestFighter || battleMainQuestFighter.slotIdx === activeSlotIndex){
+        gameWeight = Math.max(DIGIMON_STATS[currentRow].minWeight, gameWeight - 1);
+      }
       // 3V3 模式下，經驗統一在 finishQuickBattle3v3Match 結算（輸贏皆然）
       // 這裡跳過以避免每回合重複加經驗、以及戰敗時仍加經驗的問題
       if(!battleQuick3v3Active){
@@ -10815,17 +10773,19 @@ function endBattle(result){
         const _enemyStats = getEnemyStats(battleEnemyRow);
         if(_enemyStats){
           const expGained = getExpForEnemyStage(_enemyStats.stage);
-          const before = getSlotLevelExp(activeSlotIndex);
-          const _leveled = applyBattleExp(_enemyStats.stage);
-          const after = getSlotLevelExp(activeSlotIndex);
-          // 滿級（已達階段上限）時 applyBattleExp 會拒絕，before/after 不變 → 實際獲得 0
+          // 主線任務跨槽位出戰 → 經驗加到該槽位；否則加到 active 槽位
+          const _questSlot = battleMainQuestFighter ? battleMainQuestFighter.slotIdx : activeSlotIndex;
+          const before = getSlotLevelExp(_questSlot);
+          const _leveled = battleMainQuestFighter ? grantExpToSlot(_questSlot, expGained) : applyBattleExp(_enemyStats.stage);
+          const after = getSlotLevelExp(_questSlot);
+          // 滿級（已達階段上限）時會被拒絕，before/after 不變 → 實際獲得 0
           const gained = (before.level === after.level && before.exp === after.exp) ? 0 : expGained;
-          const snapshot = getBattleSlotSnapshot(activeSlotIndex);
-          // 快速對戰（1V1）勝利展示經驗結算；PVE 維持現狀不展示
-          if(!window._pveActive){
+          const snapshot = getBattleSlotSnapshot(_questSlot);
+          // 快速對戰（1V1）勝利展示經驗結算；主線任務勝利也展示（含金幣）；其餘 PVE 維持現狀不展示
+          if(!window._pveActive || window._mainQuestId){
             window._pendingExpView = {
               entries: [{
-                slotIdx: activeSlotIndex,
+                slotIdx: _questSlot,
                 version: snapshot ? snapshot.version : currentVersion,
                 row: snapshot ? snapshot.row : currentRow,
                 name: (snapshot && snapshot.name) || "數碼獸",
@@ -10844,9 +10804,47 @@ function endBattle(result){
       if(window._pveActive && window._pveMapGold){
         const goldEarned = Math.floor(Math.random() * (window._pveMapGold.max - window._pveMapGold.min + 1)) + window._pveMapGold.min;
         gameGold += goldEarned;
+        saveGlobalGold();
+      }
+      // 主線任務勝利：隨機 1~5 金幣（可重複刷），並標記完成（供解鎖後續任務）
+      if(window._mainQuestId){
+        const qid = window._mainQuestId;
+        window._mainQuestId = null;
+        const q = MAIN_QUESTS.find(x => x.id === qid);
+        if(q){
+          if(!gameMainQuestDone.includes(qid)){
+            gameMainQuestDone.push(qid);
+            saveGlobalQuestDone();
+          }
+          let goldEarned = Math.floor(Math.random() * 5) + 1; // 1~5 隨機
+          // 屬性判定：玩家屬性被敵方克制（欠缺屬性）→ 金錢 *2
+          let attrBonus = null;
+          try {
+            const pStats = battleMainQuestFighter
+              ? getStatsForVersion(battleMainQuestFighter.version)[battleMainQuestFighter.row]
+              : getStatsForVersion(currentVersion)[currentRow];
+            const eStats = getStatsForVersion(q.enemyVersion)[q.enemyRow];
+            if(pStats && eStats && attrBeats(eStats.attr, pStats.attr)){
+              goldEarned *= 2;
+              attrBonus = { player: pStats.attr, enemy: eStats.attr };
+            }
+          } catch(_){}
+          gameGold += goldEarned;
+          saveGlobalGold();
+          if(window._pendingExpView){
+            window._pendingExpView.gold = goldEarned;
+            if(attrBonus) window._pendingExpView.attrBonus = attrBonus;
+          }
+        }
       }
     }
   }
+  // 非勝利（失敗/逃跑）時清除主線任務對戰狀態
+  if(result !== "win"){
+    window._mainQuestId = null;
+  }
+  // 無論勝負，清除主線任務出戰龍 fighter
+  battleMainQuestFighter = null;
   setBattleActive(false);
   if(battleAnimTimer){ clearInterval(battleAnimTimer); battleAnimTimer = null; }
   battleProjectileX = 0;
@@ -11079,21 +11077,37 @@ function showBattleResult(result){
       saveGameState();
       updateStatsDisplay();
       if(window._pveFromMenu){
-        // 從對戰選單發起的戰鬥 → 返回自動模式
+        // 從對戰選單發起的戰鬥（含主線任務）→ 返回自動模式
         window._pveFromMenu = false;
+        window._pveActive = false;
+        window._pveMapGold = null;
+        window._pveEnemyRow = null;
+        window._pveEnemyVersion = null;
+        window._pveEnemyName = null;
+        battleResult = "";
+        battleEnemyRow = -1;
+        // 主線任務勝利 → 展示結算頁（經驗 + 金幣）
+        if(result === "win" && window._pendingExpView){
+          const pv = window._pendingExpView;
+          window._pendingExpView = null;
+          showBattleExpResult(pv.entries, pv.gold || 0, pv.attrBonus || null);
+          return;
+        }
+        finalizeBattleReturn();
+        return;
       } else {
         // 從原地圖面板發起的戰鬥 → 返回地圖面板
         const pveMapPanel = document.getElementById("pveMapDisplay");
         if(pveMapPanel) pveMapPanel.style.display = "flex";
+        window._pveActive = false;
+        window._pveMapGold = null;
+        window._pveEnemyRow = null;
+        window._pveEnemyVersion = null;
+        window._pveEnemyName = null;
+        battleResult = "";
+        battleEnemyRow = -1;
+        return;
       }
-      window._pveActive = false;
-      window._pveMapGold = null;
-      window._pveEnemyRow = null;
-      window._pveEnemyVersion = null;
-      window._pveEnemyName = null;
-      battleResult = "";
-      battleEnemyRow = -1;
-      return;
     }
 
     // 勝利且有經驗結算 → 展示經驗視圖，等用戶按「確定」再回到自動模式
@@ -11109,7 +11123,7 @@ function showBattleResult(result){
 }
 
 // === 對戰經驗結算視圖 ===
-function showBattleExpResult(entries){
+function showBattleExpResult(entries, gold, attrBonus){
   const overlay = document.getElementById("battleExpOverlay");
   const list = document.getElementById("battleExpList");
   if(!overlay || !list){
@@ -11117,6 +11131,28 @@ function showBattleExpResult(entries){
     return;
   }
   list.innerHTML = "";
+  const goldEl = document.getElementById("battleExpGold");
+  if(goldEl){
+    if(gold && gold > 0){
+      goldEl.style.display = "flex";
+      goldEl.innerHTML = '<span>🪙</span><span>金幣 +' + gold + '</span>';
+    } else {
+      goldEl.style.display = "none";
+      goldEl.innerHTML = "";
+    }
+  }
+  const attrEl = document.getElementById("battleExpAttrBonus");
+  if(attrEl){
+    if(attrBonus && attrBonus.player && attrBonus.enemy){
+      attrEl.style.display = "flex";
+      attrEl.innerHTML = '<span>⚡</span><span>屬性劣勢加成！金幣 x2</span>' +
+        '<span style="font-size:11px;color:#ffd9a0;">玩家' + attrDisplayName(attrBonus.player) +
+        ' · 敵方' + attrDisplayName(attrBonus.enemy) + '</span>';
+    } else {
+      attrEl.style.display = "none";
+      attrEl.innerHTML = "";
+    }
+  }
   for(const e of entries){
     const isMax = (e.gained === 0); // 滿級未獲得經驗
     const maxExp = isMax ? 0 : getExpToNextLevel(e.levelAfter);
@@ -11265,7 +11301,8 @@ function showUnknownConditions(row){
     } else {
       let html = `<div class="evo-section"><div class="evo-section-title">━━ 進化條件 ━━</div>`;
       for(const p of inPaths){
-        html += `<div class="evo-route"><div class="evo-r-row2">${p.fromName} [${p.conds.join(", ")}]</div></div>`;
+        const condText = getEvoCondDisplay(currentDigidexVersion, p.fromRow) || p.conds.join(", ");
+        html += `<div class="evo-route"><div class="evo-r-row2"><span class="evo-src-name">${p.fromName}</span><canvas class="evo-src-sprite" data-ver="${currentDigidexVersion}" data-row="${p.fromRow}" width="16" height="16"></canvas><span>[${condText}]</span></div></div>`;
       }
       html += `</div>`;
       bodyHtml = html;
@@ -11301,6 +11338,7 @@ function showUnknownConditions(row){
     cx.textBaseline = "middle";
     cx.fillText("?", 32, 36);
   }
+  drawEvoSourceSprites(currentDigidexVersion);
   // 返回按鈕
   document.getElementById("unkBackBtn").addEventListener('click', () => {
     unkDiv.style.display = "none";
@@ -11477,6 +11515,17 @@ function showDigidex(){
   panel.style.display = "block";
 }
 
+// 成長期→成熟期：把「來源名 [條件]」改為「來源名 [N% 概率進化]」
+function getEvoCondDisplay(ver, fromRow){
+  const pool = CHILD_EVO_POOL[ver] || CHILD_EVO_POOL.V1;
+  const cands = pool[fromRow];
+  if(cands && cands.length > 0){
+    const pct = (100 / cands.length).toFixed(1).replace(/\.0$/, '');
+    return `${pct}% 概率進化`;
+  }
+  return null; // 非成長期→成熟期，沿用原條件文字
+}
+
 function buildEvoSection(row, ver){
   const stats = getStatsForVersion(ver);
   const evoPaths = getEvoPathsForVersion(ver);
@@ -11491,12 +11540,29 @@ function buildEvoSection(row, ver){
   let html = `<div class="evo-section">
     <div class="evo-section-title">━━ 進化條件 ━━</div>`;
   for(const p of inPaths){
+    const condText = getEvoCondDisplay(ver, p.fromRow) || p.conds.join(", ");
     html += `<div class="evo-route">
-      <div class="evo-r-row2">${p.fromName} [${p.conds.join(", ")}]</div>
+      <div class="evo-r-row2"><span class="evo-src-name">${p.fromName}</span><canvas class="evo-src-sprite" data-ver="${ver}" data-row="${p.fromRow}" width="16" height="16"></canvas><span>[${condText}]</span></div>
     </div>`;
   }
   html += `</div>`;
   return html;
+}
+
+// 繪製進化條件中來源數碼獸的精靈小圖（第一幀）
+function drawEvoSourceSprites(ver){
+  const canvases = document.querySelectorAll('canvas.evo-src-sprite');
+  canvases.forEach(cv => {
+    const r = parseInt(cv.getAttribute('data-row'), 10);
+    const v = cv.getAttribute('data-ver') || ver;
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const img = getSpriteImage(v, r);
+    if(img && img.complete && img.naturalWidth > 0){
+      ctx.clearRect(0, 0, 16, 16);
+      ctx.drawImage(img, 0, 0, 16, 16, 0, 0, 16, 16);
+    }
+  });
 }
 
 function showDigidexDetail(row){
@@ -11545,6 +11611,7 @@ function showDigidexDetail(row){
   if(detailImg && detailImg.complete && detailImg.naturalWidth > 0){
     cx.drawImage(detailImg, 0, 0, 16, 16, 0, 0, 64, 64);
   }
+  drawEvoSourceSprites(currentDigidexVersion);
   
   // 返回按鈕
   document.getElementById("digidexBackBtn").addEventListener('click', () => {
@@ -11601,8 +11668,22 @@ function feedDigimon(food){
       showToast(vitaminBuff.atk > 0 ? "維他命已生效，下場對戰後才能再吃" : "太飽了，吃不下");
       return;
     }
+    // 維他命需消費 10 金幣，不足則拒絕
+    if(gameGold < 10){
+      gameMode = "refusing";
+      gameModeStep = 0;
+      if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+      restartAnimTimer(REFUSE_IV);
+      showToast("金幣不足，維他命需要 10 金幣");
+      return;
+    }
+    gameGold -= 10;
+    saveGlobalGold();
     // 維他命：下一場對戰增加臨時加成（戰後消失）
     vitaminBuff = { atk: 1, hp: 3, spd: 0.2, crit: 0.01, dodge: 0.01 };
+    // 食後飽食度 +1
+    gameHunger = Math.min(10, gameHunger + 1);
+    updateNotifArea(true);
     // 進食動畫
     eatingFood = "vitamin";
     gameMode = "eating";
@@ -11612,8 +11693,9 @@ function feedDigimon(food){
     if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
     restartAnimTimer(EAT_IV);
     saveGameState();
+    updateStatsDisplay(); // 刷新金幣顯示
     renderFrame();
-    showToast("維他命生效：下場對戰 +1攻擊 +3HP +0.2速度 +0.01暴擊 +0.01閃避");
+    showToast("維他命生效：下場對戰 +1攻擊 +3HP +0.2速度 +0.01暴擊 +0.01閃避（-10 金幣）");
   }
 }
 
@@ -12357,7 +12439,8 @@ function activateSlot(slotIndex){
     gameAgeLastDay = 0;
     stageStartDay = 0;
     stageTrainingPointsUsed = 0;
-    gameGold = 0;
+    loadGlobalGold();
+    loadGlobalQuestDone();
     autoFeedEnabled = false;
     cultivatedRows = new Set();
     eightPoopsStartTime = 0;
@@ -12428,7 +12511,8 @@ function activateSlot(slotIndex){
     isSick = false;
     sickStartTime = 0;
     curingMode = false;
-    gameGold = 0;
+    loadGlobalGold();
+    loadGlobalQuestDone();
     gameTotalBattles = 0;
     gameBattleWins = 0;
     autoFeedEnabled = false;
@@ -12633,7 +12717,8 @@ function returnToLauncher(){
     gameAgeLastDay = 0;
     stageStartDay = 0;
     stageTrainingPointsUsed = 0;
-    gameGold = 0;
+    loadGlobalGold();
+    loadGlobalQuestDone();
     autoFeedEnabled = false;
     cultivatedRows = new Set();
     eightPoopsStartTime = 0;
@@ -13325,7 +13410,305 @@ function pveGetEnemyName(row, version) {
   else if (version === "V8") stats = DIGIMON_STATS_V8[row];
   else if (version === "V9") stats = DIGIMON_STATS_V9[row];
   else if (version === "V10") stats = DIGIMON_STATS_V10[row];
+  else stats = DIGIMON_STATS_V1[row];
   return stats ? stats.name : (version + "-" + row);
+}
+
+// ========== 主線任務系統 ==========
+// 成長期任務：每個成長期龍一個任務，獎勵金幣 1~5（勝利時隨機發放）
+const MAIN_QUESTS = [
+  { id:"main_01", title:"起始之路",   desc:"擊敗成長期數碼獸「亞古獸」，證明你的實力！",   enemyVersion:"V1",  enemyRow:2, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:null },
+  { id:"main_02", title:"黑暗萌芽",   desc:"擊敗成長期數碼獸「貝塔獸」，證明你的實力！",   enemyVersion:"V1",  enemyRow:3, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_01" },
+  { id:"main_03", title:"蒼狼月影",   desc:"擊敗成長期數碼獸「加布獸」，證明你的實力！",   enemyVersion:"V2",  enemyRow:2, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_02" },
+  { id:"main_04", title:"利爪狂嵐",   desc:"擊敗成長期數碼獸「艾力獸」，證明你的實力！",   enemyVersion:"V2",  enemyRow:3, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_03" },
+  { id:"main_05", title:"天使初啼",   desc:"擊敗成長期數碼獸「巴達獸」，證明你的實力！",   enemyVersion:"V3",  enemyRow:2, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_04" },
+  { id:"main_06", title:"蟲鳴幽林",   desc:"擊敗成長期數碼獸「古尼獸」，證明你的實力！",   enemyVersion:"V3",  enemyRow:3, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_05" },
+  { id:"main_07", title:"鳳雛展翼",   desc:"擊敗成長期數碼獸「比丘獸」，證明你的實力！",   enemyVersion:"V4",  enemyRow:2, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_06" },
+  { id:"main_08", title:"藤蔓之森",   desc:"擊敗成長期數碼獸「巴魯獸」，證明你的實力！",   enemyVersion:"V4",  enemyRow:3, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_07" },
+  { id:"main_09", title:"尖牙利齒",   desc:"擊敗成長期數碼獸「加支獸」，證明你的實力！",   enemyVersion:"V5",  enemyRow:2, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_08" },
+  { id:"main_10", title:"赤眼凶光",   desc:"擊敗成長期數碼獸「基刹獸」，證明你的實力！",   enemyVersion:"V5",  enemyRow:3, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_09" },
+  { id:"main_11", title:"堅甲銅壁",   desc:"擊敗成長期數碼獸「甲蟲獸」，證明你的實力！",   enemyVersion:"V6",  enemyRow:2, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_10" },
+  { id:"main_12", title:"磐石不動",   desc:"擊敗成長期數碼獸「礦石獸」，證明你的實力！",   enemyVersion:"V6",  enemyRow:3, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_11" },
+  { id:"main_13", title:"碧波悠游",   desc:"擊敗成長期數碼獸「蝌蚪獸」，證明你的實力！",   enemyVersion:"V6",  enemyRow:4, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_12" },
+  { id:"main_14", title:"柔毛溫暖",   desc:"擊敗成長期數碼獸「安哥拉獸」，證明你的實力！", enemyVersion:"V6",  enemyRow:5, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_13" },
+  { id:"main_15", title:"深海圓舞",   desc:"擊敗成長期數碼獸「哥瑪獸」，證明你的實力！",   enemyVersion:"V7",  enemyRow:2, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_14" },
+  { id:"main_16", title:"鐵鉗橫行",   desc:"擊敗成長期數碼獸「加尼獸」，證明你的實力！",   enemyVersion:"V7",  enemyRow:3, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_15" },
+  { id:"main_17", title:"浪濤拍岸",   desc:"擊敗成長期數碼獸「沙古門獸」，證明你的實力！", enemyVersion:"V7",  enemyRow:4, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_16" },
+  { id:"main_18", title:"幽海漂影",   desc:"擊敗成長期數碼獸「水母獸」，證明你的實力！",   enemyVersion:"V7",  enemyRow:5, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_17" },
+  { id:"main_19", title:"夢魘吞食",   desc:"擊敗成長期數碼獸「食夢獸」，證明你的實力！",   enemyVersion:"V8",  enemyRow:2, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_18" },
+  { id:"main_20", title:"燭火微光",   desc:"擊敗成長期數碼獸「蠟燭獸」，證明你的實力！",   enemyVersion:"V8",  enemyRow:3, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_19" },
+  { id:"main_21", title:"惡魔低語",   desc:"擊敗成長期數碼獸「小惡魔獸」，證明你的實力！", enemyVersion:"V8",  enemyRow:4, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_20" },
+  { id:"main_22", title:"疾影奔馳",   desc:"擊敗成長期數碼獸「路加獸」，證明你的實力！",   enemyVersion:"V8",  enemyRow:5, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_21" },
+  { id:"main_23", title:"烈焰羽翼",   desc:"擊敗成長期數碼獸「比丘獸」，證明你的實力！",   enemyVersion:"V9",  enemyRow:2, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_22" },
+  { id:"main_24", title:"花海綻放",   desc:"擊敗成長期數碼獸「花拉獸」，證明你的實力！",   enemyVersion:"V9",  enemyRow:3, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_23" },
+  { id:"main_25", title:"孢子迷霧",   desc:"擊敗成長期數碼獸「蘑菇獸」，證明你的實力！",   enemyVersion:"V9",  enemyRow:4, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_24" },
+  { id:"main_26", title:"荊棘叢生",   desc:"擊敗成長期數碼獸「巴魯獸」，證明你的實力！",   enemyVersion:"V9",  enemyRow:5, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_25" },
+  { id:"main_27", title:"天際翱翔",   desc:"擊敗成長期數碼獸「翼龍獸」，證明你的實力！",   enemyVersion:"V9",  enemyRow:6, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_26" },
+  { id:"main_28", title:"玩具奇兵",   desc:"擊敗成長期數碼獸「玩具亞古獸」，證明你的實力！", enemyVersion:"V10", enemyRow:2, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_27" },
+  { id:"main_29", title:"鋼鐵之翼",   desc:"擊敗成長期數碼獸「機甲蟲獸」，證明你的實力！", enemyVersion:"V10", enemyRow:3, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_28" },
+  { id:"main_30", title:"齒輪運轉",   desc:"擊敗成長期數碼獸「齒輪獸」，證明你的實力！",   enemyVersion:"V10", enemyRow:4, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_29" },
+  { id:"main_31", title:"突擊先鋒",   desc:"擊敗成長期數碼獸「突擊龍獸」，證明你的實力！", enemyVersion:"V10", enemyRow:5, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_30" },
+];
+
+let currentQuestCategory = "main";
+
+function switchQuestCategory(cat) {
+  currentQuestCategory = cat;
+  ["main", "daily", "evo"].forEach(c => {
+    const btn = document.getElementById("bmCat_" + c);
+    if (btn) btn.classList.toggle("active", c === cat);
+  });
+  renderQuestList();
+}
+
+function renderQuestList() {
+  const listEl = document.getElementById("bmQuestList");
+  if (!listEl) return;
+  if (currentQuestCategory !== "main") {
+    listEl.innerHTML = '<div class="bm-quest-empty">敬請期待，功能開發中…</div>';
+    return;
+  }
+  // 只顯示已解鎖的任務：可進行（已解鎖未完成）排在上方，已完成排在下方的「已完成」區
+  const unlockedQuests = MAIN_QUESTS.filter(q => !q.unlockBy || gameMainQuestDone.includes(q.unlockBy));
+  const ongoing = unlockedQuests.filter(q => !gameMainQuestDone.includes(q.id));
+  const done = unlockedQuests.filter(q => gameMainQuestDone.includes(q.id));
+  const sorted = ongoing.concat(done);
+
+  if (sorted.length === 0) {
+    listEl.innerHTML = '<div class="bm-quest-empty">目前沒有可進行的任務。</div>';
+    return;
+  }
+
+  let html = "";
+  // 可進行任務（已解鎖未完成）排在上方
+  ongoing.forEach(q => {
+    html +=
+      '<div class="bm-quest-card">' +
+        '<div class="bm-quest-title">' + q.title + '</div>' +
+        '<canvas class="qb3v3-card-sprite" width="32" height="32" data-version="' + q.enemyVersion + '" data-row="' + q.enemyRow + '"></canvas>' +
+        '<button class="bm-quest-btn" onclick="startMainQuest(\'' + q.id + '\')">⚔ 開始</button>' +
+      '</div>';
+  });
+  // 已完成任務排在下方的「已完成」區
+  if (done.length > 0) {
+    html += '<div class="bm-quest-section">✔ 已完成</div>';
+    done.forEach(q => {
+      html +=
+        '<div class="bm-quest-card bm-quest-card-done">' +
+          '<div class="bm-quest-title">' + q.title + '</div>' +
+          '<canvas class="qb3v3-card-sprite" width="32" height="32" data-version="' + q.enemyVersion + '" data-row="' + q.enemyRow + '"></canvas>' +
+          '<button class="bm-quest-btn" onclick="startMainQuest(\'' + q.id + '\')">⚔ 開始</button>' +
+        '</div>';
+    });
+  }
+  listEl.innerHTML = html;
+  // 繪製敵人龍圖
+  listEl.querySelectorAll('.qb3v3-card-sprite').forEach(function(c) {
+    const ver = c.dataset.version;
+    const row = parseInt(c.dataset.row, 10);
+    const img = getSpriteImage(ver, row);
+    if (img && img.complete && img.naturalWidth > 0) {
+      var ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0, 0, 16, 16, 0, 0, 32, 32);
+    }
+  });
+}
+
+function startMainQuest(questId) {
+  const q = MAIN_QUESTS.find(x => x.id === questId);
+  if (!q) return;
+  if (q.unlockBy && !gameMainQuestDone.includes(q.unlockBy)) {
+    showToast("任務尚未解鎖！");
+    return;
+  }
+  // 直接用當前龍出戰，若階段不符則提示
+  const snapshot = getBattleSlotSnapshot(activeSlotIndex);
+  if (!snapshot || snapshot.isDead) {
+    showToast("當前龍無法出戰！");
+    return;
+  }
+  if (snapshot.row === undefined || snapshot.row < 2) {
+    showToast("只限「" + q.stage + "」階段進入（幼年期無法戰鬥）");
+    return;
+  }
+  if (snapshot.stage !== q.stage) {
+    showToast("只限「" + q.stage + "」階段進入");
+    return;
+  }
+  // 構建出戰 fighter（使用當前龍）
+  battleMainQuestFighter = {
+    slotIdx: activeSlotIndex,
+    version: snapshot.version,
+    row: snapshot.row,
+    name: snapshot.name,
+    stage: snapshot.stage,
+    hpBonus: snapshot.hpBonus || 0,
+    atkBonus: snapshot.atkBonus || 0,
+    spdBonus: snapshot.spdBonus || 0,
+    critBonus: snapshot.critBonus || 0,
+    dodgeBonus: snapshot.dodgeBonus || 0,
+    affBonus: snapshot.affBonus || 0
+  };
+  // 設置主線任務對戰參數
+  window._mainQuestId = questId;
+  window._pveActive = true;
+  window._pveFromMenu = true;
+  window._pveEnemyVersion = q.enemyVersion;
+  window._pveEnemyRow = q.enemyRow;
+  window._pveMapGold = null;
+  pveCurrentEnemyVersion = q.enemyVersion;
+  pveCurrentEnemyRow = q.enemyRow;
+  pveCurrentEnemyName = pveGetEnemyName(q.enemyRow, q.enemyVersion);
+  closeBattleMenu();
+  startBattlePVE(q.enemyVersion, q.enemyRow, 0);
+}
+
+function openMainQuestPanel(questId) {
+  const q = MAIN_QUESTS.find(x => x.id === questId);
+  if (!q) return;
+  // 選龍面板在「對戰」標籤頁內，從任務地圖進入時需先切換到對戰頁，否則面板會被父容器遮住
+  switchBattleTab("battle");
+  mainQuestPendingId = questId;
+  mainQuestSelectedSlot = -1;
+  const desc = document.getElementById("mainQuestSelectDesc");
+  if (desc) desc.textContent = "挑戰「" + q.title + "」：只有「" + q.stage + "」的龍可以出戰，請選擇出戰的龍。";
+  document.getElementById("bmBattleMainMenu").style.display = "none";
+  document.getElementById("bmSelfBattlePanel").style.display = "none";
+  document.getElementById("bmQuickBattle3v3Panel").style.display = "none";
+  document.getElementById("bmMainQuestPanel").style.display = "block";
+  renderMainQuestDragonList();
+}
+
+function renderMainQuestDragonList() {
+  const list = document.getElementById("mainQuestDragonList");
+  const q = MAIN_QUESTS.find(x => x.id === mainQuestPendingId);
+  if (!list) return;
+  if (!q) { list.innerHTML = ""; return; }
+  const total = Math.max(slotCount || 0, activeSlotIndex + 1);
+  let html = "";
+  for (let i = 0; i < total; i++) {
+    const snapshot = getBattleSlotSnapshot(i);
+    const selected = (i === mainQuestSelectedSlot);
+    let disabled = false;
+    let name = "無數據";
+    let stage = "—";
+    let statsLine = "";
+    if (!snapshot) {
+      disabled = true;
+    } else if (snapshot.isDead) {
+      disabled = true;
+      name = "已離世";
+      stage = "不可出戰";
+    } else if (snapshot.row === undefined || snapshot.row < 2) {
+      disabled = true;
+      name = snapshot.name || "階段不足";
+      stage = snapshot.stage || "不可出戰";
+    } else if (snapshot.stage !== q.stage) {
+      // 非任務指定階段 → 灰顯不可選
+      disabled = true;
+      name = snapshot.name;
+      stage = snapshot.stage + "（不可選）";
+    } else {
+      const s = getStatsForVersion(snapshot.version)[snapshot.row];
+      name = snapshot.name;
+      stage = snapshot.stage;
+      statsLine = 'HP:' + ((((s && s.hp) || 0) + snapshot.hpBonus)) + ' ATK:' + ((((s && s.atk) || 0) + snapshot.atkBonus)) + ' SPD:' + ((((s && s.spd) || 0) + snapshot.spdBonus).toFixed(1));
+    }
+    const classes = 'self-battle-card' + (selected ? ' selected' : '') + (disabled ? ' disabled' : '');
+    html += '<div class="' + classes + '" onclick="selectMainQuestDragon(' + i + ')">';
+    html += '<span class="self-battle-card-version">NO.' + (i + 1) + ' ' + (snapshot ? snapshot.version : "—") + '</span>';
+    html += '<div class="self-battle-card-info">';
+    html += '<div class="self-battle-card-name">' + name + '</div>';
+    html += '<div class="self-battle-card-stage">' + stage + '</div>';
+    if (statsLine) html += '<div class="self-battle-card-stats">' + statsLine + '</div>';
+    html += '</div>';
+    if (snapshot && !disabled) {
+      html += '<canvas class="qb3v3-card-sprite" width="32" height="32" data-version="' + snapshot.version + '" data-row="' + snapshot.row + '"></canvas>';
+    }
+    html += '</div>';
+  }
+  if (!html) {
+    html = '<div style="text-align:center;color:#999;padding:16px;">沒有可選的龍</div>';
+  }
+  list.innerHTML = html;
+  const canvases = list.querySelectorAll('.qb3v3-card-sprite');
+  canvases.forEach(function(c) {
+    const ver = c.dataset.version;
+    const row = parseInt(c.dataset.row, 10);
+    const img = getSpriteImage(ver, row);
+    if (img && img.complete && img.naturalWidth > 0) {
+      var ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0, 0, 16, 16, 0, 0, 32, 32);
+    }
+  });
+  const startBtn = document.getElementById("mainQuestStartBtn");
+  if (startBtn) startBtn.disabled = !(mainQuestSelectedSlot >= 0);
+}
+
+function selectMainQuestDragon(slotIdx) {
+  const q = MAIN_QUESTS.find(x => x.id === mainQuestPendingId);
+  if (!q) return;
+  const snapshot = getBattleSlotSnapshot(slotIdx);
+  if (!snapshot || snapshot.isDead || snapshot.row === undefined || snapshot.row < 2 || snapshot.stage !== q.stage) {
+    return;
+  }
+  mainQuestSelectedSlot = slotIdx;
+  renderMainQuestDragonList();
+}
+
+function confirmMainQuestDragon() {
+  const q = MAIN_QUESTS.find(x => x.id === mainQuestPendingId);
+  if (!q) return;
+  if (mainQuestSelectedSlot < 0) {
+    showToast("請先選擇出戰的龍");
+    return;
+  }
+  const slotIdx = mainQuestSelectedSlot;
+  const snapshot = getBattleSlotSnapshot(slotIdx);
+  if (!snapshot || snapshot.isDead || snapshot.row === undefined || snapshot.row < 2 || snapshot.stage !== q.stage) {
+    showToast("所選龍無法出戰，請重新選擇");
+    return;
+  }
+  // 構建主線任務出戰 fighter（跨槽位）
+  battleMainQuestFighter = {
+    slotIdx: slotIdx,
+    version: snapshot.version,
+    row: snapshot.row,
+    name: snapshot.name,
+    stage: snapshot.stage,
+    hpBonus: snapshot.hpBonus || 0,
+    atkBonus: snapshot.atkBonus || 0,
+    spdBonus: snapshot.spdBonus || 0,
+    critBonus: snapshot.critBonus || 0,
+    dodgeBonus: snapshot.dodgeBonus || 0,
+    affBonus: snapshot.affBonus || 0
+  };
+  // 設置主線任務對戰參數
+  window._mainQuestId = mainQuestPendingId;
+  window._pveActive = true;
+  window._pveFromMenu = true;
+  window._pveEnemyVersion = q.enemyVersion;
+  window._pveEnemyRow = q.enemyRow;
+  window._pveMapGold = null; // 主線任務不使用隨機金幣，改用首通獎勵
+  pveCurrentEnemyVersion = q.enemyVersion;
+  pveCurrentEnemyRow = q.enemyRow;
+  pveCurrentEnemyName = pveGetEnemyName(q.enemyRow, q.enemyVersion);
+  mainQuestPendingId = null;
+  mainQuestSelectedSlot = -1;
+  closeMainQuestPanel();
+  closeBattleMenu();
+  startBattlePVE(q.enemyVersion, q.enemyRow, 0, q.recommendLevel);
+}
+
+function closeMainQuestPanel() {
+  const p = document.getElementById("bmMainQuestPanel");
+  if (p) p.style.display = "none";
+  const mainMenu = document.getElementById("bmBattleMainMenu");
+  if (mainMenu) mainMenu.style.display = "block";
+  mainQuestPendingId = null;
+  mainQuestSelectedSlot = -1;
 }
 
 // ========== 對戰選單（雙標籤頁） ==========
@@ -13374,6 +13757,7 @@ function closeBattleMenu() {
   bmExpandedMapId = null;
   closeQuickBattle3v3Menu();
   closeSelfBattleMenu();
+  closeMainQuestPanel();
   startAutoPlay();
 }
 
@@ -13388,6 +13772,7 @@ function switchBattleTab(tab) {
     tabBattle.classList.remove("active");
     contentMap.style.display = "block";
     contentBattle.style.display = "none";
+    renderQuestList();
   } else {
     tabMap.classList.remove("active");
     tabBattle.classList.add("active");
@@ -13515,6 +13900,7 @@ function bmEncAction(action) {
     }
     const reward = Math.floor(Math.random() * 20) + 5;
     gameGold = (gameGold || 0) + reward;
+    saveGlobalGold();
     if (dialog) dialog.textContent = "交流成功！獲得了 " + reward + " 金幣！💛";
     updateStatsDisplay();
     setTimeout(function() { collapseMapRow(); }, 1500);
@@ -13544,18 +13930,9 @@ function bmEncAction(action) {
 }
 
 function openPveMap() {
-  if (currentRow <= 1) {
-    alert("幼年期還不能冒險！");
-    return;
-  }
-  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
-  if (autoMoveTimer) { clearInterval(autoMoveTimer); autoMoveTimer = null; }
-  if (flushingMode) stopFlushing();
-  if (trainingMode) stopTraining();
-
-  pveHideAllPanels();
-  const mapPanel = document.getElementById("pveMapDisplay");
-  if (mapPanel) mapPanel.style.display = "flex";
+  // 主畫面「冒險地圖」入口已改為任務地圖
+  openBattleMenu();
+  switchBattleTab("map");
 }
 
 function closePveMap() {
@@ -13699,6 +14076,7 @@ function pveCommunicate() {
   }
 
   gameGold += goldEarned;
+  saveGlobalGold();
   saveGameState();
   updateStatsDisplay();
 
@@ -13743,9 +14121,9 @@ function pveStartFight() {
   startBattlePVE();
 }
 
-function startBattlePVE(enemyVersion, enemyRow, bgIdx) {
+function startBattlePVE(enemyVersion, enemyRow, bgIdx, enemyLevel) {
   if (flushingMode) stopFlushing();
-  if (currentRow <= 1) {
+  if (getBattlePlayerRow() <= 1) {
     alert("幼年期還不能戰鬥！");
     return;
   }
@@ -13760,6 +14138,7 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx) {
   battleEnemyVersion = (enemyVersion !== undefined) ? enemyVersion : window._pveEnemyVersion;
   battleEnemyRow = (enemyRow !== undefined) ? enemyRow : window._pveEnemyRow;
   const es = getEnemyStats(battleEnemyRow);
+  battleEnemyLevel = (enemyLevel !== undefined) ? enemyLevel : rollEnemyLevel();
   rollEnemyTrainingBonus(0); // PVE 暫無隨機訓練加成，清零避免殘留
 
   // 設置背景（使用 PVE 地圖對應背景或傳入值）
@@ -13771,8 +14150,8 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx) {
   }
 
   // 初始化 HP
-  battlePlayerMaxHp = getTotalHp();
-  battlePlayerHp = getTotalHp();
+  battlePlayerMaxHp = getBattlePlayerTotalHp();
+  battlePlayerHp = getBattlePlayerTotalHp();
   battleEnemyMaxHp = es.hp;
   battleEnemyHp = es.hp;
 
@@ -13797,7 +14176,7 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx) {
   setBattleActive(true);
 
   // 重置逆境進化狀態
-  battleOriginalRow = currentRow;
+  battleOriginalRow = getBattlePlayerRow();
   battleAdversityEvoRow = -1;
   battleAdversityTries = 0;
   battleEvoState = "none";
@@ -13815,10 +14194,30 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx) {
   battleEnemyEvoCallback = null;
   battleEnemyResultEvo = false;
 
+  // 設置玩家/敵人名字欄（與快速對戰一致）
+  const ps = getBattlePlayerStats();
+  const pAttrColor = getAttrColor(ps.attr, es.attr);
+  const eAttrColor = getAttrColor(es.attr, ps.attr);
+  document.getElementById("battlePlayerName").innerHTML = formatBattleNameHtml(ps.name, ps.attr, pAttrColor, getBattlePlayerLevel());
+  document.getElementById("battleEnemyName").innerHTML = formatBattleNameHtml(es.name, es.attr, eAttrColor, battleEnemyLevel);
+
   battleMsg = pveCurrentEnemyName + " 出現了！";
   document.getElementById("battleMsg").textContent = battleMsg;
-  document.getElementById("battleAttackBtn").disabled = false;
-  document.getElementById("battleRunBtn").disabled = false;
+  // PVE 對戰自動進行，隱藏 🔄/攻擊/退出 按鈕
+  const pveBtns = document.getElementById("battleBtns");
+  if (pveBtns) pveBtns.style.display = "none";
+  document.getElementById("battleAttackBtn").disabled = true;
+  document.getElementById("battleRunBtn").disabled = true;
+
+  // 調整 canvas 為戰鬥模式 384×144（與普通對戰一致，否則背景/精靈畫不出來）
+  trainingMode = false;
+  canvas.width = CANVAS_BATTLE_W;
+  canvas.height = CANVAS_BATTLE_H;
+  canvas.style.width = CANVAS_BATTLE_W + "px";
+  canvas.style.height = CANVAS_BATTLE_H + "px";
+  gameMode = "battle";
+  updateCssBackground("battle");
+  updateBattleTeamSprites();
 
   startBattleIntro();
 }
