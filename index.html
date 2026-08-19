@@ -2039,7 +2039,7 @@ canvas {
     </div>
     <div id="bmQuickBattle3v3Panel" class="self-battle-panel" style="display:none;">
       <div class="self-battle-title">⚔ 快速對戰3V3（電腦）</div>
-      <div class="qb3v3-desc">選擇 3 隻「同一階段」的自己龍作為出戰順序，點開始後自動開打。</div>
+      <div class="qb3v3-desc">第1位自動為「本機」，再選擇第2、3位「同一階段」的自己龍作為出戰順序，點開始後自動開打。</div>
       <div class="qb3v3-order-box" id="qb3v3OrderBox"></div>
       <div id="qb3v3CardList"></div>
       <button class="self-battle-confirm-btn" id="qb3v3StartBtn" onclick="startQuickBattle3v3()" disabled>⚔ 開始 3V3 對戰</button>
@@ -9183,7 +9183,7 @@ function getQuickBattle3v3StageButtonId(stage){
 }
 function getQuickBattle3v3OrderText(){
   if(battleQuick3v3SelectedSlots.length === 0){
-    return '<strong>出戰順序：</strong>尚未選擇，請依序點選 3 隻龍。';
+    return '<strong>出戰順序：</strong>第1位自動為本機，請依序點選第2、3位龍。';
   }
   let html = '<strong>出戰順序：</strong>';
   for(let i = 0; i < battleQuick3v3SelectedSlots.length; i++){
@@ -9227,10 +9227,11 @@ function renderQuickBattle3v3Panel(){
       stage = snapshot.stage;
       statsLine = 'HP:' + ((((s && s.hp) || 0) + snapshot.hpBonus)) + ' ATK:' + ((((s && s.atk) || 0) + snapshot.atkBonus)) + ' SPD:' + ((((s && s.spd) || 0) + snapshot.spdBonus).toFixed(1));
     }
-    const classes = 'self-battle-card' + (selectedOrder >= 0 ? ' selected' : '') + (disabled ? ' disabled' : '');
+    const isHome = (i === activeSlotIndex);
+    const classes = 'self-battle-card' + (selectedOrder >= 0 ? ' selected' : '') + (disabled ? ' disabled' : '') + (isHome ? ' home' : '');
     const orderBadge = (selectedOrder >= 0)
-      ? ('<div class="qb3v3-card-order">第' + (selectedOrder + 1) + '位</div>')
-      : '<div class="qb3v3-card-order empty">待命</div>';
+      ? ('<div class="qb3v3-card-order">第' + (selectedOrder + 1) + '位' + (isHome ? '·本機' : '') + '</div>')
+      : (isHome ? '<div class="qb3v3-card-order">本機</div>' : '<div class="qb3v3-card-order empty">待命</div>');
     html += '<div class="' + classes + '" onclick="toggleQuickBattle3v3Slot(' + i + ')">';
     html += orderBadge;
     html += '<span class="self-battle-card-version">NO.' + (i + 1) + ' ' + (snapshot ? snapshot.version : "—") + '</span>';
@@ -9267,7 +9268,14 @@ function renderQuickBattle3v3Panel(){
 }
 function openQuickBattle3v3Menu(){
   saveGameState();
+  // 第1位固定為「本機」（當前操作的數碼暴龍機），玩家只需選第2、3位
   battleQuick3v3SelectedSlots = [];
+  if(activeSlotIndex >= 0 && activeSlotIndex < slotCount){
+    const home = getBattleSlotSnapshot(activeSlotIndex);
+    if(home && !home.isDead && home.row !== undefined && home.row >= 2 && ["成長期","成熟期","完全體"].includes(home.stage)){
+      battleQuick3v3SelectedSlots = [activeSlotIndex];
+    }
+  }
   battleQuick3v3Stage = "";
   document.getElementById("bmBattleMainMenu").style.display = "none";
   document.getElementById("bmSelfBattlePanel").style.display = "none";
@@ -9284,6 +9292,10 @@ function toggleQuickBattle3v3Slot(slotIdx){
   const snapshot = getBattleSlotSnapshot(slotIdx);
   if(!snapshot || snapshot.isDead || snapshot.row === undefined || snapshot.row < 2) return;
   if(!["成長期","成熟期","完全體"].includes(snapshot.stage)) return;
+  if(slotIdx === activeSlotIndex){
+    showToast("本機為固定第1位，不可更換");
+    return;
+  }
   const existing = battleQuick3v3SelectedSlots.indexOf(slotIdx);
   if(existing >= 0){
     battleQuick3v3SelectedSlots.splice(existing, 1);
