@@ -1849,6 +1849,13 @@ canvas {
 .evo-result-down{ font-size:12px; font-weight:900; color:#ff6b6b; min-width:34px; text-align:right; }
 .evo-result-zero{ font-size:12px; font-weight:700; color:#888; min-width:34px; text-align:right; }
 
+/* 手機窄屏：存檔卡片兩列放不下「80px 預覽圖 + 105px 資訊欄」，改單列避免「無/無/練點」溢出卡片外 */
+@media (max-width: 480px) {
+  .slot-cards-container {
+    grid-template-columns: 1fr;
+  }
+}
+
 </style>
 </head>
 <body>
