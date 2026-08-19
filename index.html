@@ -6728,6 +6728,15 @@ function loadGameState(slotIndex){
       if(typeof rowImagesV10 !== "undefined" && rowImagesV10.length > 0) rowImages = rowImagesV10;
       if(typeof v10EggImage !== "undefined") eggImage = v10EggImage;
       currentVersion = "V10";
+    } else if(saveVersion === "V1" && currentVersion !== "V1"){
+      ALL_NAMES.splice(0, ALL_NAMES.length, ...ALL_NAMES_V1);
+      for(const k in DIGIMON_STATS) delete DIGIMON_STATS[k];
+      Object.assign(DIGIMON_STATS, DIGIMON_STATS_V1);
+      for(const k in EVO_PATHS) delete EVO_PATHS[k];
+      Object.assign(EVO_PATHS, EVO_PATHS_V1);
+      if(typeof rowImagesV1 !== "undefined" && rowImagesV1.length > 0) rowImages = rowImagesV1;
+      if(typeof eggImageV1 !== "undefined") eggImage = eggImageV1;
+      currentVersion = "V1";
     }
     // === 蛋時期狀態處理 ===
     if(data.isEggPhase && data.eggStartTime){
