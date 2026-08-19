@@ -2500,7 +2500,7 @@ function getEvolutionRow(row) {
   if (row === 0) return 1;                         // 黑球獸 → 滾球獸
   if (row === 1) return (gameCareMistakes >= 1) ? 3 : 2; // 滾球獸：失誤≥1→貝塔獸(3)，無失誤→亞古獸(2)
   if (row >= 2 && row <= 3) return getChildEvoResult(row); // 成長期 → 條件進化至成熟期
-  if (row >= 4 && row <= 10) return 11 + Math.floor(Math.random() * 3); // 成熟期 → 隨機完全體 (11~13)
+  if (row >= 4 && row <= 10) return pickPerfectEvoResult(row); // 成熟期 → 機率進化完全體（2 種 + 權重）
   return row;                                      // 完全體/究極體 → 不變（究極體僅對戰逆境進化）
 }
 
@@ -2509,7 +2509,7 @@ function getEvolutionRowV3(row){
   if(row === 0) return 1;               // 漂游獸 → 迪哥獸
   if(row === 1) return (gameCareMistakes >= 1) ? 3 : 2; // 迪哥獸：失誤≥1→古尼獸(3)，無失誤→巴達獸(2)
   if(row >= 2 && row <= 3) return getChildEvoResult(row); // 成長期→成熟期（复用 V1 逻辑）
-  if(row >= 4 && row <= 10) return 11 + Math.floor(Math.random() * 3); // 成熟期→隨機完全體(11~13)
+  if(row >= 4 && row <= 10) return pickPerfectEvoResult(row); // 成熟期→機率進化完全體（2 種 + 權重）
   return row; // 完全體/究極體→不變
 }
 
@@ -2518,7 +2518,7 @@ function getEvolutionRowV4(row){
   if(row === 0) return 1;               // 浮球獸 → 種子獸
   if(row === 1) return (gameCareMistakes >= 1) ? 3 : 2; // 種子獸：失誤≥1→巴魯獸(3)，無失誤→比丘獸(2)
   if(row >= 2 && row <= 3) return getChildEvoResult(row); // 成長期→成熟期（复用 V1 逻辑）
-  if(row >= 4 && row <= 10) return 11 + Math.floor(Math.random() * 3); // 成熟期→隨機完全體(11~13)
+  if(row >= 4 && row <= 10) return pickPerfectEvoResult(row); // 成熟期→機率進化完全體（2 種 + 權重）
   return row; // 完全體/究極體→不變（究極體僅對戰逆境進化觸發）
 }
 
@@ -2527,7 +2527,7 @@ function getEvolutionRowV5(row){
   if(row === 0) return 1;               // 狡猾獸 → 柏古獸
   if(row === 1) return (gameCareMistakes >= 1) ? 3 : 2; // 柏古獸：失誤≥1→基刹獸(3)，無失誤→加支獸(2)
   if(row >= 2 && row <= 3) return getChildEvoResult(row); // 成長期→成熟期（复用 V1 逻辑）
-  if(row >= 4 && row <= 10) return 11 + Math.floor(Math.random() * 3); // 成熟期→隨機完全體(11~13)
+  if(row >= 4 && row <= 10) return pickPerfectEvoResult(row); // 成熟期→機率進化完全體（2 種 + 權重）
   return row; // 完全體/究極體→不變（究極體僅對戰逆境進化觸發）
 }
 
@@ -2541,12 +2541,7 @@ function getEvolutionRowV6(row){
     return 2;                                                     // 失誤=0 訓練≥4 → 甲蟲獸(vaccine)
   }
   if(row >= 2 && row <= 5) return getChildEvoResultV6(row); // 成長期→成熟期
-  if(row >= 6 && row <= 12){ // 成熟期→完全體（分組隨機）
-    const groupMapV6 = { 6:0, 12:0, 7:1, 8:1, 9:2, 10:2, 11:2 };
-    const perfectsV6 = [[13,14,20],[15,18,19],[16,17,21]];
-    const g = groupMapV6[row];
-    return perfectsV6[g][Math.floor(Math.random() * perfectsV6[g].length)];
-  }
+  if(row >= 6 && row <= 12) return pickPerfectEvoResult(row); // 成熟期→完全體（進化任務機率）
   return row; // 完全體/究極體→不變（究極體僅對戰逆境進化觸發）
 }
 
@@ -2595,6 +2590,72 @@ function pickChildEvoResult(row){
   return cands[cands.length - 1];
 }
 
+// ========== 成熟期 → 完全體 機率進化候選池（每個成熟體 2 種完全體 + 權重） ==========
+// V1/V3/V4/V5 完全體位置相同：11=virus, 12=data, 13=vaccine
+// 每個成熟體對應 2 種完全體，各 50% 概率
+const PERFECT_EVO_POOL = {
+  4:  { 11: 50, 13: 50 },
+  5:  { 12: 50, 13: 50 },
+  6:  { 11: 50, 12: 50 },
+  7:  { 12: 50, 11: 50 },
+  8:  { 12: 50, 13: 50 },
+  9:  { 11: 50, 13: 50 },
+  10: { 13: 50, 11: 50 },
+};
+
+// 成熟期 → 完全體 候選列表（統一 V1~V10）
+function getPerfectCandidates(ver, row){
+  if(ver === "V6" || ver === "V7" || ver === "V8" || ver === "V9" || ver === "V10"){
+    const g = PERFECT_EVO_GROUPS[ver];
+    if(!g) return [];
+    const gi = g.map[row];
+    if(gi === undefined) return [];
+    return (g.perfects[gi] || []).slice();
+  }
+  // V1/V2/V3/V4/V5：PERFECT_EVO_POOL（每成熟體 2 種完全體）
+  const cands = PERFECT_EVO_POOL[row];
+  return cands ? Object.keys(cands).map(Number) : [];
+}
+
+// 成熟期進化任務進化率（惰性初始化為均分，儲存於 evoTaskRates，key 前綴 "P|"）
+function getPerfectEvoRates(ver, row){
+  const key = ver + "|P|" + row;
+  if(!evoTaskRates[key]){
+    const cands = getPerfectCandidates(ver, row);
+    const obj = {};
+    cands.forEach(t => obj[t] = +(100 / cands.length).toFixed(2));
+    evoTaskRates[key] = obj;
+  }
+  return evoTaskRates[key];
+}
+
+// 成熟期 → 完全體 加權隨機（依進化任務進化率加權，無記錄時均分）
+function pickPerfectEvoResult(row, ver){
+  const v = ver || currentVersion || "V1";
+  const cands = getPerfectCandidates(v, row);
+  if(!cands || cands.length === 0) return 11 + Math.floor(Math.random() * 3); // 兜底
+  const rates = getPerfectEvoRates(v, row);
+  let total = 0;
+  for(const c of cands) total += (rates[c] || 0);
+  if(total <= 0) return cands[Math.floor(Math.random() * cands.length)];
+  let r = Math.random() * total;
+  for(const c of cands){
+    r -= (rates[c] || 0);
+    if(r <= 0) return c;
+  }
+  return cands[cands.length - 1];
+}
+
+// ========== 成熟期 → 完全體 分組進化來源（V6~V10 等概率隨機，V2 已改機率進化） ==========
+// map: 成熟體 row → 分組編號；perfects: 各組可進化的完全體 row（等概率）
+const PERFECT_EVO_GROUPS = {
+  V6:  { map: { 6:0, 12:0, 7:1, 8:1, 9:2, 10:2, 11:2 }, perfects: [[13,14,20],[15,18,19],[16,17,21]] },
+  V7:  { map: { 6:0, 7:0, 8:1, 9:1, 12:1, 10:2, 11:2 }, perfects: [[14,15,21],[13,16,17],[18,19,20]] },
+  V8:  { map: { 6:0, 7:0, 8:1, 9:1, 13:1, 10:2, 11:2, 12:2 }, perfects: [[14,15],[16,17,21],[18,19,20]] },
+  V9:  { map: { 7:0, 8:0, 13:0, 9:1, 10:1, 11:2, 12:2 }, perfects: [[14,15,21],[16,17,20],[18,19]] },
+  V10: { map: { 6:0, 7:0, 8:1, 9:1, 12:1, 10:2, 11:2 }, perfects: [[14,15,21],[13,16,17],[18,19,20]] },
+};
+
 // V6 成長期→成熟期（機率進化）
 function getChildEvoResultV6(row){
   return pickChildEvoResult(row);
@@ -2610,16 +2671,7 @@ function getEvolutionRowV7(row){
     return 2;                                                     // 失誤=0 訓練≥4 → 哥瑪獸(vaccine)
   }
   if(row >= 2 && row <= 5) return getChildEvoResultV7(row); // 成長期→成熟期
-  if(row >= 6 && row <= 12){ // 成熟期→完全體（分組隨機）
-    // Group 1 (疫苗): 一角獸(6), 魯卡獸(7) → 祖頓獸(14), 巨鯨獸(15), 忒提斯獸(21)
-    // Group 2 (資料): 海龍獸(8), 腔棘魚獸(9), 伊比德拉獸(12) → 特斯拉水母獸(13), 超海龍獸(16), 奇蝦獸(17)
-    // Group 3 (病毒): 章魚獸(10), 墨魚獸(11) → 達高獸(18), 海洋惡魔獸(19), 灣魷獸(20)
-    // Group 4 (病毒延伸): 一角獸(6), 魯卡獸(7) → 巨型蝌蚪獸(27), 克莉獸(28)
-    const groupMapV7 = { 6:0, 7:0, 8:1, 9:1, 12:1, 10:2, 11:2 };
-    const perfectsV7 = [[14,15,21],[13,16,17],[18,19,20]];
-    const g = groupMapV7[row] !== undefined ? groupMapV7[row] : 1;
-    return perfectsV7[g][Math.floor(Math.random() * perfectsV7[g].length)];
-  }
+  if(row >= 6 && row <= 12) return pickPerfectEvoResult(row); // 成熟期→完全體（進化任務機率）
   return row; // 完全體/究極體→不變（究極體僅對戰逆境進化觸發）
 }
 
@@ -2638,15 +2690,7 @@ function getEvolutionRowV8(row){
     return 2;                                                     // 失誤=0 訓練≥4 → 食夢獸(vaccine)
   }
   if(row >= 2 && row <= 5) return getChildEvoResultV8(row); // 成長期→成熟期
-  if(row >= 6 && row <= 13){ // 成熟期→完全體（分組隨機）
-    // Group 1 (疫苗): 哈奴曼獸(6), 加魯魯獸(7) → 長毛象獸(14), 獸人加魯魯獸(15)
-    // Group 2 (資料): 火焰獸(8), 巫師獸(9), 邪路加獸(13) → 死神火焰獸(16), 南瓜獸(17), 獨狼路加獸(21)
-    // Group 3 (病毒): 惡魔獸(10), 猛鬼獸(11), 蜘蛛獸(12) → 吸血魔獸(18), 死神獸(19), 妖女獸(20)
-    const groupMapV8 = { 6:0, 7:0, 8:1, 9:1, 13:1, 10:2, 11:2, 12:2 };
-    const perfectsV8 = [[14,15],[16,17,21],[18,19,20]];
-    const g = groupMapV8[row] !== undefined ? groupMapV8[row] : 1;
-    return perfectsV8[g][Math.floor(Math.random() * perfectsV8[g].length)];
-  }
+  if(row >= 6 && row <= 13) return pickPerfectEvoResult(row); // 成熟期→完全體（進化任務機率）
   return row; // 完全體/究極體→不變（究極體僅對戰逆境進化觸發）
 }
 
@@ -2666,12 +2710,7 @@ function getEvolutionRowV9(row){
     return 2;                                                       // 失誤=0 訓練≥4 → 比丘獸(vaccine)
   }
   if(row >= 2 && row <= 6) return getChildEvoResultV9(row); // 成長期→成熟期
-  if(row >= 7 && row <= 13){
-    const groupMapV9 = { 7:0, 8:0, 13:0, 9:1, 10:1, 11:2, 12:2 };
-    const perfectsV9 = [[14,15,21],[16,17,20],[18,19]];
-    const g = groupMapV9[row] !== undefined ? groupMapV9[row] : 1;
-    return perfectsV9[g][Math.floor(Math.random() * perfectsV9[g].length)];
-  }
+  if(row >= 7 && row <= 13) return pickPerfectEvoResult(row); // 成熟期→完全體（進化任務機率）
   return row;
 }
 
@@ -2690,12 +2729,7 @@ function getEvolutionRowV10(row){
     return 2;
   }
   if(row >= 2 && row <= 5) return getChildEvoResultV10(row);
-  if(row >= 6 && row <= 12){
-    const groupMapV10 = { 6:0, 7:0, 8:1, 9:1, 12:1, 10:2, 11:2 };
-    const perfectsV10 = [[14,15,21],[13,16,17],[18,19,20]];
-    const g = groupMapV10[row] !== undefined ? groupMapV10[row] : 1;
-    return perfectsV10[g][Math.floor(Math.random() * perfectsV10[g].length)];
-  }
+  if(row >= 6 && row <= 12) return pickPerfectEvoResult(row); // 成熟期→完全體（進化任務機率）
   return row;
 }
 
@@ -2709,12 +2743,7 @@ function getEvolutionRowV2(row){
   if(row === 0) return 1;               // 普尼獸 → 獨角獸
   if(row === 1) return (gameCareMistakes >= 1) ? 3 : 2; // 獨角獸：失誤≥1→艾力獸(3)，無失誤→加布獸(2)
   if(row >= 2 && row <= 3) return getChildEvoResultV2(row); // 成長期→成熟期
-  if(row >= 4 && row <= 10) {
-    // 成熟期→完全體：基於戰鬥勝利數
-    const bw = gameBattleWins;
-    if([4,5,6,10].includes(row)) return bw >= 15 ? 12 : 11; // 比多獸/加魯魯獸/天使獸/鼻屎獸 → 鋼鐵豆豆獸(12) 或 喪屍暴龍獸(11)
-    return 13; // 雪人獸/巴多拉獸/巨鯨獸 → 宇宙腦魔(13)
-  }
+  if(row >= 4 && row <= 10) return pickPerfectEvoResult(row); // 成熟期→完全體（機率進化，每成熟體 2 種完全體 50/50）
   return row; // 完全體/究極體→不變
 }
 
@@ -2728,8 +2757,7 @@ function getNextEvoRowV2(row){
   if(stage === "成長期"){
     return getChildEvoResultV2(row);
   } else if(stage === "成熟期"){
-    if([4,5,6,10].includes(row)) return gameBattleWins >= 15 ? 12 : 11;
-    return 13; // 雪人獸(7)/巴多拉獸(8)/巨鯨獸(9)→宇宙腦魔(13)
+    return pickPerfectEvoResult(row); // 成熟期→完全體（機率進化）
   }
   return -1;
 }
@@ -7541,13 +7569,7 @@ function getNextEvoRow(row){
   if(stage === "成長期"){
     return getChildEvoResult(row);
   } else if(stage === "成熟期"){
-    // 暴龍獸(4) / 惡魔獸(6) / 飛龍獸(9) → 機械暴龍獸(11)
-    if([4,6,9].includes(row)) return 11;
-    // 巨龍獸(5) / 火焰獸(7) / 海龍獸(8) → 豆豆獸(12)
-    if([5,7,8].includes(row)) return 12;
-    // 鼻涕獸(10) → 熊仔獸(13)
-    if(row === 10) return 13;
-    return -1;
+    return pickPerfectEvoResult(row);
   }
   return -1;
 }
@@ -7557,10 +7579,7 @@ function getNextEvoRowV3(row){
   if(stage === "成長期"){
     return getChildEvoResult(row); // 复用 V1 逻辑
   } else if(stage === "成熟期"){
-    if([4,6,9].includes(row)) return 11; // 獨角馬獸/奧加獸/鑽地獸 → 安杜路獸(11)
-    if([5,7,8].includes(row)) return 12; // 人馬獸/猛鬼獸/貝殼獸 → 炮彈獸(12)
-    if(row === 10) return 13; // 大便獸 → 悟空獸(13)
-    return -1;
+    return pickPerfectEvoResult(row);
   }
   return -1;
 }
@@ -7571,12 +7590,7 @@ function getNextEvoRowV6(row){
   if(stage === "成長期"){
     return getChildEvoResultV6(row);
   } else if(stage === "成熟期"){
-    // Group 1: 比多獸(6), 迪路獸(12) → 西姆巴安哥拉獸(13)
-    if([6,12].includes(row)) return 13;
-    // Group 2: 古加獸(7), 獨角獸(8) → 奧古加獸(15)
-    if([7,8].includes(row)) return 15;
-    // Group 3: 陸龜獸(9), 星星獸(10), 青蛙獸(11) → 三角龍獸(16)
-    return 16;
+    return pickPerfectEvoResult(row);
   }
   return -1;
 }
@@ -7587,10 +7601,7 @@ function getNextEvoRowV7(row){
   if(stage === "成長期"){
     return getChildEvoResultV7(row);
   } else if(stage === "成熟期"){
-    // Group 1 (疫苗): 一角獸(6), 魯卡獸(7) → 祖頓獸(14)
-    if([6,7].includes(row)) return 14;
-    // Group 2 (資料): 海龍獸(8), 腔棘魚獸(9), 伊比德拉獸(12) → 特斯拉水母獸(13)
-    return 13;
+    return pickPerfectEvoResult(row);
   }
   return -1;
 }
@@ -7601,12 +7612,7 @@ function getNextEvoRowV8(row){
   if(stage === "成長期"){
     return getChildEvoResultV8(row);
   } else if(stage === "成熟期"){
-    // Group 1 (疫苗): 哈奴曼獸(6), 加魯魯獸(7) → 長毛象獸(14)
-    if([6,7].includes(row)) return 14;
-    // Group 2 (資料): 火焰獸(8), 巫師獸(9), 邪路加獸(13) → 死神火焰獸(16)
-    if([8,9,13].includes(row)) return 16;
-    // Group 3 (病毒): 惡魔獸(10), 猛鬼獸(11), 蜘蛛獸(12) → 吸血魔獸(18)
-    return 18;
+    return pickPerfectEvoResult(row);
   }
   return -1;
 }
@@ -7617,12 +7623,7 @@ function getNextEvoRowV9(row){
   if(stage === "成長期"){
     return getChildEvoResultV9(row);
   } else if(stage === "成熟期"){
-    // Group 1 (疫苗): V龍獸(7), 巴多拉獸(8), 烈風獸(13) → 飛行V龍獸(14)
-    if([7,8,13].includes(row)) return 14;
-    // Group 2 (資料): 仙人掌獸(9), 奇鳥獸(10) → 華麗獸(16)
-    if([9,10].includes(row)) return 16;
-    // Group 3 (病毒): 枯木獸(11), 紅蔬菜獸(12) → 樹靈獸(18)
-    return 18;
+    return pickPerfectEvoResult(row);
   }
   return -1;
 }
@@ -7633,10 +7634,7 @@ function getNextEvoRowV10(row){
   if(stage === "成長期"){
     return getChildEvoResultV10(row);
   } else if(stage === "成熟期"){
-    // Group 1 (疫苗): 一角獸(6), 魯卡獸(7) → 祖頓獸(14)
-    if([6,7].includes(row)) return 14;
-    // Group 2 (資料): 海龍獸(8), 腔棘魚獸(9), 伊比德拉獸(12) → 特斯拉水母獸(13)
-    return 13;
+    return pickPerfectEvoResult(row);
   }
   return -1;
 }
@@ -10960,9 +10958,15 @@ function endBattle(result){
       if(window._evoTask){
         const t = window._evoTask;
         window._evoTask = null;
-        const rates = getEvoRates(t.ver, t.childRow);
-        const pool = CHILD_EVO_POOL[t.ver] || CHILD_EVO_POOL.V1;
-        const cands = pool[t.childRow] || [];
+        let rates, cands;
+        if(t.stage === "成熟期"){
+          cands = getPerfectCandidates(t.ver, t.childRow);
+          rates = getPerfectEvoRates(t.ver, t.childRow);
+        } else {
+          const pool = CHILD_EVO_POOL[t.ver] || CHILD_EVO_POOL.V1;
+          cands = pool[t.childRow] || [];
+          rates = getEvoRates(t.ver, t.childRow);
+        }
         const others = cands.filter(x => x !== t.targetRow);
         const before = {};
         cands.forEach(c => before[c] = +(rates[c] || 0));
@@ -11490,7 +11494,7 @@ function showUnknownConditions(row){
   // 構造內容
   let bodyHtml = "";
   if(s && s.stage === "完全體"){
-    bodyHtml = `<div class="unk-hint" style="color:#aaa;margin-top:10px;">此階段無進化路線</div>`;
+    bodyHtml = buildPerfectEvoHtml(currentDigidexVersion, row) || `<div class="unk-hint" style="color:#aaa;margin-top:10px;">此階段無進化路線</div>`;
   } else if(row === 0){
     // 幼年期I：從蛋孵化
     bodyHtml = `
@@ -11761,13 +11765,43 @@ function mergeEvoPaths(inPaths){
   return merged;
 }
 
+// 完全體：反推「成熟體 → 完全體」來源（V1/V3/V4/V5 概率池、V2 確定性、V6~V10 分組隨機）
+function buildPerfectEvoHtml(ver, row){
+  const names = getAllNamesForVersion(ver);
+  const srcRows = [];
+
+  // 統一收集該版本所有可能進化出完全體的「成熟體」row，並讀取實時進化任務機率
+  let matureRows = [];
+  if(PERFECT_EVO_GROUPS[ver]){
+    matureRows = Object.keys(PERFECT_EVO_GROUPS[ver].map).map(Number);
+  } else {
+    matureRows = Object.keys(PERFECT_EVO_POOL).map(Number);
+  }
+  for(const fr of matureRows){
+    const cands = getPerfectCandidates(ver, fr);
+    if(cands.includes(row)){
+      const rates = getPerfectEvoRates(ver, fr);
+      const pct = +((rates[row] || 0)).toFixed(2);
+      srcRows.push({ fromRow: fr, fromName: names[fr] || ('??_' + fr), text: `${pct}% 概率進化` });
+    }
+  }
+
+  if(srcRows.length === 0) return "";
+  let html = `<div class="evo-section"><div class="evo-section-title">━━ 進化條件 ━━</div>`;
+  for(const p of srcRows){
+    html += `<div class="evo-route"><div class="evo-r-row2"><span class="evo-src-name">${p.fromName}</span><canvas class="evo-src-sprite" data-ver="${ver}" data-row="${p.fromRow}" width="16" height="16"></canvas><span>[${p.text}]</span></div></div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
 function buildEvoSection(row, ver){
   const stats = getStatsForVersion(ver);
   const evoPaths = getEvoPathsForVersion(ver);
   const s = stats[row];
-  // 完全體：不顯示壽命提示
+  // 完全體：顯示「成熟體 → 完全體」概率進化來源
   if(s.stage === "完全體"){
-    return ``;
+    return buildPerfectEvoHtml(ver, row);
   }
   // 所有其他階段 → 統一顯示從哪個 row 進化來 + 條件
   const inPaths = evoPaths[row] || [];
@@ -13759,17 +13793,23 @@ function renderQuestList() {
 function renderEvoTaskList(listEl){
   const ver = currentVersion || "V1";
   const s = getStatsForVersion(ver)[currentRow];
-  if(!s || s.stage !== "成長期"){
-    listEl.innerHTML = '<div class="bm-quest-empty">本階段無進化任務（需為「成長期」）。</div>';
+  if(!s || (s.stage !== "成長期" && s.stage !== "成熟期")){
+    listEl.innerHTML = '<div class="bm-quest-empty">本階段無進化任務（需為「成長期」或「成熟期」）。</div>';
     return;
   }
-  const pool = CHILD_EVO_POOL[ver] || CHILD_EVO_POOL.V1;
-  const cands = pool[currentRow] || [];
+  let cands, rates;
+  if(s.stage === "成熟期"){
+    cands = getPerfectCandidates(ver, currentRow);
+    rates = getPerfectEvoRates(ver, currentRow);
+  } else {
+    const pool = CHILD_EVO_POOL[ver] || CHILD_EVO_POOL.V1;
+    cands = pool[currentRow] || [];
+    rates = getEvoRates(ver, currentRow);
+  }
   if(cands.length === 0){
     listEl.innerHTML = '<div class="bm-quest-empty">本階段無進化任務。</div>';
     return;
   }
-  const rates = getEvoRates(ver, currentRow);
   let html = '<div class="bm-quest-section">' + s.name + ' 進化任務（勝利目標 +5%，其餘平均下降）</div>';
   for(const t of cands){
     const ts = getStatsForVersion(ver)[t];
@@ -13800,31 +13840,32 @@ function renderEvoTaskList(listEl){
 function startEvoTask(targetRow){
   const ver = currentVersion || "V1";
   const s = getStatsForVersion(ver)[currentRow];
-  if(!s || s.stage !== "成長期"){
-    showToast("只限「成長期」階段進行進化任務");
+  if(!s || (s.stage !== "成長期" && s.stage !== "成熟期")){
+    showToast("只限「成長期」或「成熟期」階段進行進化任務");
     return;
   }
   const pAttr = s.attr;
-  // 收集 V1~V10 所有成長期龍作為敵方候選
+  const enemyStage = s.stage; // 敵人與當前龍同階段
+  // 收集 V1~V10 所有同階段龍作為敵方候選
   const children = [];
   for(const v of SLOT_VERSIONS){
     const stats = getStatsForVersion(v);
     for(const r in stats){
       const st = stats[r];
-      if(st && st.stage === "成長期"){
+      if(st && st.stage === enemyStage){
         children.push({ ver: v, row: parseInt(r, 10), attr: st.attr, name: st.name });
       }
     }
   }
-  // 優先選「克制你」的成長期（更難）；若無則退化為任意成長期
+  // 優先選「克制你」的同階段敵人（更難）；若無則退化為任意同階段敵人
   let enemyPool = children.filter(c => pAttr && attrBeats(c.attr, pAttr));
   if(enemyPool.length === 0) enemyPool = children;
   if(enemyPool.length === 0){
-    showToast("找不到可對戰的成長期敵人");
+    showToast("找不到可對戰的" + enemyStage + "敵人");
     return;
   }
   const e = enemyPool[Math.floor(Math.random() * enemyPool.length)];
-  window._evoTask = { ver: ver, childRow: currentRow, targetRow: targetRow };
+  window._evoTask = { ver: ver, childRow: currentRow, targetRow: targetRow, stage: s.stage };
   window._pveActive = true;
   window._pveFromMenu = true;
   window._pveEnemyVersion = e.ver;
