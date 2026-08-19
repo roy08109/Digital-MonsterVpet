@@ -2076,6 +2076,7 @@ canvas {
     <div id="battleExpList" class="battle-exp-list"></div>
     <div id="battleExpGold" class="battle-exp-gold" style="display:none;"></div>
     <div id="battleExpAttrBonus" class="battle-exp-attr-bonus" style="display:none;"></div>
+    <div id="battleExpSpecialNote" class="battle-exp-attr-bonus" style="display:none;"></div>
     <button class="battle-exp-ok" onclick="closeBattleExpResult()">確定</button>
   </div>
 </div>
@@ -2098,7 +2099,7 @@ canvas {
       <span style="font-size:10px;color:#888;margin-right:6px;">一鍵</span>
       <div class="toggle-switch-sm" id="autoFeedToggle" onclick="toggleAutoFeed(event)"></div>
     </div>
-    <div class="food-item" id="foodItemVitamin" onclick="feedDigimon('vitamin')">
+    <div class="food-item" id="foodItemVitamin" onclick="feedDigimon('vitamin')" style="display:none;">
       <span class="food-label">💊 2.維他命</span>
       <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">攻擊+1 血量+3 速度+0.2 暴擊+0.01 閃避+0.01</span><span style="color:#e8a33d;">(10💰)</span></span>
     </div>
@@ -8776,6 +8777,11 @@ function showFood(){
     panel.style.display = "none";
     return;
   }
+  // 維他命配方：完成主線「巴達獸任務」(main_05) 後解鎖，否則隱藏
+  const vitaminEl = document.getElementById("foodItemVitamin");
+  if(vitaminEl){
+    vitaminEl.style.display = (gameMainQuestDone && gameMainQuestDone.includes("main_05")) ? "flex" : "none";
+  }
   // 關閉狀態面板與圖鑑面板
   statsPanel.style.display = "none";
   document.getElementById("digidexDisplay").style.display = "none";
@@ -10941,9 +10947,14 @@ function endBattle(result){
         window._mainQuestId = null;
         const q = MAIN_QUESTS.find(x => x.id === qid);
         if(q){
-          if(!gameMainQuestDone.includes(qid)){
+          const firstClear = !gameMainQuestDone.includes(qid);
+          if(firstClear){
             gameMainQuestDone.push(qid);
             saveGlobalQuestDone();
+          }
+          // 完成巴達獸任務(main_05)：巴達獸交出維他命圖配方 → 解鎖食品頁維他命
+          if(qid === "main_05" && firstClear && window._pendingExpView){
+            window._pendingExpView.vitaminUnlock = true;
           }
           let goldEarned = Math.floor(Math.random() * 5) + 1; // 1~5 隨機
           // 屬性判定：玩家屬性被敵方克制（欠缺屬性）→ 金錢 *2
@@ -11268,7 +11279,7 @@ function showBattleResult(result){
         if(result === "win" && window._pendingExpView){
           const pv = window._pendingExpView;
           window._pendingExpView = null;
-          showBattleExpResult(pv.entries, pv.gold || 0, pv.attrBonus || null);
+          showBattleExpResult(pv.entries, pv.gold || 0, pv.attrBonus || null, pv.vitaminUnlock || false);
           return;
         }
         finalizeBattleReturn();
@@ -11301,7 +11312,7 @@ function showBattleResult(result){
 }
 
 // === 對戰經驗結算視圖 ===
-function showBattleExpResult(entries, gold, attrBonus){
+function showBattleExpResult(entries, gold, attrBonus, vitaminUnlock){
   const overlay = document.getElementById("battleExpOverlay");
   const list = document.getElementById("battleExpList");
   if(!overlay || !list){
@@ -11329,6 +11340,16 @@ function showBattleExpResult(entries, gold, attrBonus){
     } else {
       attrEl.style.display = "none";
       attrEl.innerHTML = "";
+    }
+  }
+  const specialEl = document.getElementById("battleExpSpecialNote");
+  if(specialEl){
+    if(vitaminUnlock){
+      specialEl.style.display = "flex";
+      specialEl.innerHTML = '<span>💊</span><span>巴達獸交出維他命圖配方！食品頁已解鎖「維他命」。</span>';
+    } else {
+      specialEl.style.display = "none";
+      specialEl.innerHTML = "";
     }
   }
   for(const e of entries){
