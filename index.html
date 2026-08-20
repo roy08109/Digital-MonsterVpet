@@ -3049,6 +3049,8 @@ function updateSleepByTime(){
     isSleeping = false;
   }
   if(isSleeping && !wasSleeping){
+    playSFX("sleep");
+    stopBGM();
     // 剛進入睡眠：確保在 auto mode 並停止移動
     if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
     autoTargetX = null;
@@ -3098,6 +3100,8 @@ function startBabyCareCycle(){
     }
     if(babySleepCountdown <= 0){
       if(babySleepPhase === 0){
+        playSFX("sleep");
+        stopBGM();
         // 醒 → 睡（3分鐘）
         babySleepPhase = 1;
         isSleeping = true;
@@ -3106,6 +3110,8 @@ function startBabyCareCycle(){
         autoTargetX = null;
         autoX = 9;
       } else {
+        playSFX("wake");
+        playBGM("main");
         // 睡 → 醒（2分鐘）
         babySleepPhase = 0;
         isSleeping = false;
@@ -3974,6 +3980,7 @@ function stepFlushing(){
       updateNotifArea(false); // 清理完成，立即隱藏大便提示
       resetPoopCountdown();
       flushingPhase = 1;
+      playSFX("happy");
       flushingStep = 0;
       flushingPushX = 0;
       autoX = 9; // 龍回到中間
@@ -4089,6 +4096,7 @@ function cleanPoops(){
   // 如果在訓練/對戰中，不啟動沖水
   if(trainingMode || gameMode === "battle") return;
   startFlushing();
+  playSFX("clean");
 }
 
 function startAutoPlay(){
@@ -4107,6 +4115,7 @@ function startAutoPlay(){
   }
   renderFrame();
   startPoopTimer(); // 啟動排便計時器
+  if(!isSleeping) playBGM("main");
 }
 
 // ========== 訓練系統 ==========
@@ -4959,6 +4968,7 @@ function handleTrainingClick(){
   }
   
   trainingClickCount++;
+  playSFX("trainTap");
   // 每2次點擊向右移動1格
   if(trainingClickCount % 2 === 0){
     trainingLevel++;
@@ -4981,6 +4991,8 @@ function triggerTrainingAttack(){
   trainingAttackFired = true;
   trainingSucceeded = true;
   trainingAttackActive = true;
+  playSFX("trainSuccess");
+  playSFX("happy");
   trainingLevel = 6;
   // 確保計時器清除
   if(trainingTimer){
@@ -5103,6 +5115,7 @@ function triggerTrainingFailure(){
 
   trainingFailed = true;
   trainingFailureActive = true;
+  playSFX("trainFail");
   trainingPowerHidden = true;
 
   // 停止 Idle 動畫
@@ -7298,6 +7311,7 @@ function enterSickMode(){
   if(sickStartTime === 0) sickStartTime = Date.now();
   updateNotifArea(true);
   gameMode = "auto";
+  playSFX("sick");
   // 停止所有移動/動畫計時器
   if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
   if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
@@ -7576,6 +7590,7 @@ function startNaturalEvoAnim(nextRow){
   console.log(`[startNaturalEvoAnim] evo to row ${nextRow}`);
   evoAnimActive = true;
   evoAnimNextRow = nextRow;
+  playSFX("evo"); playBGM("evo");
   gameMode = "auto";
   // 停止移動，將數碼獸移到中間
   if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
@@ -7630,6 +7645,7 @@ function startNaturalEvoAnim(nextRow){
               evoAnimActive = false;
               evoAnimPhase = "";
               evoAnimNextRow = -1;
+              playBGM("main");
               // 進化後處理幼年期護理
               if(currentRow <= 1){
                 startBabyCareCycle(); // 仍在幼年期，重置循環
@@ -8797,6 +8813,7 @@ function quickBattleCleanup(){
   canvas.style.width = "";
   canvas.style.height = "";
   gameMode = "auto";
+  playBGM("main");
   battleResult = "";
   battleEnemyRow = -1;
   resetQuickBattle3v3State();
@@ -9725,6 +9742,7 @@ function finishQuickBattle3v3Match(playerWon){
   battleEnemyRow = -1;
 
   if(playerWon){
+    playSFX("happy");
     // 對戰勝利減 1 體重（不低於最低體重）
     gameWeight = Math.max(DIGIMON_STATS[currentRow].minWeight, gameWeight - 1);
     // 整場 3V3 勝利：3 隻龍（不管是否出過場）每隻都獲得完整階段經驗
@@ -10220,6 +10238,7 @@ function executeAttack(who, onDone, isSpeedBonus = false){
       battleProjectileDir = 0;
     }
     battleProjectileActive = true;
+    playSFX("attack");
     renderBattleScene();
 
     // 火球飛向目標，穿越後目標龍原地轉身
@@ -10281,6 +10300,7 @@ function executeAttack(who, onDone, isSpeedBonus = false){
     battleProjectileDir = 0;
   }
   battleProjectileActive = true;
+  playSFX("attack");
 
   const dx = who === "player" ? -4 : 4;
   const isEnemyAttack = who === "enemy";
@@ -10323,6 +10343,7 @@ function executeAttack(who, onDone, isSpeedBonus = false){
 
           battleMsg = msg;
           document.getElementById("battleMsg").textContent = battleMsg;
+          if(crit) playSFX("crit"); else playSFX("hit");
           let typeLabel = "";
           if(crit && attrAdv) typeLabel = "爆擊！屬性剋制！";
           else if(crit) typeLabel = "爆擊！";
@@ -10635,7 +10656,8 @@ function startBattle(targetSlotIdx){
   canvas.height = CANVAS_BATTLE_H;
   canvas.style.width = CANVAS_BATTLE_W + "px";
   canvas.style.height = CANVAS_BATTLE_H + "px";
-  gameMode = "battle";
+  gameMode = "battle"; playBGM("battle");
+  playSFX("gameStart");
   updateCssBackground("battle");
   battlePlayerFrame = 0;
   battleEnemyFrame = 0;
@@ -11007,6 +11029,7 @@ function clearBattleState(){
 
 function endBattle(result){
   battleResult = result;
+  if(result === "win") playSFX("happy");
   // 對戰有勝負（非逃跑）且非 3V3 回合 → 飽食度 -1（3V3 整場結束統一在 finishQuickBattle3v3Match 扣除）
   if((result === "win" || result === "lose") && !battleQuick3v3Active){
     gameHunger = Math.max(0, gameHunger - 1);
@@ -11608,6 +11631,7 @@ function closeEvoTaskResult(){
 // 回到自動模式（對戰結束後統一收尾）
 function finalizeBattleReturn(){
   gameMode = "auto";
+  playBGM("main");
   battleResult = "";
   battleEnemyRow = -1;
   window._pveActive = false;
@@ -12086,7 +12110,7 @@ function feedDigimon(food){
   if(food === "meat"){
     if(gameHunger >= 10){
       // 拒絕：搖晃動畫
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12106,7 +12130,7 @@ function feedDigimon(food){
     updateCallButton();
     // 進食：eat1/eat2 動畫，龍在右邊，食物從左到右
     eatingFood = "meat";
-    gameMode = "eating";
+    gameMode = "eating"; playSFX("eat");
     gameModeStep = 0;
     autoX = 14;
     autoTargetX = null;
@@ -12118,7 +12142,7 @@ function feedDigimon(food){
   } else if(food === "vitamin"){
     // 已有臨時食物加成（尚未消耗）或太飽 → 拒絕
     if(hasSlotBuff(activeSlotIndex) || gameHunger >= 10){
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12127,7 +12151,7 @@ function feedDigimon(food){
     }
     // 維他命需消費 10 金幣，不足則拒絕
     if(gameGold < 10){
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12143,7 +12167,7 @@ function feedDigimon(food){
     updateNotifArea(true);
     // 進食動畫
     eatingFood = "vitamin";
-    gameMode = "eating";
+    gameMode = "eating"; playSFX("eat");
     gameModeStep = 0;
     autoX = 14;
     autoTargetX = null;
@@ -12156,7 +12180,7 @@ function feedDigimon(food){
   } else if(food === "steak"){
     // 已有臨時食物加成（尚未消耗）或太飽 → 拒絕
     if(hasSlotBuff(activeSlotIndex) || gameHunger >= 10){
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12165,7 +12189,7 @@ function feedDigimon(food){
     }
     // 戰斧牛扒需消費 12 金幣，不足則拒絕
     if(gameGold < 12){
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12181,7 +12205,7 @@ function feedDigimon(food){
     updateNotifArea(true);
     // 進食動畫
     eatingFood = "steak";
-    gameMode = "eating";
+    gameMode = "eating"; playSFX("eat");
     gameModeStep = 0;
     autoX = 14;
     autoTargetX = null;
@@ -12194,7 +12218,7 @@ function feedDigimon(food){
   } else if(food === "chicken"){
     // 已有臨時食物加成（尚未消耗）或太飽 → 拒絕
     if(hasSlotBuff(activeSlotIndex) || gameHunger >= 10){
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12203,7 +12227,7 @@ function feedDigimon(food){
     }
     // 雞腿需消費 12 金幣，不足則拒絕
     if(gameGold < 12){
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12219,7 +12243,7 @@ function feedDigimon(food){
     updateNotifArea(true);
     // 進食動畫
     eatingFood = "chicken";
-    gameMode = "eating";
+    gameMode = "eating"; playSFX("eat");
     gameModeStep = 0;
     autoX = 14;
     autoTargetX = null;
@@ -12232,7 +12256,7 @@ function feedDigimon(food){
   } else if(food === "carrot"){
     // 已有臨時食物加成（尚未消耗）或太飽 → 拒絕
     if(hasSlotBuff(activeSlotIndex) || gameHunger >= 10){
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12241,7 +12265,7 @@ function feedDigimon(food){
     }
     // 紅蘿蔔需消費 12 金幣，不足則拒絕
     if(gameGold < 12){
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12257,7 +12281,7 @@ function feedDigimon(food){
     updateNotifArea(true);
     // 進食動畫
     eatingFood = "carrot";
-    gameMode = "eating";
+    gameMode = "eating"; playSFX("eat");
     gameModeStep = 0;
     autoX = 14;
     autoTargetX = null;
@@ -12270,7 +12294,7 @@ function feedDigimon(food){
   } else if(food === "potato"){
     // 已有臨時食物加成（尚未消耗）或太飽 → 拒絕
     if(hasSlotBuff(activeSlotIndex) || gameHunger >= 10){
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12279,7 +12303,7 @@ function feedDigimon(food){
     }
     // 土豆需消費 12 金幣，不足則拒絕
     if(gameGold < 12){
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12295,7 +12319,7 @@ function feedDigimon(food){
     updateNotifArea(true);
     // 進食動畫
     eatingFood = "potato";
-    gameMode = "eating";
+    gameMode = "eating"; playSFX("eat");
     gameModeStep = 0;
     autoX = 14;
     autoTargetX = null;
@@ -12308,7 +12332,7 @@ function feedDigimon(food){
   } else if(food === "apple"){
     // 已有臨時食物加成（尚未消耗）或太飽 → 拒絕
     if(hasSlotBuff(activeSlotIndex) || gameHunger >= 10){
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12317,7 +12341,7 @@ function feedDigimon(food){
     }
     // 蘋果需消費 12 金幣，不足則拒絕
     if(gameGold < 12){
-      gameMode = "refusing";
+      gameMode = "refusing"; playSFX("refuse");
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
@@ -12333,7 +12357,7 @@ function feedDigimon(food){
     updateNotifArea(true);
     // 進食動畫
     eatingFood = "apple";
-    gameMode = "eating";
+    gameMode = "eating"; playSFX("eat");
     gameModeStep = 0;
     autoX = 14;
     autoTargetX = null;
@@ -12370,6 +12394,7 @@ function selectDigimon(idx){
 // ========== 關燈 / 開燈 ==========
 function toggleLights(){
   lightsOff = !lightsOff;
+  playSFX("click");
   const overlay = document.getElementById("darkOverlay");
   if(overlay){
     overlay.style.display = ""; // 清除內聯樣式，讓 CSS class 規則生效
@@ -12403,6 +12428,155 @@ function showToast(msg){
 // ========== 設定面板 ==========
 let soundEnabled = true;
 let autoFeedEnabled = false; // 自動餵食開關
+
+// ========== 8-bit 音效系統（Web Audio 合成，復古方波 + 噪聲通道） ==========
+let audioCtx = null;
+let bgmTimer = null;
+let bgmScene = null;
+let bgmStep = 0;
+let noiseBuf = null;
+
+function ensureAudioCtx(){
+  if(!audioCtx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return null;
+    audioCtx = new AC();
+  }
+  if(audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+document.addEventListener("pointerdown", () => ensureAudioCtx());
+document.addEventListener("keydown", () => ensureAudioCtx());
+
+// 8-bit 方波單音：attack 立即、decay 快速（線性衰減，仿 NES 包絡）
+// [freq, dur秒, slide目標頻率(可選), vol]
+function tone8(freq, dur, slide, vol, delay){
+  const ctx = ensureAudioCtx();
+  if(!ctx) return;
+  const t0 = ctx.currentTime + (delay || 0);
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "square";                                  // 方波 = 8-bit 標誌音色
+  osc.frequency.setValueAtTime(freq, t0);
+  if(slide) osc.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
+  gain.gain.setValueAtTime(vol || 0.13, t0);            // 立即達峰值
+  gain.gain.linearRampToValueAtTime(0.0001, t0 + dur);  // 快速線性衰減
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.02);
+}
+
+// 噪聲通道（打擊/命中/爆炸）：白噪聲 burst，快速衰減
+function noise8(dur, vol, delay){
+  const ctx = ensureAudioCtx();
+  if(!ctx) return;
+  if(!noiseBuf){
+    const len = Math.floor(ctx.sampleRate * 0.5);
+    noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for(let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuf;
+  const gain = ctx.createGain();
+  const t0 = ctx.currentTime + (delay || 0);
+  gain.gain.setValueAtTime(vol || 0.16, t0);
+  gain.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 400;
+  src.connect(hp).connect(gain).connect(ctx.destination);
+  src.start(t0);
+  src.stop(t0 + dur + 0.02);
+}
+
+// 8-bit 音效定義（方波短音 + 噪聲）
+const SFX_DEF = {
+  click:        { tone:[[880,0.05]], noise:null },
+  eat:          { tone:[[392,0.06],[523,0.06]], noise:null },
+  refuse:       { tone:[[240,0.12,160]], noise:null },
+  clean:        { tone:[[900,0.04]], noise:[0.08,0.08] },
+  trainTap:     { tone:[[660,0.04]], noise:null },
+  trainSuccess: { tone:[[523,0.07],[659,0.07],[784,0.07],[1046,0.18]], noise:null },
+  trainFail:    { tone:[[392,0.14,262]], noise:null },
+  evo:          { tone:[[523,0.09],[659,0.09],[784,0.09],[1046,0.22]], noise:null },
+  levelUp:      { tone:[[784,0.07],[1175,0.16]], noise:null },
+  win:          { tone:[[523,0.09],[659,0.09],[784,0.09],[1046,0.26]], noise:null },
+  lose:         { tone:[[392,0.16,196]], noise:null },
+  attack:       { tone:[[180,0.06,80]], noise:[0.05,0.18] },   // 出招「BU B...」
+  hit:          { tone:[[140,0.09,70,0],[140,0.09,70,0.10],[587,0.06,null,0.20]],
+                  noise:[[0.08,0.22,0],[0.08,0.22,0.10]] },    // 命中「boom-boom-ba」
+  crit:         { tone:[[120,0.05,60],[880,0.12]], noise:[0.08,0.2] },
+  dodge:        { tone:[[600,0.09,1400]], noise:null },
+  sleep:        { tone:[[520,0.16,260]], noise:null },
+  wake:         { tone:[[260,0.16,520]], noise:null },
+  sick:         { tone:[[880,0.09],[660,0.09],[880,0.09]], noise:null },
+  toast:        { tone:[[988,0.05]], noise:null }
+};
+
+// ====== 現成 mp3 音效（優先於合成器） ======
+const SFX_FILES = {
+  click:      "Sound effects/button.mp3",
+  refuse:     "Sound effects/angry.mp3",
+  evo:        "Sound effects/evolution.mp3",
+  sick:       "Sound effects/attention.mp3",   // 生病
+  attention:  "Sound effects/attention.mp3",   // 飢餓（CALL 首次出現）
+  gameStart:  "Sound effects/game-start.mp3",  // 對戰開始
+  happy:      "Sound effects/happy.mp3"        // 沖大便/戰勝/訓練成功
+};
+
+const sfxAudioCache = {};
+function playSFXFile(path, vol){
+  if(!soundEnabled) return false;
+  if(!path) return false;
+  let a = sfxAudioCache[path];
+  if(!a){
+    a = new Audio(path);
+    a.preload = "auto";
+    sfxAudioCache[path] = a;
+  }
+  try {
+    a.currentTime = 0;
+    a.volume = (vol == null ? 1 : vol);
+    const p = a.play();
+    if(p && p.catch) p.catch(() => {});
+  } catch(e){}
+  return true;
+}
+
+function playSFX(name){
+  if(!soundEnabled) return;
+  if(playSFXFile(SFX_FILES[name])) return;
+  const def = SFX_DEF[name];
+  if(!def) return;
+  // noise 支持單個 [dur,vol] 或多個 [[dur,vol,delay], ...]
+  if(def.noise){
+    if(Array.isArray(def.noise[0])){
+      def.noise.forEach(n => noise8(n[0], n[1], n[2]));
+    } else {
+      noise8(def.noise[0], def.noise[1]);
+    }
+  }
+  // tone 第4元素 = 相對延遲（秒），可選；預設 0（維持原有多音同響）
+  (def.tone || []).forEach(n => tone8(n[0], n[1], n[2], 0.13, n[3]));
+}
+
+// 8-bit BGM：方波主旋律 + 低八度方波 bass（更「紅白機」）
+const BGM_TRACKS = {
+  main:   { bpm: 126, vol: 0.055,
+            mel:  [262,330,392,330, 294,349,440,349, 262,330,392,523, 440,392,330,294],
+            bass: [131,131,131,131, 147,147,147,147, 131,131,131,131, 196,196,165,147] },
+  battle: { bpm: 168, vol: 0.06,
+            mel:  [196,196,233,262, 233,196,175,175, 196,233,262,294, 262,233,196,175],
+            bass: [98,98,98,98, 87,87,87,87, 98,98,98,98, 131,131,98,87] },
+  evo:    { bpm: 138, vol: 0.06,
+            mel:  [523,659,784,1046, 784,1046,1319,1046, 784,659,523,659, 784,1046,1568,1046],
+            bass: [262,262,262,262, 392,392,392,392, 262,262,262,262, 523,523,392,262] }
+};
+
+function playBGM(scene){ /* BGM 已停用 */ }
+
+function stopBGM(){ /* BGM 已停用 */ }
 
 // ========== 測驗面板（開發用） ==========
 // 打開測驗面板
@@ -12751,6 +12925,7 @@ document.getElementById("settingsDeleteBtn").onclick = () => {
 // 音效開關
 function toggleSoundSetting(){
   soundEnabled = !soundEnabled;
+  if(!soundEnabled) stopBGM(); else playBGM("main");
   const tgl = document.getElementById("toggleSound");
   if(soundEnabled){
     tgl.classList.add("on");
@@ -14984,7 +15159,7 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx, enemyLevel) {
   canvas.height = CANVAS_BATTLE_H;
   canvas.style.width = CANVAS_BATTLE_W + "px";
   canvas.style.height = CANVAS_BATTLE_H + "px";
-  gameMode = "battle";
+  gameMode = "battle"; playBGM("battle");
   updateCssBackground("battle");
   updateBattleTeamSprites();
 
