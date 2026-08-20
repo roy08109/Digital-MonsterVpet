@@ -1813,6 +1813,11 @@ canvas {
   font-size:15px; font-weight:700; cursor:pointer;
 }
 .battle-exp-ok:hover{ background:#e53030; }
+.battle-exp-rematch{
+  padding:10px; background:#2f7d32; color:#fff; border:none; border-radius:8px;
+  font-size:15px; font-weight:700; cursor:pointer;
+}
+.battle-exp-rematch:hover{ background:#3a9a3e; }
 .battle-exp-gold{
   display:flex; align-items:center; justify-content:center; gap:6px;
   padding:10px; border-radius:8px;
@@ -2091,6 +2096,7 @@ canvas {
     <div id="battleExpGold" class="battle-exp-gold" style="display:none;"></div>
     <div id="battleExpAttrBonus" class="battle-exp-attr-bonus" style="display:none;"></div>
     <div id="battleExpSpecialNote" class="battle-exp-attr-bonus" style="display:none;"></div>
+    <button id="battleExpRematch" class="battle-exp-rematch" style="display:none;" onclick="rematchBattle()">⚔ 再戰一場</button>
     <button class="battle-exp-ok" onclick="closeBattleExpResult()">確定</button>
   </div>
 </div>
@@ -9745,6 +9751,9 @@ function finishQuickBattle3v3Match(playerWon){
     }
     saveGameState();
     window._pendingExpView = { entries };
+    // 3V3 勝利：記錄再戰資訊（需在 resetQuickBattle3v3State 前保存所選槽位）
+    window._rematchMode = "quick3v3";
+    window._rematch3v3Slots = battleQuick3v3SelectedSlots.slice();
   } else {
     showToast("3V3 戰敗…");
   }
@@ -11034,6 +11043,8 @@ function endBattle(result){
           const snapshot = getBattleSlotSnapshot(_questSlot);
           // 快速對戰（1V1）勝利展示經驗結算；主線任務勝利也展示（含金幣）；其餘 PVE 維持現狀不展示
           if(!window._pveActive || window._mainQuestId){
+            // 只有「快速對戰（電腦）1V1」提供「再戰一場」；主線/自家/PVE 不提供
+            window._rematchMode = (!window._pveActive && !window._mainQuestId && !battleQuick3v3Active && !battleIsSelfBattle) ? "quick1v1" : null;
             window._pendingExpView = {
               entries: [{
                 slotIdx: _questSlot,
@@ -11500,6 +11511,11 @@ function showBattleExpResult(entries, gold, attrBonus, vitaminUnlock){
     list.appendChild(item);
   }
   document.getElementById("returnBtn").style.display = "none";
+  // 只有快速對戰（1V1 / 3V3）顯示「再戰一場」按鈕
+  const rematchBtn = document.getElementById("battleExpRematch");
+  if(rematchBtn){
+    rematchBtn.style.display = window._rematchMode ? "" : "none";
+  }
   overlay.style.display = "flex";
   // 觸發經驗條動畫（0 → 目標百分比）
   requestAnimationFrame(() => {
@@ -11512,10 +11528,32 @@ function showBattleExpResult(entries, gold, attrBonus, vitaminUnlock){
 }
 
 function closeBattleExpResult(){
+  window._rematchMode = null;
+  window._rematch3v3Slots = null;
   const overlay = document.getElementById("battleExpOverlay");
   if(overlay) overlay.style.display = "none";
   document.getElementById("returnBtn").style.display = "";
   finalizeBattleReturn();
+}
+
+// 再戰一場：依上一場模式重新開打（僅快速對戰 1V1 / 3V3 提供）
+function rematchBattle(){
+  const mode = window._rematchMode;
+  window._rematchMode = null;
+  const overlay = document.getElementById("battleExpOverlay");
+  if(overlay) overlay.style.display = "none";
+  document.getElementById("returnBtn").style.display = "none";
+  if(mode === "quick3v3"){
+    const slots = window._rematch3v3Slots || [];
+    window._rematch3v3Slots = null;
+    if(slots.length === 3){
+      battleQuick3v3SelectedSlots = slots.slice();
+      startQuickBattle3v3();
+      return;
+    }
+  }
+  // 1V1 快速對戰（或 3V3 資料遺失時退回 1V1）
+  startBattle();
 }
 
 // === 進化任務結算視圖 ===
