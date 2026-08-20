@@ -707,8 +707,21 @@ body{
 .food-item .food-label{
   flex:1;
   cursor:pointer;
+  display:flex;
+  align-items:center;
 }
 .food-item .food-label:active{ color:#c42222; }
+.food-icon{
+  width:16px;
+  height:16px;
+  object-fit:none;
+  object-position:0 0;
+  background:#fff;
+  margin-right:8px;
+  flex-shrink:0;
+  border-radius:2px;
+  image-rendering:pixelated;
+}
 
 /* 訓練面板 */
 .training-mode-selector{
@@ -1962,6 +1975,7 @@ canvas {
   <div class="sd-row"><span>年齡</span><span id="sdAge">0歲</span></div>
   <div class="sd-row"><span>體重</span><span id="sdWeight">5</span></div>
   <div class="sd-row"><span>飢餓</span><span id="sdHunger" style="font-size:12px;letter-spacing:1px;">❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️</span></div>
+  <div class="sd-row" id="sdFoodBuff" style="display:none;"><span>食物BUFF</span><span id="sdFoodBuffName" style="color:#ffcc00;font-weight:bold;">—</span></div>
   <div class="sd-row"><span>生命值</span><span id="sdHp">120</span></div>
   <div class="sd-row"><span>攻擊力</span><span id="sdAtk">12</span></div>
   <div class="sd-row"><span>速度</span><span id="sdSpeed">3.0</span></div>
@@ -2092,16 +2106,39 @@ canvas {
 
 <!-- 食物面板（按鈕下方） -->
 <div class="stats-display" id="foodDisplay" style="display:none;">
-  <div class="sd-title">食物選擇</div>
+  <div class="sd-title" style="display:flex;justify-content:space-between;align-items:center;">
+    <span>食物選擇</span>
+    <span id="foodGold" style="font-size:13px;color:#ffcc00;">💰 0</span>
+  </div>
   <div id="foodList" style="padding:4px 0;">
     <div class="food-item" id="foodItemMeat" onclick="feedDigimon('meat')">
-      <span class="food-label">🥩 1.肉</span>
+      <span class="food-label"><img src="Food/meat.png" class="food-icon" alt="">1.肉</span>
       <span style="font-size:10px;color:#888;margin-right:6px;">一鍵</span>
       <div class="toggle-switch-sm" id="autoFeedToggle" onclick="toggleAutoFeed(event)"></div>
     </div>
     <div class="food-item" id="foodItemVitamin" onclick="feedDigimon('vitamin')" style="display:none;">
-      <span class="food-label">💊 2.維他命</span>
-      <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">攻擊+1 血量+3 速度+0.2 暴擊+0.01 閃避+0.01</span><span style="color:#e8a33d;">(10💰)</span></span>
+      <span class="food-label"><img src="Food/vitamin.png" class="food-icon" alt="">2.維他命</span>
+      <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">攻擊+1 血量+3 速度+0.2 暴擊+1% 閃避+1%</span><span style="color:#e8a33d;">(10💰)</span></span>
+    </div>
+    <div class="food-item" id="foodItemSteak" onclick="feedDigimon('steak')">
+      <span class="food-label"><img src="Food/Tomahawk Steak.png" class="food-icon" alt="">3.戰斧牛扒</span>
+      <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">攻擊+4</span><span style="color:#e8a33d;">(12💰)</span></span>
+    </div>
+    <div class="food-item" id="foodItemChicken" onclick="feedDigimon('chicken')">
+      <span class="food-label"><img src="Food/Chicken Leg.png" class="food-icon" alt="">4.雞腿</span>
+      <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">爆擊+3%</span><span style="color:#e8a33d;">(12💰)</span></span>
+    </div>
+    <div class="food-item" id="foodItemCarrot" onclick="feedDigimon('carrot')">
+      <span class="food-label"><img src="Food/carrot.png" class="food-icon" alt="">5.紅蘿蔔</span>
+      <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">速度+0.06</span><span style="color:#e8a33d;">(12💰)</span></span>
+    </div>
+    <div class="food-item" id="foodItemPotato" onclick="feedDigimon('potato')">
+      <span class="food-label"><img src="Food/Potato.png" class="food-icon" alt="">6.土豆</span>
+      <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">血量+15</span><span style="color:#e8a33d;">(12💰)</span></span>
+    </div>
+    <div class="food-item" id="foodItemApple" onclick="feedDigimon('apple')">
+      <span class="food-label"><img src="Food/apple.png" class="food-icon" alt="">7.蘋果</span>
+      <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">閃避率+3%</span><span style="color:#e8a33d;">(12💰)</span></span>
     </div>
   </div>
 </div>
@@ -2272,6 +2309,14 @@ canvas {
     </div>
 
     <button class="debug-btn-apply" id="debugApplyBtn">✓ 套用設定</button>
+    <div style="margin-top:14px;padding-top:10px;border-top:1px solid #333;">
+      <div style="font-size:12px;color:#aaa;margin-bottom:6px;">💰 金錢（目前持有：<span id="debugGoldShow" style="color:#ffcc00;">0</span>）</div>
+      <div class="debug-row">
+        <span class="debug-label">增加金額</span>
+        <input type="number" id="debugAddGold" value="100" min="1" max="999999">
+      </div>
+      <button class="debug-evo-btn" id="debugAddGoldBtn" style="background:#FF9800;">💰 增加金錢</button>
+    </div>
     <div style="margin-top:14px;padding-top:10px;border-top:1px solid #333;">
       <button class="debug-evo-btn child" id="debugEvoChildBtn" style="background:#4CAF50;">🐣 一鍵成長期</button>
       <select id="debugEvoChildSelect" class="debug-select"></select>
@@ -2789,6 +2834,11 @@ let attackRowImagesV9 = new Array(32);  // V9_Attack/V9_00_at.png ~ V9_31_at.png
 let attackRowImagesV10 = new Array(32); // V10_Attack/V10_00_at.png ~ V10_31_at.png
 let meatImage = new Image();
 let vitaminImage = new Image();      // 食物圖（維他命）
+let steakImage = new Image();        // 食物圖（戰斧牛扒）
+let chickenImage = new Image();      // 食物圖（雞腿）
+let carrotImage = new Image();       // 食物圖（紅蘿蔔）
+let potatoImage = new Image();        // 食物圖（土豆）
+let appleImage = new Image();          // 食物圖（蘋果）
 let strikeFirstImage = new Image();  // 技能圖（先制）
 let bgImages = {};
 let currentBgName = "Noon";
@@ -2931,7 +2981,7 @@ let autoMoveTimer = null;
 // ========== 進食/拒絕 模式變數 ==========
 let gameMode = "auto";       // "auto" | "eating" | "refusing" | "battle"
 let gameModeStep = 0;
-let eatingFood = "meat";     // 當前進食的食物（"meat" | "vitamin"）
+let eatingFood = "meat";     // 當前進食的食物（"meat" | "vitamin" | "steak" | "chicken" | "carrot" | "potato" | "apple"）
 const EAT_IV = 400;
 const REFUSE_IV = 300;
 
@@ -3215,6 +3265,9 @@ function startEggPhase(version = "V1") {
   
   isEggPhase = true;
   eggStartTime = Date.now();
+  
+  // 回蛋時清除該槽位的食物 BUFF（死亡/重新育成都會歸零）
+  clearSlotBuff(activeSlotIndex);
   
   // 所有狀態數據歸零
   gameAge = 0;
@@ -3621,7 +3674,7 @@ function renderFrame(){
     const foodX = 0 - poopShift;                    // 食物隨糞便偏移左移
     const foodFrame = Math.floor((gameModeStep + 1) / 2); // 只在 EAT2 時進幀
     // 畫食物（肉 / 維他命）
-    const foodImg = (eatingFood === "vitamin") ? vitaminImage : meatImage;
+    const foodImg = (eatingFood === "vitamin") ? vitaminImage : (eatingFood === "steak") ? steakImage : (eatingFood === "chicken") ? chickenImage : (eatingFood === "carrot") ? carrotImage : (eatingFood === "potato") ? potatoImage : (eatingFood === "apple") ? appleImage : meatImage;
     if(foodImg.complete && foodImg.naturalWidth > 0){
       ctx.drawImage(
         foodImg,
@@ -4224,8 +4277,11 @@ function setBattleActive(val){
 
 // 繪製對戰資訊兩側（敵方/我方）上方的食物圖＋技能圖（16×16 縮放為 28×28）
 function drawBattleItemIcons(){
-  // 玩家是否吃了維他命（有臨時加成）；敵方（AI）無維他命加成，固定顯示 "-"
-  const hasVitBuff = vitaminBuff && (vitaminBuff.atk > 0 || vitaminBuff.hp > 0 || vitaminBuff.spd > 0 || vitaminBuff.crit > 0 || vitaminBuff.dodge > 0);
+  // 玩家當前出戰龍是否有食物 BUFF；敵方（AI）無食物加成，固定顯示 "-"
+  const fighter = getBattlePlayerFighter();
+  const buffSlotIdx = fighter ? fighter.slotIdx : activeSlotIndex;
+  const curFoodName = getSlotFoodName(buffSlotIdx);
+  const hasVitBuff = curFoodName !== "";
   const slots = [
     { food: 'battleEnemyFoodIcon', skill: 'battleEnemySkillIcon', hasBuff: false },
     { food: 'battlePlayerFoodIcon', skill: 'battlePlayerSkillIcon', hasBuff: hasVitBuff }
@@ -4237,9 +4293,15 @@ function drawBattleItemIcons(){
       ctx.imageSmoothingEnabled = false;
       ctx.clearRect(0, 0, 16, 16);
       if(slot.hasBuff){
-        // vitamin.png 為 64×16（4 幀），取第一幀
-        if(vitaminImage && vitaminImage.complete && vitaminImage.naturalWidth > 0){
-          ctx.drawImage(vitaminImage, 0, 0, 16, 16, 0, 0, 16, 16);
+        // 依當前生效食物取第一幀（均為 64×16，4 幀）
+        let buffImg = vitaminImage;
+        if(curFoodName === "戰斧牛扒") buffImg = steakImage;
+        else if(curFoodName === "雞腿") buffImg = chickenImage;
+        else if(curFoodName === "紅蘿蔔") buffImg = carrotImage;
+        else if(curFoodName === "土豆") buffImg = potatoImage;
+        else if(curFoodName === "蘋果") buffImg = appleImage;
+        if(buffImg && buffImg.complete && buffImg.naturalWidth > 0){
+          ctx.drawImage(buffImg, 0, 0, 16, 16, 0, 0, 16, 16);
         }
       } else {
         // 無加成：灰色底 + 黑色粗線 "-"
@@ -7039,7 +7101,27 @@ let debugSpeedBackup = null; // 速度測試：備份原始加成
 let gameCritBonus = 0;     // 暴擊訓練加成
 let gameDodgeBonus = 0;    // 閃避訓練加成
 let gameAffBonus = 0;      // 親密度訓練加成
-let vitaminBuff = { atk: 0, hp: 0, spd: 0, crit: 0, dodge: 0 }; // 維他命臨時加成（下一場對戰生效，戰後消失）
+// 每槽位獨立的食物 BUFF（"維他命" / "戰斧牛扒" / "雞腿" / "紅蘿蔔" / "土豆" / "蘋果"）
+// 元素為 null 或 { name, buff:{atk,hp,spd,crit,dodge} }；吃下後在狀態顯示，直到該龍出場對戰結束才消失
+let slotFoodBuff = [];
+
+function getSlotBuff(slotIdx){
+  return (slotFoodBuff[slotIdx] && slotFoodBuff[slotIdx].buff)
+    || { atk: 0, hp: 0, spd: 0, crit: 0, dodge: 0 };
+}
+function getSlotFoodName(slotIdx){
+  return (slotFoodBuff[slotIdx] && slotFoodBuff[slotIdx].name) || "";
+}
+function setSlotBuff(slotIdx, foodName, buff){
+  while(slotFoodBuff.length <= slotIdx) slotFoodBuff.push(null);
+  slotFoodBuff[slotIdx] = { name: foodName, buff: { ...buff } };
+}
+function clearSlotBuff(slotIdx){
+  if(slotIdx >= 0 && slotIdx < slotFoodBuff.length) slotFoodBuff[slotIdx] = null;
+}
+function hasSlotBuff(slotIdx){
+  return !!(slotFoodBuff[slotIdx] && slotFoodBuff[slotIdx].name);
+}
 let totalTrainingCount = 0;// 全生命周期累計訓練成功次數
 let gameTrainingCount = 0; // V6/V7 當前階段訓練次數（進化條件判斷用）
 let gameAgeLastDay = 0;    // 上次加訓練點的日數 floor(gameAge/1440)
@@ -7673,6 +7755,18 @@ function updateStatsDisplay(){
     const need = (gameLevel >= cap || gameLevel >= 100) ? 0 : getExpToNextLevel(gameLevel);
     sdExp.textContent = (need > 0) ? (gameExp + ' / ' + need) : 'MAX';
   }
+  // 食物 BUFF 顯示：本機（activeSlotIndex）有 BUFF 才顯示該行，否則隱藏
+  const sdFoodBuff = document.getElementById("sdFoodBuff");
+  if(sdFoodBuff){
+    const buffName = getSlotFoodName(activeSlotIndex);
+    const sdFoodBuffName = document.getElementById("sdFoodBuffName");
+    if(buffName){
+      sdFoodBuff.style.display = "";
+      if(sdFoodBuffName) sdFoodBuffName.textContent = buffName;
+    } else {
+      sdFoodBuff.style.display = "none";
+    }
+  }
   if(isEggPhase){
     const ids = ["sdHp","sdAtk","sdSpeed","sdDouble","sdEvade","sdAffinity"];
     ids.forEach(id => {
@@ -7704,6 +7798,8 @@ function updateStatsDisplay(){
   if(sdCareMistakes) sdCareMistakes.textContent = gameCareMistakes;
   const sdGold = document.getElementById("sdGold");
   if(sdGold) sdGold.textContent = gameGold;
+  const foodGold = document.getElementById("foodGold");
+  if(foodGold) foodGold.textContent = "💰 " + gameGold;
   updateCallButton();
 }
 
@@ -8802,6 +8898,8 @@ function showFood(){
   if(pveEncF) pveEncF.style.display = "none";
   const bmF = document.getElementById("battleMenuDisplay");
   if(bmF) bmF.style.display = "none";
+  const foodGold = document.getElementById("foodGold");
+  if(foodGold) foodGold.textContent = "💰 " + gameGold;
   panel.style.display = "block";
 }
 
@@ -9057,22 +9155,24 @@ function getBattlePlayerStats(row){
 }
 function getBattlePlayerBonuses(){
   const fighter = getBattlePlayerFighter();
+  const slotIdx = fighter ? fighter.slotIdx : activeSlotIndex;
+  const buff = getSlotBuff(slotIdx);
   if(fighter){
     return {
-      hp: (fighter.hpBonus || 0) + vitaminBuff.hp,
-      atk: (fighter.atkBonus || 0) + vitaminBuff.atk,
-      spd: (fighter.spdBonus || 0) + vitaminBuff.spd,
-      crit: (fighter.critBonus || 0) + vitaminBuff.crit,
-      dodge: (fighter.dodgeBonus || 0) + vitaminBuff.dodge,
+      hp: (fighter.hpBonus || 0) + buff.hp,
+      atk: (fighter.atkBonus || 0) + buff.atk,
+      spd: (fighter.spdBonus || 0) + buff.spd,
+      crit: (fighter.critBonus || 0) + buff.crit,
+      dodge: (fighter.dodgeBonus || 0) + buff.dodge,
       aff: fighter.affBonus || 0
     };
   }
   return {
-    hp: (gameHpBonus || 0) + vitaminBuff.hp,
-    atk: (gameAtkBonus || 0) + vitaminBuff.atk,
-    spd: (gameSpdBonus || 0) + vitaminBuff.spd,
-    crit: (gameCritBonus || 0) + vitaminBuff.crit,
-    dodge: (gameDodgeBonus || 0) + vitaminBuff.dodge,
+    hp: (gameHpBonus || 0) + buff.hp,
+    atk: (gameAtkBonus || 0) + buff.atk,
+    spd: (gameSpdBonus || 0) + buff.spd,
+    crit: (gameCritBonus || 0) + buff.crit,
+    dodge: (gameDodgeBonus || 0) + buff.dodge,
     aff: gameAffBonus || 0
   };
 }
@@ -9254,6 +9354,9 @@ function renderQuickBattle3v3Panel(){
     html += '<div class="self-battle-card-name">' + name + '</div>';
     html += '<div class="self-battle-card-stage">' + stage + '</div>';
     if(statsLine) html += '<div class="self-battle-card-stats">' + statsLine + '</div>';
+    if(!disabled && hasSlotBuff(i)){
+      html += '<div style="margin-top:2px;font-size:10px;color:#ffcc00;">BUFF:' + getSlotFoodName(i) + '</div>';
+    }
     html += '</div>';
     // 卡片最右加入 IDLE 精靈圖
     if(snapshot && !disabled){
@@ -9595,7 +9698,10 @@ function startQuickBattle3v3NextRound(){
 }
 
 function finishQuickBattle3v3Match(playerWon){
-  vitaminBuff = { atk: 0, hp: 0, spd: 0, crit: 0, dodge: 0 }; // 3V3 整場結束清除維他命加成
+  // 3V3 整場結束：清除所選 3 隻龍（含未輪到出場的）的食物 BUFF
+  for(const bSlot of battleQuick3v3SelectedSlots){
+    clearSlotBuff(bSlot);
+  }
   // 3V3 整場對戰結束，飽食度 -1
   gameHunger = Math.max(0, gameHunger - 1);
   updateNotifArea(true);
@@ -10897,9 +11003,10 @@ function endBattle(result){
     gameHunger = Math.max(0, gameHunger - 1);
     updateNotifArea(true);
   }
-  // 維他命臨時加成：單場對戰結束即消失（3V3 整場結束時才清除）
+  // 食物 BUFF：單場（1V1 / 主線）結束即清除該出戰龍；3V3 整場結束才清
   if(!battleQuick3v3Active){
-    vitaminBuff = { atk: 0, hp: 0, spd: 0, crit: 0, dodge: 0 };
+    const clearSlot = battleMainQuestFighter ? battleMainQuestFighter.slotIdx : activeSlotIndex;
+    clearSlotBuff(clearSlot);
   }
   // 自家對戰不計入戰績
   if(!battleIsSelfBattle){
@@ -10950,7 +11057,7 @@ function endBattle(result){
         gameGold += goldEarned;
         saveGlobalGold();
       }
-      // 主線任務勝利：隨機 1~5 金幣（可重複刷），並標記完成（供解鎖後續任務）
+      // 主線任務勝利：隨機 3~10 金幣（可重複刷），並標記完成（供解鎖後續任務）
       if(window._mainQuestId){
         const qid = window._mainQuestId;
         window._mainQuestId = null;
@@ -10965,7 +11072,7 @@ function endBattle(result){
           if(qid === "main_05" && firstClear && window._pendingExpView){
             window._pendingExpView.vitaminUnlock = true;
           }
-          let goldEarned = Math.floor(Math.random() * 5) + 1; // 1~5 隨機
+          let goldEarned = Math.floor(Math.random() * 8) + 3; // 3~10 隨機
           // 屬性判定：玩家屬性被敵方克制（欠缺屬性）→ 金錢 *2
           let attrBonus = null;
           try {
@@ -11971,13 +12078,13 @@ function feedDigimon(food){
     renderFrame();
     console.log(`餵食: ${food}, 飽食度: ${gameHunger}`);
   } else if(food === "vitamin"){
-    // 已吃過維他命（加成尚未消耗）或太飽 → 拒絕
-    if(vitaminBuff.atk > 0 || gameHunger >= 10){
+    // 已有臨時食物加成（尚未消耗）或太飽 → 拒絕
+    if(hasSlotBuff(activeSlotIndex) || gameHunger >= 10){
       gameMode = "refusing";
       gameModeStep = 0;
       if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
       restartAnimTimer(REFUSE_IV);
-      showToast(vitaminBuff.atk > 0 ? "維他命已生效，下場對戰後才能再吃" : "太飽了，吃不下");
+      showToast(hasSlotBuff(activeSlotIndex) ? "已有食物加成，下場對戰後才能再吃" : "太飽了，吃不下");
       return;
     }
     // 維他命需消費 10 金幣，不足則拒絕
@@ -11992,7 +12099,7 @@ function feedDigimon(food){
     gameGold -= 10;
     saveGlobalGold();
     // 維他命：下一場對戰增加臨時加成（戰後消失）
-    vitaminBuff = { atk: 1, hp: 3, spd: 0.2, crit: 0.01, dodge: 0.01 };
+    setSlotBuff(activeSlotIndex, "維他命", { atk: 1, hp: 3, spd: 0.2, crit: 0.01, dodge: 0.01 });
     // 食後飽食度 +1
     gameHunger = Math.min(10, gameHunger + 1);
     updateNotifArea(true);
@@ -12007,7 +12114,197 @@ function feedDigimon(food){
     saveGameState();
     updateStatsDisplay(); // 刷新金幣顯示
     renderFrame();
-    showToast("維他命生效：下場對戰 +1攻擊 +3HP +0.2速度 +0.01暴擊 +0.01閃避（-10 金幣）");
+    showToast("維他命生效：下場對戰 +1攻擊 +3HP +0.2速度 +1%暴擊 +1%閃避（-10 金幣）");
+  } else if(food === "steak"){
+    // 已有臨時食物加成（尚未消耗）或太飽 → 拒絕
+    if(hasSlotBuff(activeSlotIndex) || gameHunger >= 10){
+      gameMode = "refusing";
+      gameModeStep = 0;
+      if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+      restartAnimTimer(REFUSE_IV);
+      showToast(hasSlotBuff(activeSlotIndex) ? "已有食物加成，下場對戰後才能再吃" : "太飽了，吃不下");
+      return;
+    }
+    // 戰斧牛扒需消費 12 金幣，不足則拒絕
+    if(gameGold < 12){
+      gameMode = "refusing";
+      gameModeStep = 0;
+      if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+      restartAnimTimer(REFUSE_IV);
+      showToast("金幣不足，戰斧牛扒需要 12 金幣");
+      return;
+    }
+    gameGold -= 12;
+    saveGlobalGold();
+    // 戰斧牛扒：下場對戰增加臨時加成（攻擊+4，戰後消失）
+    setSlotBuff(activeSlotIndex, "戰斧牛扒", { atk: 4, hp: 0, spd: 0, crit: 0, dodge: 0 });
+    // 食後飽食度 +1
+    gameHunger = Math.min(10, gameHunger + 1);
+    updateNotifArea(true);
+    // 進食動畫
+    eatingFood = "steak";
+    gameMode = "eating";
+    gameModeStep = 0;
+    autoX = 14;
+    autoTargetX = null;
+    if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+    restartAnimTimer(EAT_IV);
+    saveGameState();
+    updateStatsDisplay(); // 刷新金幣顯示
+    renderFrame();
+    showToast("戰斧牛扒生效：下場對戰 +4攻擊（-12 金幣）");
+  } else if(food === "chicken"){
+    // 已有臨時食物加成（尚未消耗）或太飽 → 拒絕
+    if(hasSlotBuff(activeSlotIndex) || gameHunger >= 10){
+      gameMode = "refusing";
+      gameModeStep = 0;
+      if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+      restartAnimTimer(REFUSE_IV);
+      showToast(hasSlotBuff(activeSlotIndex) ? "已有食物加成，下場對戰後才能再吃" : "太飽了，吃不下");
+      return;
+    }
+    // 雞腿需消費 12 金幣，不足則拒絕
+    if(gameGold < 12){
+      gameMode = "refusing";
+      gameModeStep = 0;
+      if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+      restartAnimTimer(REFUSE_IV);
+      showToast("金幣不足，雞腿需要 12 金幣");
+      return;
+    }
+    gameGold -= 12;
+    saveGlobalGold();
+    // 雞腿：下場對戰增加臨時加成（爆擊+3%，戰後消失）
+    setSlotBuff(activeSlotIndex, "雞腿", { atk: 0, hp: 0, spd: 0, crit: 0.03, dodge: 0 });
+    // 食後飽食度 +1
+    gameHunger = Math.min(10, gameHunger + 1);
+    updateNotifArea(true);
+    // 進食動畫
+    eatingFood = "chicken";
+    gameMode = "eating";
+    gameModeStep = 0;
+    autoX = 14;
+    autoTargetX = null;
+    if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+    restartAnimTimer(EAT_IV);
+    saveGameState();
+    updateStatsDisplay(); // 刷新金幣顯示
+    renderFrame();
+    showToast("雞腿生效：下場對戰 +3%暴擊（-12 金幣）");
+  } else if(food === "carrot"){
+    // 已有臨時食物加成（尚未消耗）或太飽 → 拒絕
+    if(hasSlotBuff(activeSlotIndex) || gameHunger >= 10){
+      gameMode = "refusing";
+      gameModeStep = 0;
+      if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+      restartAnimTimer(REFUSE_IV);
+      showToast(hasSlotBuff(activeSlotIndex) ? "已有食物加成，下場對戰後才能再吃" : "太飽了，吃不下");
+      return;
+    }
+    // 紅蘿蔔需消費 12 金幣，不足則拒絕
+    if(gameGold < 12){
+      gameMode = "refusing";
+      gameModeStep = 0;
+      if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+      restartAnimTimer(REFUSE_IV);
+      showToast("金幣不足，紅蘿蔔需要 12 金幣");
+      return;
+    }
+    gameGold -= 12;
+    saveGlobalGold();
+    // 紅蘿蔔：下場對戰增加臨時加成（速度+0.06，戰後消失）
+    setSlotBuff(activeSlotIndex, "紅蘿蔔", { atk: 0, hp: 0, spd: 0.06, crit: 0, dodge: 0 });
+    // 食後飽食度 +1
+    gameHunger = Math.min(10, gameHunger + 1);
+    updateNotifArea(true);
+    // 進食動畫
+    eatingFood = "carrot";
+    gameMode = "eating";
+    gameModeStep = 0;
+    autoX = 14;
+    autoTargetX = null;
+    if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+    restartAnimTimer(EAT_IV);
+    saveGameState();
+    updateStatsDisplay(); // 刷新金幣顯示
+    renderFrame();
+    showToast("紅蘿蔔生效：下場對戰 +0.06速度（-12 金幣）");
+  } else if(food === "potato"){
+    // 已有臨時食物加成（尚未消耗）或太飽 → 拒絕
+    if(hasSlotBuff(activeSlotIndex) || gameHunger >= 10){
+      gameMode = "refusing";
+      gameModeStep = 0;
+      if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+      restartAnimTimer(REFUSE_IV);
+      showToast(hasSlotBuff(activeSlotIndex) ? "已有食物加成，下場對戰後才能再吃" : "太飽了，吃不下");
+      return;
+    }
+    // 土豆需消費 12 金幣，不足則拒絕
+    if(gameGold < 12){
+      gameMode = "refusing";
+      gameModeStep = 0;
+      if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+      restartAnimTimer(REFUSE_IV);
+      showToast("金幣不足，土豆需要 12 金幣");
+      return;
+    }
+    gameGold -= 12;
+    saveGlobalGold();
+    // 土豆：下場對戰增加臨時加成（血量+15，戰後消失）
+    setSlotBuff(activeSlotIndex, "土豆", { atk: 0, hp: 15, spd: 0, crit: 0, dodge: 0 });
+    // 食後飽食度 +1
+    gameHunger = Math.min(10, gameHunger + 1);
+    updateNotifArea(true);
+    // 進食動畫
+    eatingFood = "potato";
+    gameMode = "eating";
+    gameModeStep = 0;
+    autoX = 14;
+    autoTargetX = null;
+    if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+    restartAnimTimer(EAT_IV);
+    saveGameState();
+    updateStatsDisplay(); // 刷新金幣顯示
+    renderFrame();
+    showToast("土豆生效：下場對戰 +15血量（-12 金幣）");
+  } else if(food === "apple"){
+    // 已有臨時食物加成（尚未消耗）或太飽 → 拒絕
+    if(hasSlotBuff(activeSlotIndex) || gameHunger >= 10){
+      gameMode = "refusing";
+      gameModeStep = 0;
+      if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+      restartAnimTimer(REFUSE_IV);
+      showToast(hasSlotBuff(activeSlotIndex) ? "已有食物加成，下場對戰後才能再吃" : "太飽了，吃不下");
+      return;
+    }
+    // 蘋果需消費 12 金幣，不足則拒絕
+    if(gameGold < 12){
+      gameMode = "refusing";
+      gameModeStep = 0;
+      if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+      restartAnimTimer(REFUSE_IV);
+      showToast("金幣不足，蘋果需要 12 金幣");
+      return;
+    }
+    gameGold -= 12;
+    saveGlobalGold();
+    // 蘋果：下場對戰增加臨時加成（閃避率+3%，戰後消失）
+    setSlotBuff(activeSlotIndex, "蘋果", { atk: 0, hp: 0, spd: 0, crit: 0, dodge: 0.03 });
+    // 食後飽食度 +1
+    gameHunger = Math.min(10, gameHunger + 1);
+    updateNotifArea(true);
+    // 進食動畫
+    eatingFood = "apple";
+    gameMode = "eating";
+    gameModeStep = 0;
+    autoX = 14;
+    autoTargetX = null;
+    if(autoMoveTimer){ clearInterval(autoMoveTimer); autoMoveTimer = null; }
+    restartAnimTimer(EAT_IV);
+    saveGameState();
+    updateStatsDisplay(); // 刷新金幣顯示
+    renderFrame();
+    showToast("蘋果生效：下場對戰 +3%閃避率（-12 金幣）");
   }
 }
 
@@ -12075,6 +12372,7 @@ document.getElementById("debugBtn").onclick = () => {
   // 預填當前值
   document.getElementById("debugMistakes").value = gameCareMistakes;
   document.getElementById("debugWeight").value = gameWeight;
+  document.getElementById("debugGoldShow").textContent = gameGold;
   refreshChildSelect();
   refreshPerfectSelect();
   document.getElementById("debugOverlay").classList.add("open");
@@ -12101,6 +12399,19 @@ document.getElementById("debugApplyBtn").onclick = () => {
   updateStatsDisplay();
   document.getElementById("debugOverlay").classList.remove("open");
   showToast("已套用：失誤=" + gameCareMistakes + "，體重=" + gameWeight + "kg");
+};
+// 增加金錢
+document.getElementById("debugAddGoldBtn").onclick = () => {
+  const g = parseInt(document.getElementById("debugAddGold").value, 10);
+  if(isNaN(g) || g <= 0){
+    showToast("請輸入有效的金額");
+    return;
+  }
+  gameGold += g;
+  saveGlobalGold();
+  updateStatsDisplay();
+  document.getElementById("debugGoldShow").textContent = gameGold;
+  showToast("已增加 " + g + " 金幣，目前持有 💰 " + gameGold);
 };
 // 刷新成長期下拉選單
 function refreshChildSelect(){
@@ -13323,6 +13634,21 @@ meatImage.onerror = onImageError;
 vitaminImage.src = "Food/vitamin.png";
 vitaminImage.onload = onImageLoaded;
 vitaminImage.onerror = onImageError;
+steakImage.src = "Food/Tomahawk Steak.png";
+steakImage.onload = onImageLoaded;
+steakImage.onerror = onImageError;
+chickenImage.src = "Food/Chicken Leg.png";
+chickenImage.onload = onImageLoaded;
+chickenImage.onerror = onImageError;
+carrotImage.src = "Food/carrot.png";
+carrotImage.onload = onImageLoaded;
+carrotImage.onerror = onImageError;
+potatoImage.src = "Food/Potato.png";
+potatoImage.onload = onImageLoaded;
+potatoImage.onerror = onImageError;
+appleImage.src = "Food/apple.png";
+appleImage.onload = onImageLoaded;
+appleImage.onerror = onImageError;
 strikeFirstImage.src = "Player skills/Strike first.png";
 strikeFirstImage.onload = onImageLoaded;
 strikeFirstImage.onerror = onImageError;
