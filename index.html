@@ -49,6 +49,33 @@ body{
 }
 .setting-input::placeholder{ color:#888; }
 .setting-input:focus{ border-color:#ffcc00; }
+/* 音量滑桿 */
+.volume-slider{
+  -webkit-appearance:none;
+  appearance:none;
+  width:120px;
+  height:6px;
+  border-radius:3px;
+  background:#444;
+  outline:none;
+  cursor:pointer;
+}
+.volume-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  appearance:none;
+  width:18px;height:18px;
+  border-radius:50%;
+  background:#ffcc00;
+  cursor:pointer;
+  border:none;
+}
+.volume-slider::-moz-range-thumb{
+  width:18px;height:18px;
+  border-radius:50%;
+  background:#ffcc00;
+  cursor:pointer;
+  border:none;
+}
 .settings-btn{
   position:absolute;
   right:0;
@@ -2255,6 +2282,18 @@ canvas {
         <div class="setting-desc">開啟 / 關閉遊戲音效</div>
       </div>
       <div class="toggle-switch on" id="toggleSound" onclick="toggleSoundSetting()"></div>
+    </div>
+
+    <!-- 音量控制 -->
+    <div class="settings-row">
+      <div>
+        <div class="setting-label">音量</div>
+        <div class="setting-desc">調整遊戲音效音量</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="volumePercent" style="font-size:12px;color:#ffcc00;min-width:36px;text-align:right;">100%</span>
+        <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="100" step="1">
+      </div>
     </div>
 
     <!-- 睡眠時間設定 -->
@@ -4614,6 +4653,7 @@ function startTrainingPlay(){
   if(trainingType === "critical"){
     document.getElementById("trainingTimerDisplay").textContent = "";
     criticalWallBroken = false;
+    playSFXLoop("training");
     startCriticalBar();
     renderFrame();
     return;
@@ -4623,6 +4663,7 @@ function startTrainingPlay(){
   if(trainingType === "evade"){
     document.getElementById("trainingTimerDisplay").textContent = "";
     evadePhase = "moving";
+    playSFXLoop("training");
     evadeProjX = -16;
     evadeSucceeded = false;
     evadeDragonFlipped = false;
@@ -4634,6 +4675,7 @@ function startTrainingPlay(){
   // 攻速訓練：序列 AB 配對，從左到右點擊
   if(trainingType === "speed"){
     speedActive = true;
+    playSFXLoop("training");
     speedSequence = [];
     speedCurrentIndex = 0;
     speedDragonX = 48;
@@ -4666,6 +4708,7 @@ function startTrainingPlay(){
   // 親密度訓練：記憶翻牌
   if(trainingType === "affinity"){
     evoActive = true;
+    playSFXLoop("training");
     evoFound = 0;
     evoPhase = "showing";
     evoTarget = Math.floor(Math.random() * EVO_TYPES);
@@ -4696,6 +4739,9 @@ function startTrainingPlay(){
     return;
   }
 
+  // 攻擊/生命訓練：開始播放循環訓練音，直到按滿/點完
+  if(trainingType === "attack" || trainingType === "life") playSFXLoop("training");
+
   // 開始倒數計時（UI 每秒更新）
   trainingCountdown = (trainingType === "life") ? 2 : 3;
   document.getElementById("trainingTimerDisplay").textContent = trainingCountdown;
@@ -4725,6 +4771,7 @@ function startTrainingPlay(){
 
 function backToTrainingModeSelect(){
   if(trainingAttackActive || trainingCelebrationActive || trainingFailureActive) return;
+  stopSFXLoop();
   // 清除計時器
   if(trainingTimer){
     clearInterval(trainingTimer);
@@ -4772,6 +4819,7 @@ function clearTrainingState(){
   // 清理訓練狀態但不重置 canvas/bg（供直接切換到對戰使用）
   trainingMode = false;
   trainingAttackFired = false;
+  stopSFXLoop();
   if(trainingProjectileTimer){ clearInterval(trainingProjectileTimer); trainingProjectileTimer = null; }
   if(trainingIdleTimer){ clearInterval(trainingIdleTimer); trainingIdleTimer = null; }
   if(sandbagTimer){ clearInterval(sandbagTimer); sandbagTimer = null; }
@@ -4810,6 +4858,7 @@ function clearTrainingState(){
 function stopTraining(){
   trainingMode = false;
   trainingAttackFired = false;
+  stopSFXLoop();
   if(trainingProjectileTimer){
     clearInterval(trainingProjectileTimer);
     trainingProjectileTimer = null;
@@ -4944,6 +4993,7 @@ function handleTrainingClick(){
       evadePhase = "success";
       evadeSucceeded = true;
       evadeDragonFlipped = true;  // 成功後龍面向右
+      stopSFXLoop();               // 按下點擊 → 停音
       clearInterval(evadeProjTimer);
       evadeProjTimer = null;
       // 飛彈穿過（繼續往右飛出畫面消失）
@@ -4991,8 +5041,7 @@ function triggerTrainingAttack(){
   trainingAttackFired = true;
   trainingSucceeded = true;
   trainingAttackActive = true;
-  playSFX("trainSuccess");
-  playSFX("happy");
+  stopSFXLoop();                   // 按滿 → 停音
   trainingLevel = 6;
   // 確保計時器清除
   if(trainingTimer){
@@ -5017,6 +5066,7 @@ function triggerTrainingAttack(){
   }
 
   trainingProjectileX = 16;
+  playSFX("attack");               // 發射音
   renderFrame();
   
   // 火球連續每像素向左移動
@@ -5026,6 +5076,7 @@ function triggerTrainingAttack(){
     renderFrame();
     if(trainingProjectileX <= 0){
       // 火球擊中沙包 → 停止移動、觸發爆炸
+      playSFX("hit");               // 命中音
       clearInterval(trainingProjectileTimer);
       trainingProjectileTimer = null;
       trainingAttackActive = false;
@@ -5087,6 +5138,7 @@ function endTrainingAttack(){
   trainingCelebrationTimer = setInterval(() => {
     if(!trainingMode) return;
     trainingCelebrationStep++;
+    if(TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7) playSFX("happy");
     if(trainingCelebrationStep >= TRAINING_CELEBRATION_SEQ.length){
       // 慶祝結束，自動返回
       clearInterval(trainingCelebrationTimer);
@@ -5115,7 +5167,8 @@ function triggerTrainingFailure(){
 
   trainingFailed = true;
   trainingFailureActive = true;
-  playSFX("trainFail");
+  stopSFXLoop();                   // 失敗 → 停音
+  playSFX("refuse");
   trainingPowerHidden = true;
 
   // 停止 Idle 動畫
@@ -5248,6 +5301,7 @@ function startLifeCelebration(){
   trainingCelebrationTimer = setInterval(() => {
     if(!trainingMode) return;
     trainingCelebrationStep++;
+    if(TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7) playSFX("happy");
     // 龍在慶祝過程中從 x=48 移動到 x=32（盾牌位置，從右到左第2個16×16）
     if(trainingCelebrationStep === 1) lifeDragonMoveX = 32;       // 第1下 happy 就到盾牌位置
     else if(trainingCelebrationStep >= 2) lifeDragonMoveX = 32;   // 停留
@@ -5284,6 +5338,7 @@ function startCriticalBar(){
       criticalPaused = true;
       renderFrame();
       setTimeout(() => {
+        if(!criticalBarActive) return; // 已停止（成功/失敗）→ 不再移動
         criticalPaused = false;
         criticalDirection = -1;
         criticalPos = 2;
@@ -5303,6 +5358,7 @@ function startCriticalBar(){
 }
 
 function stopCriticalBar(){
+  stopSFXLoop();                   // 按點擊 → 停音
   criticalBarActive = false;
   if(criticalBarTimer){
     clearInterval(criticalBarTimer);
@@ -5328,6 +5384,7 @@ function startCriticalSuccessAnimation(){
   trainingAttackActive = true;
   criticalAttackStep = 16;  // 火球起始 x 位置
   criticalWallBroken = false;
+  playSFX("attack");               // 發射音
   renderFrame();
 
   // Phase 1：火球從 x=16 一格一格向左移動到牆（16ms 每格）
@@ -5336,6 +5393,7 @@ function startCriticalSuccessAnimation(){
     criticalAttackStep -= 1;
     if(criticalAttackStep <= 0){
       // 火球抵達牆，切到 Phase 2：BOOM 動畫
+      playSFX("hit");               // 命中音
       clearInterval(criticalAttackTimer);
       boomFrame = 0;
       boomCycle = 0;
@@ -5407,6 +5465,7 @@ function startEvadeCelebration(){
   trainingCelebrationTimer = setInterval(() => {
     if(!trainingMode) return;
     trainingCelebrationStep++;
+    if(TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7) playSFX("happy");
     if(trainingCelebrationStep >= TRAINING_CELEBRATION_SEQ.length){
       clearInterval(trainingCelebrationTimer);
       trainingCelebrationTimer = null;
@@ -5453,6 +5512,7 @@ function handleSpeedClick(btn){
 
 function startSpeedWalkAnimation(){
   trainingSucceeded = true;
+  stopSFXLoop();                   // 完成 → 停音
   // 第一階段：龍從 x=48 一格一格往左走到 x=0
   speedMovePhase = "movingLeft";
   speedDragonX = 48;
@@ -5478,6 +5538,7 @@ function startSpeedWalkAnimation(){
           trainingCelebrationTimer = setInterval(() => {
             if(!trainingMode) return;
             trainingCelebrationStep++;
+            if(TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7) playSFX("happy");
             if(trainingCelebrationStep >= TRAINING_CELEBRATION_SEQ.length){
               clearInterval(trainingCelebrationTimer);
               trainingCelebrationTimer = null;
@@ -5547,6 +5608,7 @@ function handleEvoClick(idx){
     if(evoFound >= EVO_EACH){
       // 全部找到 → 成功
       trainingSucceeded = true;
+      stopSFXLoop();                   // 完成 → 停音
       evoActive = false;
       evoPhase = "success";
       if(evoFlipTimer){ clearTimeout(evoFlipTimer); evoFlipTimer = null; }
@@ -5560,6 +5622,7 @@ function handleEvoClick(idx){
       evoEvolutionTimer = setInterval(() => {
         if(!trainingMode){ return; }
         trainingCelebrationStep++;
+        if(TRAINING_CELEBRATION_SEQ[trainingCelebrationStep] === 7) playSFX("happy");
         if(trainingCelebrationStep >= TRAINING_CELEBRATION_SEQ.length){
           clearInterval(evoEvolutionTimer);
           evoEvolutionTimer = null;
@@ -5696,8 +5759,8 @@ function renderTrainingCanvas(){
     }
 
     // Critical Hit Bar 放在最右 x=48，根據 criticalPos 顯示對應的 cell
-    // 慶祝（happy）或失敗（sad）時隱藏
-    if(!trainingCelebrationActive && !trainingFailureActive && criticalBarImage.complete && criticalBarImage.naturalWidth > 0){
+    // 失敗（sad）時整條隱藏；成功後 criticalPos 保持 3，固定顯示最右格
+    if(!trainingFailureActive && criticalBarImage.complete && criticalBarImage.naturalWidth > 0){
       ctx.drawImage(criticalBarImage, criticalPos * 16, 0, 16, 16, 48, 0, 16, 16);
     }
 
@@ -8795,6 +8858,7 @@ function clickFunction(idx){
   btn.classList.add('active');
   setTimeout(() => btn.classList.remove('active'), 200);
   console.log(`功能: ${FUNCTION_BTNS[idx]}`);
+  playSFX("click");                     // 按鈕點擊音
   if(idx === 0) showStats();   // 狀態
   else if(idx === 1) showFood(); // 食物
   else if(idx === 2) startTraining(); // 訓練
@@ -9773,6 +9837,7 @@ function finishQuickBattle3v3Match(playerWon){
     window._rematchMode = "quick3v3";
     window._rematch3v3Slots = battleQuick3v3SelectedSlots.slice();
   } else {
+    playSFX("lose");
     showToast("3V3 戰敗…");
   }
 
@@ -10319,6 +10384,7 @@ function executeAttack(who, onDone, isSpeedBonus = false){
 
       // 開始爆炸動畫
       battleBoomActive = true;
+      playSFX("hit");  // 命中音效在 Boom 出現時立即發聲
       // 玩家攻擊→打中敵方(x=0), 敵方攻擊→打中玩家(x=48)
       battleBoomX = (who === "player") ? 0 : 48;
       battleBoomFrame = 0;
@@ -10343,7 +10409,6 @@ function executeAttack(who, onDone, isSpeedBonus = false){
 
           battleMsg = msg;
           document.getElementById("battleMsg").textContent = battleMsg;
-          if(crit) playSFX("crit"); else playSFX("hit");
           let typeLabel = "";
           if(crit && attrAdv) typeLabel = "爆擊！屬性剋制！";
           else if(crit) typeLabel = "爆擊！";
@@ -11030,6 +11095,7 @@ function clearBattleState(){
 function endBattle(result){
   battleResult = result;
   if(result === "win") playSFX("happy");
+  else if(result === "lose") playSFX("lose");
   // 對戰有勝負（非逃跑）且非 3V3 回合 → 飽食度 -1（3V3 整場結束統一在 finishQuickBattle3v3Match 扣除）
   if((result === "win" || result === "lose") && !battleQuick3v3Active){
     gameHunger = Math.max(0, gameHunger - 1);
@@ -12427,6 +12493,7 @@ function showToast(msg){
 
 // ========== 設定面板 ==========
 let soundEnabled = true;
+let soundVolume = 1;         // 主音量 0~1
 let autoFeedEnabled = false; // 自動餵食開關
 
 // ========== 8-bit 音效系統（Web Audio 合成，復古方波 + 噪聲通道） ==========
@@ -12459,7 +12526,7 @@ function tone8(freq, dur, slide, vol, delay){
   osc.type = "square";                                  // 方波 = 8-bit 標誌音色
   osc.frequency.setValueAtTime(freq, t0);
   if(slide) osc.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
-  gain.gain.setValueAtTime(vol || 0.13, t0);            // 立即達峰值
+  gain.gain.setValueAtTime((vol || 0.13) * soundVolume, t0); // 立即達峰值
   gain.gain.linearRampToValueAtTime(0.0001, t0 + dur);  // 快速線性衰減
   osc.connect(gain).connect(ctx.destination);
   osc.start(t0);
@@ -12480,7 +12547,7 @@ function noise8(dur, vol, delay){
   src.buffer = noiseBuf;
   const gain = ctx.createGain();
   const t0 = ctx.currentTime + (delay || 0);
-  gain.gain.setValueAtTime(vol || 0.16, t0);
+  gain.gain.setValueAtTime((vol || 0.16) * soundVolume, t0);
   gain.gain.linearRampToValueAtTime(0.0001, t0 + dur);
   const hp = ctx.createBiquadFilter();
   hp.type = "highpass";
@@ -12506,7 +12573,6 @@ const SFX_DEF = {
   attack:       { tone:[[180,0.06,80]], noise:[0.05,0.18] },   // 出招「BU B...」
   hit:          { tone:[[140,0.09,70,0],[140,0.09,70,0.10],[587,0.06,null,0.20]],
                   noise:[[0.08,0.22,0],[0.08,0.22,0.10]] },    // 命中「boom-boom-ba」
-  crit:         { tone:[[120,0.05,60],[880,0.12]], noise:[0.08,0.2] },
   dodge:        { tone:[[600,0.09,1400]], noise:null },
   sleep:        { tone:[[520,0.16,260]], noise:null },
   wake:         { tone:[[260,0.16,520]], noise:null },
@@ -12521,8 +12587,12 @@ const SFX_FILES = {
   evo:        "Sound effects/evolution.mp3",
   sick:       "Sound effects/attention.mp3",   // 生病
   attention:  "Sound effects/attention.mp3",   // 飢餓（CALL 首次出現）
-  gameStart:  "Sound effects/game-start.mp3",  // 對戰開始
-  happy:      "Sound effects/happy.mp3"        // 沖大便/戰勝/訓練成功
+  gameStart:  "Sound effects/Start fighting.mp3", // 對戰開始
+  attack:     "Sound effects/emission.mp3",    // 出招
+  hit:        "Sound effects/hit.mp3",         // 命中
+  happy:      "Sound effects/happy.mp3",       // 沖大便/戰勝/訓練成功
+  lose:       "Sound effects/angry.mp3",       // 戰敗
+  training:   "Sound effects/training.mp3"     // 訓練循環音
 };
 
 const sfxAudioCache = {};
@@ -12559,6 +12629,38 @@ function playSFX(name){
   }
   // tone 第4元素 = 相對延遲（秒），可選；預設 0（維持原有多音同響）
   (def.tone || []).forEach(n => tone8(n[0], n[1], n[2], 0.13, n[3]));
+}
+
+// ====== 循環音效（訓練開始播放、到達條件後停止） ======
+let sfxLoopAudio = null;
+function playSFXLoop(name){
+  if(!soundEnabled) return;
+  const path = SFX_FILES[name];
+  if(!path) return;
+  stopSFXLoop();                       // 同一時間只允許一個循環音
+  let a = sfxAudioCache["loop:" + path];
+  if(!a){
+    a = new Audio(path);
+    a.preload = "auto";
+    a.loop = true;
+    sfxAudioCache["loop:" + path] = a;
+  }
+  try {
+    a.currentTime = 0;
+    a.volume = soundVolume;
+    const p = a.play();
+    if(p && p.catch) p.catch(() => {});
+    sfxLoopAudio = a;
+  } catch(e){}
+}
+function stopSFXLoop(){
+  if(sfxLoopAudio){
+    try {
+      sfxLoopAudio.pause();
+      sfxLoopAudio.currentTime = 0;
+    } catch(e){}
+    sfxLoopAudio = null;
+  }
 }
 
 // 8-bit BGM：方波主旋律 + 低八度方波 bass（更「紅白機」）
@@ -12925,13 +13027,34 @@ document.getElementById("settingsDeleteBtn").onclick = () => {
 // 音效開關
 function toggleSoundSetting(){
   soundEnabled = !soundEnabled;
-  if(!soundEnabled) stopBGM(); else playBGM("main");
+  if(!soundEnabled){ stopBGM(); stopSFXLoop(); } else { playBGM("main"); }
   const tgl = document.getElementById("toggleSound");
   if(soundEnabled){
     tgl.classList.add("on");
   } else {
     tgl.classList.remove("on");
   }
+  saveSettings();
+  if(soundEnabled) playSFX("click");
+}
+
+// 音量控制
+function initVolumeSlider(){
+  const slider = document.getElementById("volumeSlider");
+  const label = document.getElementById("volumePercent");
+  if(!slider) return;
+  const update = () => {
+    soundVolume = Math.max(0, Math.min(1, parseInt(slider.value, 10) / 100));
+    if(label) label.textContent = Math.round(soundVolume * 100) + "%";
+  };
+  slider.value = Math.round(soundVolume * 100);
+  update();
+  slider.oninput = update;                 // 拖動即時生效
+  slider.onchange = () => {                // 放開後儲存並回饋
+    update();
+    saveSettings();
+    playSFX("click");
+  };
 }
 
 // 一鍵食肉開關
@@ -12976,7 +13099,7 @@ function initSleepHourSelect(){
 // 儲存設定
 function saveSettings(){
   const trainerName = document.getElementById("trainerNameInput")?.value?.trim() || "";
-  localStorage.setItem("digivpet_settings", JSON.stringify({ soundEnabled, sleepHour, lightsOff, trainerName }));
+  localStorage.setItem("digivpet_settings", JSON.stringify({ soundEnabled, soundVolume, sleepHour, lightsOff, trainerName }));
 }
 function loadSettings(){
   const raw = localStorage.getItem("digivpet_settings");
@@ -13099,6 +13222,7 @@ function clearNotifTimer(){
 }
 
 initSleepHourSelect();
+initVolumeSlider();
 
 // ========== 啟動 ==========
 if("serviceWorker" in navigator){
@@ -13393,6 +13517,7 @@ function activateSlot(slotIndex){
 function handleReturnBtn(){
   // 進化動畫中不能操作按鈕
   if(evoAnimActive || birthEvoCelebrate || preEvoCelebrate) return;
+  playSFX("click");                     // 按鈕點擊音
   // 1. 設定面板
   const settingsOverlay = document.getElementById("settingsOverlay");
   if(settingsOverlay && settingsOverlay.classList.contains("open")){
