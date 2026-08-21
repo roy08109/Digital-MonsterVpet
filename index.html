@@ -15285,6 +15285,7 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx, enemyLevel) {
   canvas.style.width = CANVAS_BATTLE_W + "px";
   canvas.style.height = CANVAS_BATTLE_H + "px";
   gameMode = "battle"; playBGM("battle");
+  playSFX("gameStart");   // 任務對戰開始音
   updateCssBackground("battle");
   updateBattleTeamSprites();
 
