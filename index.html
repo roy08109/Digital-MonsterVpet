@@ -7583,13 +7583,13 @@ function getTotalAtk(){ return DIGIMON_STATS[currentRow].atk + gameAtkBonus; }
 function getTotalSpd(){ return DIGIMON_STATS[currentRow].spd + gameSpdBonus; }
 function getTotalCrit(){ return Math.min(0.40, (DIGIMON_STATS[currentRow].critRate || 0) + gameCritBonus); }
 function getTotalDodge(){ return Math.min(0.35, (DIGIMON_STATS[currentRow].dodgeRate || 0) + gameDodgeBonus); }
-function getTotalAffinity(){ return Math.min(100, (DIGIMON_STATS[currentRow].bondInitial || 0) + gameAffBonus); }
+function getTotalAffinity(){ return (DIGIMON_STATS[currentRow].bondInitial || 0) + gameAffBonus; }
 
 function tryTrainingSuccess(type){
   const babyStage = (currentRow <= 1);
   const mult = trainingMultiplier || 1;
   const cap = {"crit":0.40,"dodge":0.35,"affinity":100}[type] || null;
-  const cur = type==="hp"?getTotalHp():type==="atk"?getTotalAtk():type==="spd"?getTotalSpd():type==="crit"?getTotalCrit():type==="dodge"?getTotalDodge():getTotalAffinity();
+  const cur = type==="hp"?getTotalHp():type==="atk"?getTotalAtk():type==="spd"?getTotalSpd():type==="crit"?getTotalCrit():type==="dodge"?getTotalDodge():type==="affinity"?gameAffBonus:getTotalAffinity();
   if(cap !== null && cur >= cap){
     showToast("已到上限訓練不會增加");
     return {success:false,reason:"cap"};
@@ -7608,7 +7608,7 @@ function tryTrainingSuccess(type){
       case "spd": gameSpdBonus += 0.04 * mult; trainingSpdCount += mult; break;
       case "crit": gameCritBonus += 0.001 * mult; trainingCritCount += mult; break;
       case "dodge": gameDodgeBonus += 0.001 * mult; trainingDodgeCount += mult; break;
-      case "affinity": gameAffBonus += 1 * mult; trainingAffCount += mult; break;
+      case "affinity": gameAffBonus = Math.min(100, gameAffBonus + 1 * mult); trainingAffCount += mult; break;
     }
   }
   return {success:true};
@@ -7969,7 +7969,7 @@ const DIGIMON_STATS_V1 = {
   7: {name:"火焰獸",       stage:"成熟期",  attr:"data",    hp:130, atk:23,  spd:4.2, critRate:0.13, dodgeRate:0.11, bondInitial:15, weight:90,  minWeight:60},
   8: {name:"海龍獸",       stage:"成熟期",  attr:"data",    hp:132, atk:22,  spd:4.4, critRate:0.12, dodgeRate:0.12, bondInitial:15, weight:130, minWeight:90},
   9: {name:"飛龍獸",       stage:"成熟期",  attr:"vaccine", hp:120, atk:21,  spd:4.8, critRate:0.11, dodgeRate:0.14, bondInitial:15, weight:110, minWeight:75},
-  10:{name:"鼻涕獸",       stage:"成熟期",  attr:"virus",   hp:100, atk:18,  spd:3.4, critRate:0.07, dodgeRate:0.05, bondInitial:15, weight:60,  minWeight:40},
+  10:{name:"鼻涕獸",       stage:"成熟期",  attr:"virus",   hp:100, atk:18,  spd:3.4, critRate:0.07, dodgeRate:0.05, bondInitial:17, weight:60,  minWeight:40},
   11:{name:"機械暴龍獸",   stage:"完全體",  attr:"virus",   hp:205, atk:33,  spd:4.0, critRate:0.17, dodgeRate:0.09, bondInitial:20, weight:200, minWeight:130},
   12:{name:"豆豆獸",       stage:"完全體",  attr:"data",    hp:195, atk:31,  spd:5.0, critRate:0.18, dodgeRate:0.16, bondInitial:20, weight:150, minWeight:100},
   13:{name:"熊仔獸",       stage:"完全體",  attr:"vaccine", hp:230, atk:32,  spd:3.7, critRate:0.16, dodgeRate:0.08, bondInitial:20, weight:180, minWeight:120},
@@ -7991,7 +7991,7 @@ const DIGIMON_STATS_V2 = {
   7: {name:"雪人獸",       stage:"成熟期",  attr:"data",    hp:130, atk:23,  spd:4.2, critRate:0.13, dodgeRate:0.11, bondInitial:15, weight:90,  minWeight:60},
   8: {name:"巴多拉獸",     stage:"成熟期",  attr:"data",    hp:132, atk:22,  spd:4.4, critRate:0.12, dodgeRate:0.12, bondInitial:15, weight:130, minWeight:90},
   9: {name:"巨鯨獸",       stage:"成熟期",  attr:"vaccine", hp:120, atk:21,  spd:4.8, critRate:0.11, dodgeRate:0.14, bondInitial:15, weight:110, minWeight:75},
-  10:{name:"鼻屎獸",       stage:"成熟期",  attr:"virus",   hp:100, atk:18,  spd:3.4, critRate:0.07, dodgeRate:0.05, bondInitial:15, weight:60,  minWeight:40},
+  10:{name:"鼻屎獸",       stage:"成熟期",  attr:"virus",   hp:100, atk:18,  spd:3.4, critRate:0.07, dodgeRate:0.05, bondInitial:17, weight:60,  minWeight:40},
   11:{name:"喪屍暴龍獸",   stage:"完全體",  attr:"virus",   hp:205, atk:33,  spd:4.0, critRate:0.17, dodgeRate:0.09, bondInitial:20, weight:200, minWeight:130},
   12:{name:"鋼鐵豆豆獸",   stage:"完全體",  attr:"data",    hp:195, atk:31,  spd:5.0, critRate:0.18, dodgeRate:0.16, bondInitial:20, weight:150, minWeight:100},
   13:{name:"宇宙腦魔",     stage:"完全體",  attr:"vaccine", hp:230, atk:32,  spd:3.7, critRate:0.16, dodgeRate:0.08, bondInitial:20, weight:180, minWeight:120},
@@ -8013,7 +8013,7 @@ const DIGIMON_STATS_V3 = {
   7: {name:"猛鬼獸",       stage:"成熟期",   attr:"data",     hp:132, atk:23,  spd:4.3, critRate:0.14, dodgeRate:0.11, bondInitial:15, weight:95,  minWeight:65},
   8: {name:"貝殼獸",       stage:"成熟期",   attr:"data",     hp:134, atk:22,  spd:4.6, critRate:0.13, dodgeRate:0.12, bondInitial:15, weight:135, minWeight:95},
   9: {name:"鑽地獸",       stage:"成熟期",   attr:"vaccine",  hp:122, atk:21,  spd:5.0, critRate:0.12, dodgeRate:0.14, bondInitial:15, weight:115, minWeight:80},
-  10:{name:"大便獸",       stage:"成熟期",   attr:"virus",    hp:105, atk:18,  spd:3.7, critRate:0.08, dodgeRate:0.06, bondInitial:15, weight:65,  minWeight:45},
+  10:{name:"大便獸",       stage:"成熟期",   attr:"virus",    hp:105, atk:18,  spd:3.7, critRate:0.08, dodgeRate:0.06, bondInitial:17, weight:65,  minWeight:45},
   11:{name:"安杜路獸",     stage:"完全體",   attr:"virus",    hp:205, atk:33,  spd:4.3, critRate:0.18, dodgeRate:0.09, bondInitial:20, weight:210, minWeight:140},
   12:{name:"炮彈獸",       stage:"完全體",   attr:"data",     hp:195, atk:31,  spd:5.3, critRate:0.19, dodgeRate:0.17, bondInitial:20, weight:160, minWeight:105},
   13:{name:"悟空獸",       stage:"完全體",   attr:"vaccine",  hp:230, atk:32,  spd:4.0, critRate:0.17, dodgeRate:0.08, bondInitial:20, weight:190, minWeight:130},
@@ -8035,7 +8035,7 @@ const DIGIMON_STATS_V4 = {
   7: {name:"古加獸",       stage:"成熟期",  attr:"data",    hp:130, atk:23,  spd:4.2, critRate:0.13, dodgeRate:0.11, bondInitial:15, weight:90,  minWeight:60},
   8: {name:"西拉獸",       stage:"成熟期",  attr:"data",    hp:132, atk:22,  spd:4.4, critRate:0.12, dodgeRate:0.12, bondInitial:15, weight:130, minWeight:90},
   9: {name:"毛人獸",       stage:"成熟期",  attr:"vaccine", hp:120, atk:21,  spd:4.8, critRate:0.11, dodgeRate:0.14, bondInitial:15, weight:110, minWeight:75},
-  10:{name:"亞伯獸",       stage:"成熟期",  attr:"virus",   hp:100, atk:18,  spd:3.4, critRate:0.07, dodgeRate:0.05, bondInitial:15, weight:60,  minWeight:40},
+  10:{name:"亞伯獸",       stage:"成熟期",  attr:"virus",   hp:100, atk:18,  spd:3.4, critRate:0.07, dodgeRate:0.05, bondInitial:17, weight:60,  minWeight:40},
   11:{name:"機械飛龍獸",   stage:"完全體",  attr:"virus",   hp:205, atk:33,  spd:4.0, critRate:0.17, dodgeRate:0.09, bondInitial:20, weight:200, minWeight:130},
   12:{name:"妖精獸",       stage:"完全體",  attr:"data",    hp:195, atk:31,  spd:5.0, critRate:0.18, dodgeRate:0.16, bondInitial:20, weight:150, minWeight:100},
   13:{name:"蛋蛋獸",       stage:"完全體",  attr:"vaccine", hp:230, atk:32,  spd:3.7, critRate:0.16, dodgeRate:0.08, bondInitial:20, weight:180, minWeight:120},
@@ -8057,7 +8057,7 @@ const DIGIMON_STATS_V5 = {
   7: {name:"大角獸",       stage:"成熟期",  attr:"data",    hp:130, atk:23,  spd:4.2, critRate:0.13, dodgeRate:0.11, bondInitial:15, weight:90,  minWeight:60},
   8: {name:"黃蜂獸",       stage:"成熟期",  attr:"data",    hp:132, atk:22,  spd:4.4, critRate:0.12, dodgeRate:0.12, bondInitial:15, weight:130, minWeight:90},
   9: {name:"三頭龍獸",     stage:"成熟期",  attr:"vaccine", hp:120, atk:21,  spd:4.8, critRate:0.11, dodgeRate:0.14, bondInitial:15, weight:110, minWeight:75},
-  10:{name:"爛泥獸",       stage:"成熟期",  attr:"virus",   hp:100, atk:18,  spd:3.4, critRate:0.07, dodgeRate:0.05, bondInitial:15, weight:60,  minWeight:40},
+  10:{name:"爛泥獸",       stage:"成熟期",  attr:"virus",   hp:100, atk:18,  spd:3.4, critRate:0.07, dodgeRate:0.05, bondInitial:17, weight:60,  minWeight:40},
   11:{name:"鋼鐵巨龍獸",   stage:"完全體",  attr:"virus",   hp:205, atk:33,  spd:4.0, critRate:0.17, dodgeRate:0.09, bondInitial:20, weight:200, minWeight:130},
   12:{name:"分子獸",       stage:"完全體",  attr:"data",    hp:195, atk:31,  spd:5.0, critRate:0.18, dodgeRate:0.16, bondInitial:20, weight:150, minWeight:100},
   13:{name:"EX 巨龍獸",    stage:"完全體",  attr:"vaccine", hp:230, atk:32,  spd:3.7, critRate:0.16, dodgeRate:0.08, bondInitial:20, weight:180, minWeight:120},
@@ -8079,11 +8079,11 @@ const DIGIMON_STATS_V6 = {
   7: {name:"古加獸",       stage:"成熟期",  attr:"virus",   hp:122, atk:25,  spd:4.2, critRate:0.16, dodgeRate:0.10, bondInitial:15, weight:85,  minWeight:60},
   8: {name:"獨角獸",       stage:"成熟期",  attr:"virus",   hp:118, atk:25,  spd:4.6, critRate:0.16, dodgeRate:0.11, bondInitial:15, weight:90,  minWeight:65},
   9: {name:"陸龜獸",       stage:"成熟期",  attr:"data",    hp:145, atk:20,  spd:3.4, critRate:0.12, dodgeRate:0.06, bondInitial:15, weight:130, minWeight:95},
-  10:{name:"星星獸",       stage:"成熟期",  attr:"data",    hp:132, atk:21,  spd:4.1, critRate:0.12, dodgeRate:0.10, bondInitial:15, weight:95,  minWeight:65},
+  10:{name:"星星獸",       stage:"成熟期",  attr:"data",    hp:132, atk:21,  spd:4.1, critRate:0.12, dodgeRate:0.10, bondInitial:17, weight:95,  minWeight:65},
   11:{name:"青蛙獸",       stage:"成熟期",  attr:"virus",   hp:120, atk:24,  spd:4.4, critRate:0.15, dodgeRate:0.11, bondInitial:15, weight:100, minWeight:70},
   12:{name:"迪路獸",       stage:"成熟期",  attr:"vaccine", hp:138, atk:25,  spd:4.7, critRate:0.16, dodgeRate:0.13, bondInitial:15, weight:70,  minWeight:50},
   13:{name:"西姆巴安哥拉獸",stage:"完全體", attr:"vaccine", hp:210, atk:31,  spd:4.2, critRate:0.17, dodgeRate:0.09, bondInitial:20, weight:160, minWeight:110},
-  14:{name:"阿特魯比多獸", stage:"完全體", attr:"vaccine", hp:205, atk:30,  spd:4.4, critRate:0.16, dodgeRate:0.10, bondInitial:20, weight:155, minWeight:105},
+  14:{name:"阿特魯比多獸", stage:"完全體", attr:"vaccine", hp:205, atk:30,  spd:4.4, critRate:0.16, dodgeRate:0.10, bondInitial:22, weight:155, minWeight:105},
   15:{name:"奧古加獸",     stage:"完全體", attr:"virus",   hp:185, atk:34,  spd:4.7, critRate:0.19, dodgeRate:0.12, bondInitial:20, weight:180, minWeight:125},
   16:{name:"三角龍獸",     stage:"完全體", attr:"data",    hp:220, atk:28,  spd:3.6, critRate:0.15, dodgeRate:0.07, bondInitial:20, weight:220, minWeight:150},
   17:{name:"土撥鼠獸",     stage:"完全體", attr:"data",    hp:210, atk:27,  spd:3.9, critRate:0.16, dodgeRate:0.08, bondInitial:20, weight:190, minWeight:130},
@@ -8149,7 +8149,7 @@ const DIGIMON_STATS_V8 = {
   7: {name:"加魯魯獸",     stage:"成熟期",  attr:"vaccine", hp:130, atk:23,  spd:4.3, critRate:0.15, dodgeRate:0.10, bondInitial:15, weight:50,  minWeight:35},
   8: {name:"火焰獸",       stage:"成熟期",  attr:"data",    hp:132, atk:23,  spd:4.5, critRate:0.15, dodgeRate:0.12, bondInitial:15, weight:75,  minWeight:55},
   9: {name:"巫師獸",       stage:"成熟期",  attr:"data",    hp:134, atk:23,  spd:4.2, critRate:0.16, dodgeRate:0.11, bondInitial:15, weight:78,  minWeight:58},
-  10:{name:"惡魔獸",       stage:"成熟期",  attr:"virus",   hp:120, atk:24,  spd:3.9, critRate:0.15, dodgeRate:0.10, bondInitial:15, weight:55,  minWeight:40},
+  10:{name:"惡魔獸",       stage:"成熟期",  attr:"virus",   hp:120, atk:24,  spd:3.9, critRate:0.15, dodgeRate:0.10, bondInitial:17, weight:55,  minWeight:40},
   11:{name:"猛鬼獸",       stage:"成熟期",  attr:"virus",   hp:145, atk:20,  spd:3.4, critRate:0.12, dodgeRate:0.06, bondInitial:15, weight:115, minWeight:85},
   12:{name:"蜘蛛獸",       stage:"成熟期",  attr:"virus",   hp:130, atk:26,  spd:4.4, critRate:0.17, dodgeRate:0.11, bondInitial:15, weight:88,  minWeight:65},
   13:{name:"邪路加獸",     stage:"成熟期",  attr:"data",    hp:130, atk:24,  spd:4.1, critRate:0.16, dodgeRate:0.10, bondInitial:15, weight:85,  minWeight:60},
@@ -8188,7 +8188,7 @@ const DIGIMON_STATS_V9 = {
   11:{name:"枯木獸",       stage:"成熟期",  attr:"virus",   hp:122, atk:24,  spd:4.4, critRate:0.15, dodgeRate:0.11, bondInitial:15, weight:95,  minWeight:65},
   12:{name:"紅蔬菜獸",     stage:"成熟期",  attr:"virus",   hp:125, atk:25,  spd:4.6, critRate:0.17, dodgeRate:0.11, bondInitial:15, weight:90,  minWeight:65},
   13:{name:"烈風獸",       stage:"成熟期",  attr:"vaccine", hp:142, atk:21,  spd:3.9, critRate:0.13, dodgeRate:0.08, bondInitial:15, weight:110, minWeight:80},
-  14:{name:"飛行V龍獸",    stage:"完全體",  attr:"vaccine", hp:205, atk:30,  spd:3.9, critRate:0.16, dodgeRate:0.08, bondInitial:20, weight:190, minWeight:130},
+  14:{name:"飛行V龍獸",    stage:"完全體",  attr:"vaccine", hp:205, atk:30,  spd:3.9, critRate:0.16, dodgeRate:0.08, bondInitial:22, weight:190, minWeight:130},
   15:{name:"伽樓達獸",     stage:"完全體",  attr:"vaccine", hp:215, atk:31,  spd:4.2, critRate:0.17, dodgeRate:0.09, bondInitial:20, weight:200, minWeight:140},
   16:{name:"華麗獸",       stage:"完全體",  attr:"data",    hp:225, atk:28,  spd:3.7, critRate:0.15, dodgeRate:0.07, bondInitial:20, weight:230, minWeight:160},
   17:{name:"德拉莫獸",     stage:"完全體",  attr:"data",    hp:200, atk:30,  spd:4.4, critRate:0.16, dodgeRate:0.09, bondInitial:20, weight:175, minWeight:120},
@@ -8233,7 +8233,7 @@ const DIGIMON_STATS_V10 = {
   21:{name:"運輸龍獸",     stage:"完全體",  attr:"virus",   hp:195, atk:32,  spd:4.3, critRate:0.17, dodgeRate:0.10, bondInitial:20, weight:195, minWeight:135},
   22:{name:"戰鬥暴龍獸",   stage:"究極體",  attr:"vaccine", hp:270, atk:42,  spd:4.6, critRate:0.20, dodgeRate:0.10, bondInitial:25, weight:190, minWeight:130},
   23:{name:"鋼鐵加魯魯獸", stage:"究極體",  attr:"vaccine", hp:265, atk:44,  spd:3.9, critRate:0.21, dodgeRate:0.09, bondInitial:25, weight:260, minWeight:175},
-  24:{name:"機械邪龍獸",   stage:"究極體",  attr:"virus",   hp:235, atk:46,  spd:4.5, critRate:0.23, dodgeRate:0.10, bondInitial:25, weight:215, minWeight:145},
+  24:{name:"機械邪龍獸",   stage:"究極體",  attr:"virus",   hp:235, atk:46,  spd:4.5, critRate:0.23, dodgeRate:0.10, bondInitial:28, weight:215, minWeight:145},
   25:{name:"怨毒吸血魔獸", stage:"究極體",  attr:"virus",   hp:245, atk:48,  spd:4.1, critRate:0.23, dodgeRate:0.10, bondInitial:25, weight:240, minWeight:160},
   26:{name:"高級安杜路獸", stage:"究極體",  attr:"vaccine", hp:255, atk:44,  spd:4.2, critRate:0.21, dodgeRate:0.09, bondInitial:25, weight:220, minWeight:150},
   27:{name:"拉格納獸",     stage:"究極體",  attr:"",        hp:260, atk:42,  spd:4.5, critRate:0.20, dodgeRate:0.11, bondInitial:25, weight:155, minWeight:110},
@@ -9303,7 +9303,7 @@ function getBattlePlayerTotalDodge(){
 function getBattlePlayerTotalAffinity(){
   const s = getBattlePlayerStats();
   const b = getBattlePlayerBonuses();
-  return Math.min(100, ((s && s.bondInitial) || 0) + b.aff);
+  return ((s && s.bondInitial) || 0) + b.aff;
 }
 function getBattlePlayerRowImages(){
   const ver = getBattlePlayerVersion();
@@ -15298,6 +15298,7 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx, enemyLevel) {
   canvas.style.height = CANVAS_BATTLE_H + "px";
   gameMode = "battle"; playBGM("battle");
   playSFX("gameStart");   // 任務對戰開始音
+  document.getElementById("returnBtn").style.display = "none"; // 任務對戰隱藏返回按鈕
   updateCssBackground("battle");
   updateBattleTeamSprites();
 
