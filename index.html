@@ -2130,6 +2130,7 @@ canvas {
     <div class="battle-exp-title">🏆 對戰勝利 · 結算</div>
     <div id="battleExpList" class="battle-exp-list"></div>
     <div id="battleExpGold" class="battle-exp-gold" style="display:none;"></div>
+    <div id="battleExpDailyGold" class="battle-exp-gold" style="display:none;"></div>
     <div id="battleExpAttrBonus" class="battle-exp-attr-bonus" style="display:none;"></div>
     <div id="battleExpSpecialNote" class="battle-exp-attr-bonus" style="display:none;"></div>
     <button id="battleExpRematch" class="battle-exp-rematch" style="display:none;" onclick="rematchBattle()">⚔ 再戰一場</button>
@@ -2301,8 +2302,8 @@ canvas {
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span id="volumePercent" style="font-size:12px;color:#ffcc00;min-width:36px;text-align:right;">100%</span>
-          <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="100" step="25">
+          <span id="volumePercent" style="font-size:12px;color:#ffcc00;min-width:36px;text-align:right;">25%</span>
+          <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="25" step="25">
         </div>
         <div class="volume-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
       </div>
@@ -3119,6 +3120,22 @@ function updateSleepByTime(){
     saveSettings();
     if(autoTimer) renderFrame(); // 只當遊戲已初始化才重繪
   }
+}
+
+// 計算 [fromMs, toMs] 區間內的清醒秒數（成長期以上排除現實睡眠時段）
+function calcAwakeSeconds(fromMs, toMs, slpHr){
+  if(toMs <= fromMs) return 0;
+  const wakeHour = (slpHr + 8) % 24;
+  let awake = 0;
+  const MIN = 60000;
+  for(let t = fromMs; t < toMs; t += MIN){
+    const h = new Date(t).getHours();
+    const sleeping = (slpHr < wakeHour)
+      ? (h >= slpHr && h < wakeHour)
+      : (h >= slpHr || h < wakeHour);
+    if(!sleeping) awake += MIN;
+  }
+  return Math.floor(awake / 1000);
 }
 
 // ========== 幼年期護理定時器（醒2分鐘 / 睡3分鐘循環） ==========
@@ -6438,6 +6455,8 @@ function initLauncher(){
   loadLauncherMeta();
   loadGlobalQuestDone();
   loadGlobalGold();
+  loadDaily();
+  ensureDailyReset();
   activeSlotIndex = -1;
   launcherLoaded = true;
   const launcher = document.getElementById('launcherScreen');
@@ -6709,6 +6728,76 @@ function loadGlobalGold(){
 // 寫入全域共享金幣
 function saveGlobalGold(){
   try { localStorage.setItem(GLOBAL_GOLD_KEY, String(gameGold)); } catch(e){}
+}
+
+// ========== 日常任務系統 ==========
+const DAILY_QUESTS = [
+  { id:"daily_3v3",     title:"3V3 對戰",   type:"3v3",   stage:"",      desc:"完成 1 次 3V3 對戰勝利" },
+  { id:"daily_child",   title:"成長期討伐", type:"stage", stage:"成長期", desc:"擊敗成長期敵人 1 次" },
+  { id:"daily_adult",   title:"成熟期討伐", type:"stage", stage:"成熟期", desc:"擊敗成熟期敵人 1 次" },
+  { id:"daily_perfect", title:"完全體討伐", type:"stage", stage:"完全體", desc:"擊敗完全體敵人 1 次" },
+];
+const DAILY_REWARD_GOLD = 200;
+const GLOBAL_DAILY_KEY = "digimon_global_daily";
+let gameDaily = { date:"", done:{} };
+let dailyGoldThisBattle = 0; // 本場對戰累計完成的日常任務金幣（供結算頁顯示）
+
+function loadDaily(){
+  try {
+    const raw = localStorage.getItem(GLOBAL_DAILY_KEY);
+    if(raw){
+      const obj = JSON.parse(raw);
+      if(obj && typeof obj === "object"){
+        gameDaily = { date: obj.date || "", done: obj.done || {} };
+      }
+    }
+  } catch(_){}
+}
+function saveDaily(){
+  try { localStorage.setItem(GLOBAL_DAILY_KEY, JSON.stringify(gameDaily)); } catch(_){}
+}
+function ensureDailyReset(){
+  const today = new Date().toDateString();
+  if(gameDaily.date !== today){
+    gameDaily = { date: today, done: {} };
+    saveDaily();
+  }
+}
+// 完成日常任務：自動發獎 + 標記完成（每天每任務一次）
+function completeDailyQuest(id){
+  ensureDailyReset();
+  if(gameDaily.done[id]) return;
+  const q = DAILY_QUESTS.find(x => x.id === id);
+  if(!q) return;
+  gameDaily.done[id] = true;
+  gameGold += DAILY_REWARD_GOLD;
+  dailyGoldThisBattle += DAILY_REWARD_GOLD;
+  saveDaily();
+  saveGlobalGold();
+  showToast("🪙 日常任務完成：「" + q.title + "」+200 金幣");
+  const listEl = document.getElementById("bmQuestList");
+  if(listEl && currentQuestCategory === "daily") renderDailyTaskList(listEl);
+}
+// 統計「擊敗敵人」的階段（1V1 / 主線 / 進化 / 3V3 均適用）
+function onDailyEnemyDefeated(stage){
+  if(!stage) return;
+  const q = DAILY_QUESTS.find(x => x.type === "stage" && x.stage === stage);
+  if(q) completeDailyQuest(q.id);
+}
+// 渲染日常任務列表
+function renderDailyTaskList(listEl){
+  ensureDailyReset();
+  listEl.innerHTML = "";
+  let html = '<div class="bm-quest-section">📅 每日任務（每天刷新）</div>';
+  for(const q of DAILY_QUESTS){
+    const done = !!gameDaily.done[q.id];
+    html +=
+      '<div class="bm-quest-card' + (done ? ' bm-quest-card-done' : '') + '">' +
+        '<div class="bm-quest-title">' + q.title + (done ? ' ✅' : '') + '</div>' +
+        '<div style="font-size:11px;color:#8a8a8a;margin-top:2px;">' + q.desc + ' · 獎勵 🪙200</div>' +
+      '</div>';
+  }
+  listEl.innerHTML = html;
 }
 let battleMainQuestFighter = null; // 主線任務出戰龍（跨槽位 fighter）
 let mainQuestPendingId = null;     // 正在選龍的主線任務 id
@@ -7094,9 +7183,12 @@ function loadGameState(slotIndex){
       } else {
         callFirstShownTime = 0;
       }
-      // 計算離線經過的秒數，處理排便倒數（睡眠中跳過）
-      if(!data.isSleeping){
-        const elapsedSec = Math.floor((Date.now() - data.timestamp) / 1000);
+      // 計算離線期間的清醒秒數，處理排便倒數
+      // 成長期以上：排除現實睡眠時段（睡眠中不排便）；幼年期不受影響
+      const elapsedSec = (currentRow > 1)
+        ? calcAwakeSeconds(data.timestamp, Date.now(), sleepHour)
+        : Math.floor((Date.now() - data.timestamp) / 1000);
+      if(elapsedSec > 0){
         const maxOfflinePoops = (currentRow <= 1) ? (babyHasPooped ? 0 : 1) : 8;
         const offlinePoopIv = (currentRow <= 1) ? randBabyPoopInterval() : randPoopInterval();
         if(poopCountdown > 0 && maxOfflinePoops > 0){
@@ -9559,6 +9651,7 @@ function buildQuickBattle3v3EnemyTeam(stage){
   return team;
 }
 function startQuickBattle3v3(){
+  dailyGoldThisBattle = 0;
   if(battleQuick3v3SelectedSlots.length !== 3){
     showToast("請先選擇 3 隻龍的出戰順序");
     return;
@@ -9679,6 +9772,9 @@ function handleQuickBattle3v3RoundEnd(result){
 
 function continueQuickBattle3v3Round(result, outgoingSide){
   if(result === "win"){
+    // 日常任務：統計擊敗的敵人階段（battleEnemyRow 此刻仍是被擊敗的敵人）
+    const _dailyEnemy = getEnemyStats(battleEnemyRow);
+    if(_dailyEnemy) onDailyEnemyDefeated(_dailyEnemy.stage);
     battleQuick3v3EnemyIdx++;
     if(battleQuick3v3EnemyIdx >= battleQuick3v3EnemyTeam.length){
       finishQuickBattle3v3Match(true);
@@ -9845,6 +9941,14 @@ function finishQuickBattle3v3Match(playerWon){
     }
     saveGameState();
     window._pendingExpView = { entries };
+    // 3V3 勝利：獲得 5~15 金幣
+    const goldEarned = Math.floor(Math.random() * 11) + 5; // 5~15 隨機
+    gameGold += goldEarned;
+    saveGlobalGold();
+    window._pendingExpView.gold = goldEarned;
+    // 日常任務：3V3 整場勝利
+    completeDailyQuest("daily_3v3");
+    window._pendingExpView.dailyGold = dailyGoldThisBattle;
     // 3V3 勝利：記錄再戰資訊（需在 resetQuickBattle3v3State 前保存所選槽位）
     window._rematchMode = "quick3v3";
     window._rematch3v3Slots = battleQuick3v3SelectedSlots.slice();
@@ -9855,9 +9959,9 @@ function finishQuickBattle3v3Match(playerWon){
 
   resetQuickBattle3v3State();
   if(window._pendingExpView){
-    const entries = window._pendingExpView.entries;
+    const pv = window._pendingExpView;
     window._pendingExpView = null;
-    showBattleExpResult(entries);
+    showBattleExpResult(pv.entries, pv.gold || 0, pv.attrBonus || null, pv.vitaminUnlock || false, pv.dailyGold || 0);
     return;
   }
   finalizeBattleReturn();
@@ -10107,6 +10211,7 @@ function doAdversityEvo(nextAttacker, onDone){
   battleEvoCallback = () => { executeAttack(nextAttacker, onDone); };
   document.getElementById("adversityEvoBanner").style.display = "none";
   document.getElementById("battleMsg").textContent = "逆境進化！";
+  playSFX("adversityEvo");
   renderBattleScene();
 
   // Phase 1: 顯示 ! 0.5 秒
@@ -10192,6 +10297,7 @@ function doEnemyAdversityEvo(nextAttacker, onDone){
   battleEnemyEvoStep = 0;
   battleEnemyEvoCallback = () => { executeAttack(nextAttacker, onDone); };
   document.getElementById("battleMsg").textContent = (battleIsSelfBattle ? "自家" : "敵方") + "逆境進化！";
+  playSFX("adversityEvo");
   renderBattleScene();
 
   setTimeout(() => {
@@ -10547,6 +10653,7 @@ function startBattle(targetSlotIdx){
     alert("幼年期還不能戰鬥！");
     return;
   }
+  dailyGoldThisBattle = 0;
   // 關閉其他面板
   document.getElementById("statsDisplay").style.display = "none";
   document.getElementById("foodDisplay").style.display = "none";
@@ -11106,7 +11213,15 @@ function clearBattleState(){
 
 function endBattle(result){
   battleResult = result;
-  if(result === "win") playSFX("happy");
+  window._pendingWinHappySFX = false;   // 重置逆境進化延遲音效標記
+  if(result === "win"){
+    // 有逆境進化時，開心音效延後到退化動畫結束、龍露出開心表情時播放
+    if(battleAdversityEvoRow >= 0 || battleEnemyAdversityEvoRow >= 0){
+      window._pendingWinHappySFX = true;
+    } else {
+      playSFX("happy");
+    }
+  }
   else if(result === "lose") playSFX("lose");
   // 對戰有勝負（非逃跑）且非 3V3 回合 → 飽食度 -1（3V3 整場結束統一在 finishQuickBattle3v3Match 扣除）
   if((result === "win" || result === "lose") && !battleQuick3v3Active){
@@ -11163,13 +11278,7 @@ function endBattle(result){
           }
         }
       }
-      // PVE 模式：勝利獲得金幣獎勵
-      if(window._pveActive && window._pveMapGold){
-        const goldEarned = Math.floor(Math.random() * (window._pveMapGold.max - window._pveMapGold.min + 1)) + window._pveMapGold.min;
-        gameGold += goldEarned;
-        saveGlobalGold();
-      }
-      // 主線任務勝利：隨機 3~10 金幣（可重複刷），並標記完成（供解鎖後續任務）
+      // 主線任務勝利：標記完成（供解鎖後續任務）
       if(window._mainQuestId){
         const qid = window._mainQuestId;
         window._mainQuestId = null;
@@ -11184,27 +11293,24 @@ function endBattle(result){
           if(qid === "main_05" && firstClear && window._pendingExpView){
             window._pendingExpView.vitaminUnlock = true;
           }
-          let goldEarned = Math.floor(Math.random() * 8) + 3; // 3~10 隨機
-          // 屬性判定：玩家屬性被敵方克制（欠缺屬性）→ 金錢 *2
-          let attrBonus = null;
-          try {
-            const pStats = battleMainQuestFighter
-              ? getStatsForVersion(battleMainQuestFighter.version)[battleMainQuestFighter.row]
-              : getStatsForVersion(currentVersion)[currentRow];
-            const eStats = getStatsForVersion(q.enemyVersion)[q.enemyRow];
-            if(pStats && eStats && attrBeats(eStats.attr, pStats.attr)){
-              goldEarned *= 2;
-              attrBonus = { player: pStats.attr, enemy: eStats.attr };
-            }
-          } catch(_){}
-          gameGold += goldEarned;
-          saveGlobalGold();
-          if(window._pendingExpView){
-            window._pendingExpView.gold = goldEarned;
-            if(attrBonus) window._pendingExpView.attrBonus = attrBonus;
-          }
         }
       }
+      // 所有對戰勝利統一獲得 3~10 金幣（自家對戰已在上方排除；3V3 整場另以 5~15 在 finishQuickBattle3v3Match 結算）
+      if(!battleQuick3v3Active){
+        const goldEarned = Math.floor(Math.random() * 8) + 3; // 3~10 隨機
+        gameGold += goldEarned;
+        saveGlobalGold();
+        window._lastBattleGold = goldEarned;
+        if(window._pendingExpView){
+          window._pendingExpView.gold = goldEarned;
+        }
+      }
+      // 日常任務：統計擊敗的敵人階段（1V1 / 主線 / 進化任務）
+      if(!battleQuick3v3Active){
+        const _dailyEnemy = getEnemyStats(battleEnemyRow);
+        if(_dailyEnemy) onDailyEnemyDefeated(_dailyEnemy.stage);
+      }
+      if(window._pendingExpView) window._pendingExpView.dailyGold = dailyGoldThisBattle;
       // 進化任務勝利：目標 +5%，其餘候選平均下降，總和恆為 100%
       if(window._evoTask){
         const t = window._evoTask;
@@ -11236,6 +11342,8 @@ function endBattle(result){
         window._pendingEvoResult = {
           ver: t.ver,
           playerName: _pStats ? _pStats.name : "數碼獸",
+          gold: window._lastBattleGold || 0,
+          dailyGold: dailyGoldThisBattle,
           rows: cands.map(c => {
             const cs = getStatsForVersion(t.ver)[c];
             return {
@@ -11423,6 +11531,11 @@ function showBattleResult(result){
       return;
     }
     if(result === "win"){
+      // 逆境進化延遲的開心音效：龍第一次露出開心表情時播放
+      if(endStep === 0 && window._pendingWinHappySFX){
+        playSFX("happy");
+        window._pendingWinHappySFX = false;
+      }
       battlePlayerFrame = (endStep % 2 === 0) ? 7 : 0;  // 我方 happy 表情
       battleShowHappy = (endStep % 2 === 0);              // Happy.png 圖標
       battleEnemyFrame = (endStep % 2 === 0) ? 10 : 0;   // 敵方 sad 表情
@@ -11507,7 +11620,7 @@ function showBattleResult(result){
         if(result === "win" && window._pendingExpView){
           const pv = window._pendingExpView;
           window._pendingExpView = null;
-          showBattleExpResult(pv.entries, pv.gold || 0, pv.attrBonus || null, pv.vitaminUnlock || false);
+          showBattleExpResult(pv.entries, pv.gold || 0, pv.attrBonus || null, pv.vitaminUnlock || false, pv.dailyGold || 0);
           return;
         }
         finalizeBattleReturn();
@@ -11529,9 +11642,9 @@ function showBattleResult(result){
 
     // 勝利且有經驗結算 → 展示經驗視圖，等用戶按「確定」再回到自動模式
     if(window._pendingExpView){
-      const entries = window._pendingExpView.entries;
+      const pv = window._pendingExpView;
       window._pendingExpView = null;
-      showBattleExpResult(entries);
+      showBattleExpResult(pv.entries, pv.gold || 0, pv.attrBonus || null, pv.vitaminUnlock || false, pv.dailyGold || 0);
       return;
     }
 
@@ -11540,7 +11653,7 @@ function showBattleResult(result){
 }
 
 // === 對戰經驗結算視圖 ===
-function showBattleExpResult(entries, gold, attrBonus, vitaminUnlock){
+function showBattleExpResult(entries, gold, attrBonus, vitaminUnlock, dailyGold){
   const overlay = document.getElementById("battleExpOverlay");
   const list = document.getElementById("battleExpList");
   if(!overlay || !list){
@@ -11556,6 +11669,16 @@ function showBattleExpResult(entries, gold, attrBonus, vitaminUnlock){
     } else {
       goldEl.style.display = "none";
       goldEl.innerHTML = "";
+    }
+  }
+  const dailyEl = document.getElementById("battleExpDailyGold");
+  if(dailyEl){
+    if(dailyGold && dailyGold > 0){
+      dailyEl.style.display = "flex";
+      dailyEl.innerHTML = '<span>📅</span><span>日常任務完成 +' + dailyGold + '</span>';
+    } else {
+      dailyEl.style.display = "none";
+      dailyEl.innerHTML = "";
     }
   }
   const attrEl = document.getElementById("battleExpAttrBonus");
@@ -11694,6 +11817,22 @@ function showEvoTaskResult(){
     }
     item.querySelector(".evo-result-name").textContent = r.name;
     list.appendChild(item);
+  }
+  if(data.gold && data.gold > 0){
+    const goldRow = document.createElement("div");
+    goldRow.className = "evo-result-row";
+    goldRow.style.justifyContent = "center";
+    goldRow.style.marginTop = "6px";
+    goldRow.innerHTML = '<span style="color:#ffd9a0;">🪙 金幣 +' + data.gold + '</span>';
+    list.appendChild(goldRow);
+  }
+  if(data.dailyGold && data.dailyGold > 0){
+    const dailyRow = document.createElement("div");
+    dailyRow.className = "evo-result-row";
+    dailyRow.style.justifyContent = "center";
+    dailyRow.style.marginTop = "6px";
+    dailyRow.innerHTML = '<span style="color:#8ecbff;">📅 日常任務完成 +' + data.dailyGold + '</span>';
+    list.appendChild(dailyRow);
   }
   document.getElementById("returnBtn").style.display = "none";
   overlay.style.display = "flex";
@@ -12505,7 +12644,7 @@ function showToast(msg){
 
 // ========== 設定面板 ==========
 let soundEnabled = true;
-let soundVolume = 1;         // 主音量 0~1
+let soundVolume = 0.25;      // 主音量 0~1（預設 25%）
 let autoFeedEnabled = false; // 自動餵食開關
 
 // ========== 8-bit 音效系統（Web Audio 合成，復古方波 + 噪聲通道） ==========
@@ -12602,6 +12741,7 @@ const SFX_FILES = {
   gameStart:  "Sound effects/Start fighting.mp3", // 對戰開始
   attack:     "Sound effects/emission.mp3",    // 出招
   hit:        "Sound effects/hit.mp3",         // 命中
+  adversityEvo: "Sound effects/Evolution in Adversity.mp3", // 逆境進化
   happy:      "Sound effects/happy.mp3",       // 沖大便/戰勝/訓練成功
   lose:       "Sound effects/angry.mp3",       // 戰敗
   training:   "Sound effects/training.mp3"     // 訓練循環音
@@ -13119,6 +13259,7 @@ function loadSettings(){
     try {
       const s = JSON.parse(raw);
       soundEnabled = s.soundEnabled ?? true;
+      soundVolume = s.soundVolume ?? 0.25;
       sleepHour = s.sleepHour ?? 22;
       lightsOff = s.lightsOff ?? false;
       const tn = s.trainerName || "";
@@ -14456,8 +14597,8 @@ function renderQuestList() {
     renderEvoTaskList(listEl);
     return;
   }
-  if (currentQuestCategory !== "main") {
-    listEl.innerHTML = '<div class="bm-quest-empty">敬請期待，功能開發中…</div>';
+  if (currentQuestCategory === "daily") {
+    renderDailyTaskList(listEl);
     return;
   }
   // 只顯示已解鎖的任務：可進行（已解鎖未完成）排在上方，已完成排在下方的「已完成」區
