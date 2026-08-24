@@ -533,6 +533,8 @@ body{
   box-sizing:border-box;
 }
 .stats-display .sd-title{
+  display:flex;
+  align-items:center;
   text-align:center;
   font-size:16px;
   font-weight:700;
@@ -622,6 +624,10 @@ body{
   background:
     linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)) padding-box,
     linear-gradient(to right, #ff3b30, #ff9500, #ffcc00, #34c759, #00c7be, #007aff, #af52de) border-box;
+}
+.battle-skill-icon{
+  width:24px;
+  height:24px;
 }
 .battle-msg{
   text-align:center;
@@ -1978,7 +1984,9 @@ canvas {
       <div class="battle-side enemy">
         <div class="battle-side-items">
           <canvas class="battle-item-icon" id="battleEnemyFoodIcon" width="16" height="16" title="食物：維他命"></canvas>
-          <canvas class="battle-item-icon" id="battleEnemySkillIcon" width="16" height="16" title="技能：先制"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battleEnemySkillIcon0" width="16" height="16" title="技能"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battleEnemySkillIcon1" width="16" height="16" title="技能"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battleEnemySkillIcon2" width="16" height="16" title="技能"></canvas>
         </div>
         <div class="battle-side-name" id="battleEnemyName"></div>
         <div class="battle-side-hp" id="battleEnemyHpText"></div>
@@ -1988,7 +1996,9 @@ canvas {
       <div class="battle-side player">
         <div class="battle-side-items">
           <canvas class="battle-item-icon" id="battlePlayerFoodIcon" width="16" height="16" title="食物：維他命"></canvas>
-          <canvas class="battle-item-icon" id="battlePlayerSkillIcon" width="16" height="16" title="技能：先制"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battlePlayerSkillIcon0" width="16" height="16" title="技能"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battlePlayerSkillIcon1" width="16" height="16" title="技能"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battlePlayerSkillIcon2" width="16" height="16" title="技能"></canvas>
         </div>
         <div class="battle-side-name" id="battlePlayerName"></div>
         <div class="battle-side-hp" id="battlePlayerHpText"></div>
@@ -2008,7 +2018,11 @@ canvas {
 
 <!-- 狀態面板（按鈕下方） -->
 <div class="stats-display" id="statsDisplay">
-  <div class="sd-title" id="sdName">Agumon</div>
+  <div class="sd-title">
+    <span id="sdName" style="flex:1;text-align:center;">Agumon</span>
+    <canvas id="sdSkillIcon" width="16" height="16" style="width:45px;height:45px;cursor:pointer;display:none;image-rendering:pixelated;border-radius:8px;box-sizing:border-box;"
+         onclick="showSkillDisplay()" title="技能"></canvas>
+  </div>
   <div class="sd-row"><span>等級</span><span id="sdLevel" style="color:#ffcc00;">Lv.1</span></div>
   <div class="sd-row"><span>經驗</span><span id="sdExp" style="color:#7ec8ff;">0 / 16</span></div>
   <div class="sd-row"><span>階段</span><span id="sdStage">成長期</span></div>
@@ -2026,6 +2040,13 @@ canvas {
   <div class="sd-row"><span>訓練點</span><span id="sdTrainingPoints">0</span></div>
   <div class="sd-row"><span>育成失誤</span><span id="sdCareMistakes" style="color:#ff6666;">0</span></div>
   <div class="sd-row"><span>💰  金幣</span><span id="sdGold" style="color:#ffcc00;">0</span></div>
+</div>
+
+<!-- 技能選擇面板 -->
+<div class="stats-display" id="skillDisplay" style="display:none;">
+  <div class="sd-title">⚔ 技能</div>
+  <div id="skillList" style="display:flex;flex-direction:column;gap:6px;"></div>
+  <button class="detail-back" id="skillBackBtn" style="margin-top:8px;width:100%;" onclick="closeSkillDisplay()">← 返回</button>
 </div>
 
 <!-- PVE 冒險地圖選擇面板 -->
@@ -2897,7 +2918,12 @@ let chickenImage = new Image();      // 食物圖（雞腿）
 let carrotImage = new Image();       // 食物圖（紅蘿蔔）
 let potatoImage = new Image();        // 食物圖（土豆）
 let appleImage = new Image();          // 食物圖（蘋果）
-let strikeFirstImage = new Image();  // 技能圖（先制）
+let strikeFirstImage = new Image();   // 技能圖（先制）
+let critShieldImage = new Image();    // 技能圖（暴擊護盾）
+let undyingHeartImage = new Image();  // 技能圖（不死之心）
+let infiniteBladeImage = new Image(); // 技能圖（無限之刃）
+let hpRecoverImage = new Image();     // 技能圖（血量回復）
+let dodgeFollowUpImage = new Image(); // 技能圖（閃避追加）
 let bgImages = {};
 let currentBgName = "Noon";
 
@@ -3366,6 +3392,7 @@ function startEggPhase(version = "V1") {
   if(callBlinkTimer){ clearInterval(callBlinkTimer); callBlinkTimer = null; }
   resetAllBonuses();
   evoTaskRates = {}; // 進化任務進化率隨新蛋重置
+  gameSelectedSkill = "strikeFirst"; // 回蛋重置技能選擇
   
   // 重置生病狀態
   isSick = false;
@@ -4358,16 +4385,108 @@ function setBattleActive(val){
   if(val) drawBattleItemIcons();
 }
 
-// 繪製對戰資訊兩側（敵方/我方）上方的食物圖＋技能圖（16×16 縮放為 28×28）
+// 取得指定技能的顯示狀態："none"無技能 | "ready"可用 | "active"本輪生效 | "spent"已用完
+function getPlayerSkillDisplayState(skillId){
+  if(skillId !== getPlayerSelectedSkill()) return "none"; // 只顯示當前已選技能
+  const s = getBattlePlayerStats();
+  if(!getSkillIds(s ? s.stage : "").includes(skillId)) return "none";
+  if(skillId === "strikeFirst") return battlePlayerSkillState;
+  return playerHasSkillById(skillId) ? "ready" : "spent";
+}
+function getEnemySkillDisplayState(skillId){
+  if(skillId !== getEnemySelectedSkill()) return "none"; // 只顯示當前已選技能
+  const es = getEnemyStats(battleEnemyRow);
+  if(!getSkillIds(es ? es.stage : "").includes(skillId)) return "none";
+  if(skillId === "strikeFirst") return battleEnemySkillState;
+  return enemyHasSkillById(skillId) ? "ready" : "spent";
+}
+
+// 取得技能對應圖片
+function getSkillImage(skillId){
+  const map = {
+    strikeFirst: strikeFirstImage,
+    critShield: critShieldImage,
+    undyingHeart: undyingHeartImage,
+    infiniteBlade: infiniteBladeImage,
+    hpRecover: hpRecoverImage,
+    dodgeFollowUp: dodgeFollowUpImage
+  };
+  return map[skillId] || null;
+}
+
+// 取得技能圖片路徑（技能頁列表用）
+function getSkillIconSrc(skillId){
+  const map = {
+    strikeFirst: "Player skills/Strike first.png",
+    critShield: "Player skills/Critical Shield.png",
+    undyingHeart: "Player skills/Phoenix.png",
+    infiniteBlade: "Player skills/Infinite Blade.png",
+    hpRecover: "Player skills/Health recovery.png",
+    dodgeFollowUp: "Player skills/Miss add to attack.png"
+  };
+  return map[skillId] || "";
+}
+
+// 在 16×16 canvas 上繪製單一技能圖標
+function drawSkillIconOnCanvas(canvas, skillId, state){
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, 16, 16);
+  const sk = getSkill(skillId);
+  if(!sk) return;
+  if(state === "ready" || state === "active"){
+    canvas.title = sk.name + "：" + sk.desc + (state === "active" ? "（本輪生效）" : "");
+    canvas.style.background = sk.color;
+    canvas.style.border = "1px solid #ffffff";
+    canvas.style.boxShadow = "0 0 4px " + sk.color;
+    const skillImg = getSkillImage(skillId);
+    if(skillImg && skillImg.complete && skillImg.naturalWidth > 0){
+      ctx.drawImage(skillImg, 0, 0, 16, 16, 0, 0, 16, 16);
+    } else {
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 11px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(sk.name.slice(0, 1), 8, 8);
+    }
+  } else if(state === "spent"){
+    canvas.title = sk.name + "（已用完）";
+    canvas.style.background = "#444444";
+    canvas.style.border = "1px solid #666666";
+    canvas.style.boxShadow = "";
+    ctx.fillStyle = "#888888";
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = "#000000";
+    ctx.font = "bold 13px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("X", 8, 8);
+  } else {
+    canvas.title = "技能：無";
+    canvas.style.background = "";
+    canvas.style.border = "";
+    canvas.style.boxShadow = "";
+    ctx.fillStyle = "#999999";
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = "#000000";
+    ctx.font = "bold 13px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("-", 8, 8);
+  }
+}
+
+// 繪製對戰資訊兩側（敵方/我方）上方的食物圖＋三個技能圖
 function drawBattleItemIcons(){
   // 玩家當前出戰龍是否有食物 BUFF；敵方（AI）無食物加成，固定顯示 "-"
   const fighter = getBattlePlayerFighter();
   const buffSlotIdx = fighter ? fighter.slotIdx : activeSlotIndex;
   const curFoodName = getSlotFoodName(buffSlotIdx);
   const hasVitBuff = curFoodName !== "";
+  const SKILL_KEYS = ["strikeFirst", "critShield", "undyingHeart"];
   const slots = [
-    { food: 'battleEnemyFoodIcon', skill: 'battleEnemySkillIcon', hasBuff: false },
-    { food: 'battlePlayerFoodIcon', skill: 'battlePlayerSkillIcon', hasBuff: hasVitBuff }
+    { food: 'battleEnemyFoodIcon', skillPrefix: 'battleEnemySkillIcon', hasBuff: false, isPlayer: false },
+    { food: 'battlePlayerFoodIcon', skillPrefix: 'battlePlayerSkillIcon', hasBuff: hasVitBuff, isPlayer: true }
   ];
   slots.forEach(slot => {
     const foodCanvas = document.getElementById(slot.food);
@@ -4397,18 +4516,29 @@ function drawBattleItemIcons(){
         ctx.fillText("-", 8, 8);
       }
     }
-    const skillCanvas = document.getElementById(slot.skill);
-    if(skillCanvas){
-      const ctx = skillCanvas.getContext('2d');
-      ctx.imageSmoothingEnabled = false;
-      ctx.clearRect(0, 0, 16, 16);
-      // Strike first.png 為 16×16 單幀
-      if(strikeFirstImage && strikeFirstImage.complete && strikeFirstImage.naturalWidth > 0){
-        ctx.drawImage(strikeFirstImage, 0, 0, 16, 16, 0, 0, 16, 16);
+    // 每隻龍只有一個技能：只顯示當前已選技能（icon0），隱藏其餘兩個技能槽
+    const curSkill = slot.isPlayer ? getPlayerSelectedSkill() : getEnemySelectedSkill();
+    SKILL_KEYS.forEach((skId, i) => {
+      const skillCanvas = document.getElementById(slot.skillPrefix + i);
+      if(!skillCanvas) return;
+      if(i !== 0){
+        skillCanvas.style.display = "none";
+        return;
       }
-    }
+      skillCanvas.style.display = "inline-block";
+      if(curSkill){
+        const state = slot.isPlayer ? getPlayerSkillDisplayState(curSkill) : getEnemySkillDisplayState(curSkill);
+        drawSkillIconOnCanvas(skillCanvas, curSkill, state);
+      } else {
+        drawSkillIconOnCanvas(skillCanvas, "strikeFirst", "none");
+      }
+    });
   });
 }
+let battleStrikeFirstPlayer = false;   // 玩家「先制」本次對戰是否生效（第一擊攻擊力+30%）
+let battleStrikeFirstEnemy = false;    // 敵方「先制」本次對戰是否生效
+let battlePlayerSkillState = "none";   // 玩家技能圖標狀態："none"無技能 | "ready"擁有未判定 | "active"生效 | "spent"失效/用完
+let battleEnemySkillState = "none";    // 敵方技能圖標狀態
 let battleEnemyRow = -1;              // 敵方數碼獸 row
 let battlePlayerHp = 0;               // 玩家當前血量
 let battleEnemyHp = 0;                // 敵方當前血量
@@ -4428,6 +4558,7 @@ let battleResult = "";                // "" | "win" | "lose"
 let battleResultTimer = null;         // 結果顯示計時器
 let battleMsg = "";                   // 戰鬥訊息
 let battleLogEntries = [];            // 戰鬥記錄
+let battlePendingHpRecoverLog = null; // 待插入的開場回血記錄（3V3 連勝回血）
 let battleBoomActive = false;         // 爆炸動畫啟用中
 let battleBoomX = 0;                  // 爆炸 x 位置
 let battleBoomFrame = 0;              // 爆炸幀 (0=Boom01, 1=Boom02)
@@ -6165,6 +6296,7 @@ function resetSlotTrainingData(data){
   data.gameTrainingPoints = 0;
   data.gameLevel = 1;
   data.gameExp = 0;
+  data.selectedSkill = "strikeFirst";
 }
 
 // 離線自然進化結算（依賴已切換好的全局 currentVersion / DIGIMON_STATS / gameCareMistakes）
@@ -6835,6 +6967,7 @@ function saveGameState(){
       birthTimestamp: birthTimestamp || undefined,
       cultivatedRows: Array.from(cultivatedRows),
       autoFeedEnabled,
+      selectedSkill: gameSelectedSkill,
       evoRates: evoTaskRates,
       timestamp: Date.now()
     });
@@ -6890,6 +7023,8 @@ function loadGameState(slotIndex){
     const raw = localStorage.getItem(getSlotSaveKey(idx));
     if(!raw) return;
     const data = JSON.parse(raw);
+    skillUsed = false; // 每場戰鬥重新判定，切換槽位時重置
+    gameSelectedSkill = "strikeFirst"; // 切換槽位時先重置為默認，下方再依存檔讀取
     // 讀取版本並切換數據
     const saveVersion = data.currentVersion || "V1";
     if(saveVersion === "V2" && currentVersion !== "V2"){
@@ -7141,6 +7276,7 @@ function loadGameState(slotIndex){
       eightPoopsStartTime = data.eightPoopsStartTime ?? 0;
       eightPoopsMistakeRecorded = data.eightPoopsMistakeRecorded ?? false;
       evoTaskRates = data.evoRates || {};
+      gameSelectedSkill = data.selectedSkill || "strikeFirst";
       // 離線期間大便生病檢查：存檔時已有≥8個大便且未記錄失誤 → 立即生病
       if(!isSick && poopsOnScreen >= 8 && !eightPoopsMistakeRecorded){
         gameCareMistakes++;
@@ -7228,6 +7364,7 @@ function loadGameState(slotIndex){
       gameLevel = data.gameLevel ?? 1; gameExp = data.gameExp ?? 0;
       isSick = false; sickStartTime = 0; eightPoopsStartTime = 0; eightPoopsMistakeRecorded = false;
       babyIICallEverShown = data.babyIICallEverShown ?? false;
+      gameSelectedSkill = data.selectedSkill || "strikeFirst";
     }
     // 離線期間飢餓歸零≥24小時 → 死亡
     if(!isDead && gameHunger === 0 && (data.gameHunger ?? 5) <= 0){
@@ -7567,6 +7704,8 @@ function rebornAsEgg() {
   gameAffinity = 0;
   gameTrainingPoints = 0;
   gameCareMistakes = 0;
+  skillUsed = false;  // 新個體重置技能使用狀態
+  gameSelectedSkill = "strikeFirst"; // 回蛋重置技能選擇
   babyMistakeRecorded = false;
   callFirstShownTime = 0;
   callMistakeRecorded = false;
@@ -8963,6 +9102,11 @@ function clickFunction(idx){
   setTimeout(() => btn.classList.remove('active'), 200);
   console.log(`功能: ${FUNCTION_BTNS[idx]}`);
   playSFX("click");                     // 按鈕點擊音
+  // 點開技能頁後，點擊其他功能按鈕 → 先退出技能頁
+  const skillPanelEl = document.getElementById("skillDisplay");
+  if(skillPanelEl && skillPanelEl.style.display === "block"){
+    skillPanelEl.style.display = "none";
+  }
   if(idx === 0) showStats();   // 狀態
   else if(idx === 1) showFood(); // 食物
   else if(idx === 2) startTraining(); // 訓練
@@ -9014,6 +9158,8 @@ function showStats(){
     const bmEgg = document.getElementById("battleMenuDisplay");
     if(bmEgg) bmEgg.style.display = "none";
     document.getElementById("sdName").textContent = "數碼蛋";
+    const eggSkillIcon = document.getElementById("sdSkillIcon");
+    if(eggSkillIcon) eggSkillIcon.style.display = "none";
     document.getElementById("sdStage").textContent = "蛋";
     document.getElementById("sdAttr").textContent = "—";
     document.getElementById("sdAge").textContent = "0歲:00:00";
@@ -9050,12 +9196,15 @@ function showStats(){
   if(pveEnc) pveEnc.style.display = "none";
   const bmPanel = document.getElementById("battleMenuDisplay");
   if(bmPanel) bmPanel.style.display = "none";
+  const skillPanel = document.getElementById("skillDisplay");
+  if(skillPanel) skillPanel.style.display = "none";
   const years = Math.floor(gameAge / 1440);
   const hours = Math.floor((gameAge % 1440) / 60);
   const mins = gameAge % 60;
   const h = Math.min(10, Math.max(0, gameHunger));
   const hearts = "❤️".repeat(h) + "🖤".repeat(10 - h);
   document.getElementById("sdName").textContent = s.name;
+  updateSdSkillIcon();
   document.getElementById("sdStage").textContent = s.stage;
   document.getElementById("sdAttr").textContent = ATTR_CN[s.attr] || s.attr || "—";
   document.getElementById("sdAge").textContent = `${years}歲:${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
@@ -9063,6 +9212,95 @@ function showStats(){
   document.getElementById("sdHunger").innerHTML = hearts;
   updateStatsDisplay();
   panel.style.display = "block";
+}
+
+// ========== 技能選擇頁 ==========
+function updateSdSkillIcon(){
+  const icon = document.getElementById("sdSkillIcon");
+  if(!icon) return;
+  const s = getBattlePlayerStats();
+  const ids = getSkillIds(s ? s.stage : "");
+  const cur = getPlayerSelectedSkill();
+  if(ids.length && cur){
+    const sk = getSkill(cur);
+    icon.style.display = "inline-block";
+    drawSkillIconOnCanvas(icon, cur, "ready");
+    icon.title = "技能：" + sk.name + "（" + sk.desc + "）";
+  } else {
+    icon.style.display = "none";
+    icon.title = "技能：無";
+  }
+}
+
+function showSkillDisplay(){
+  const panel = document.getElementById("skillDisplay");
+  if(!panel) return;
+  // 若已顯示則關閉
+  if(panel.style.display === "block"){
+    panel.style.display = "none";
+    return;
+  }
+  // 關閉其他面板
+  document.getElementById("statsDisplay").style.display = "none";
+  document.getElementById("foodDisplay").style.display = "none";
+  document.getElementById("digidexDisplay").style.display = "none";
+  document.getElementById("trainingDisplay").style.display = "none";
+  document.getElementById("battleDisplay").style.display = "none";
+  const pveMap = document.getElementById("pveMapDisplay");
+  if(pveMap) pveMap.style.display = "none";
+  const pveEnc = document.getElementById("pveEncounterDisplay");
+  if(pveEnc) pveEnc.style.display = "none";
+  const bmPanel = document.getElementById("battleMenuDisplay");
+  if(bmPanel) bmPanel.style.display = "none";
+
+  // 生成技能選擇列表（成長期及以上可從 3 個技能中點選 1 個）
+  renderSkillList();
+  panel.style.display = "block";
+}
+
+function renderSkillList(){
+  const list = document.getElementById("skillList");
+  if(!list) return;
+  const ps = getBattlePlayerStats();
+  const skillIds = getSkillIds(ps ? ps.stage : "");
+  const cur = getPlayerSelectedSkill();
+  if(skillIds.length){
+    list.innerHTML = skillIds.map(id => {
+      const sk = getSkill(id);
+      const selected = (id === cur);
+      return `
+        <div class="detail-row" data-skill-id="${id}" style="align-items:center;cursor:pointer;${selected ? "background:rgba(255,255,255,0.16);" : ""}" onclick="selectSkill('${id}')">
+          <span style="display:flex;align-items:center;gap:6px;">
+            <img src="${getSkillIconSrc(id)}" alt="" style="width:22px;height:22px;image-rendering:pixelated;border-radius:4px;background:${sk.color};flex:none;">
+            ${sk.name}
+            ${selected ? '<span style="color:#7CFC00;font-weight:700;">✔</span>' : ""}
+          </span>
+          <span>${sk.desc}</span>
+        </div>
+      `;
+    }).join("");
+    list.insertAdjacentHTML("beforeend", `<div class="detail-row" style="opacity:0.7;"><span>提示</span><span>點擊技能即可切換（每局只能用一次）</span></div>`);
+  } else {
+    list.innerHTML = `<div class="detail-row"><span>技能</span><span>成長期後可選擇</span></div>`;
+  }
+}
+
+// 玩家點選技能：切換當前已選技能並存檔
+function selectSkill(id){
+  const ps = getBattlePlayerStats();
+  const ids = getSkillIds(ps ? ps.stage : "");
+  if(!ids.includes(id)) return;
+  gameSelectedSkill = id;
+  saveGameState();
+  renderSkillList();   // 重新渲染列表，更新高亮
+  updateSdSkillIcon();
+  showToast("已選擇技能：" + getSkill(id).name);
+}
+
+function closeSkillDisplay(){
+  const panel = document.getElementById("skillDisplay");
+  if(panel) panel.style.display = "none";
+  showStats();  // 返回狀態頁
 }
 
 function showFood(){
@@ -9089,6 +9327,8 @@ function showFood(){
   if(pveEncF) pveEncF.style.display = "none";
   const bmF = document.getElementById("battleMenuDisplay");
   if(bmF) bmF.style.display = "none";
+  const skillF = document.getElementById("skillDisplay");
+  if(skillF) skillF.style.display = "none";
   const foodGold = document.getElementById("foodGold");
   if(foodGold) foodGold.textContent = "💰 " + gameGold;
   panel.style.display = "block";
@@ -9190,7 +9430,7 @@ function updateBattleStatsDisplay(){
 
 
 // 統一傷害計算（含閃避→暴擊→屬性→下限1）
-function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef){
+function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef, atkMult = 1){
   // 玩家攻擊用總屬性，敵方攻擊用基礎屬性
   const playerRow = getBattlePlayerRow();
   if (isPlayerAtk === undefined) isPlayerAtk = (attackerRow === playerRow);
@@ -9204,7 +9444,9 @@ function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef){
   if(Math.random() < defDodge) return { dodged: true, dmg: 0, msg: defr.name + " 閃避了攻擊！" };
   // 基礎傷害（攻擊方用總攻擊）
   let dmg = isPlayerAtk ? getBattlePlayerTotalAtk() : (isSelfEnemyAtk ? ((atkr.atk || 0) + battleSelfEnemyAtkBonus) : (atkr.atk || 0) + battleEnemyAtkBonus);
+  dmg = Math.round(dmg * atkMult);   // 先制：先手方首次攻擊力+30%
   let msgExtra = "";
+  let shielded = false; // 暴擊護盾是否觸發
   // 暴擊（攻擊方用總暴擊）
   const atkCrit = isPlayerAtk ? getBattlePlayerTotalCrit() : (isSelfEnemyAtk ? ((atkr.critRate || 0) + battleSelfEnemyCritBonus) : Math.min(0.40, (atkr.critRate || 0) + battleEnemyCritBonus));
   let isCrit = false;
@@ -9212,6 +9454,27 @@ function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef){
     dmg = Math.round(dmg * CRIT_MULT);
     msgExtra = "爆擊！";
     isCrit = true;
+    // 無限之刃：攻擊方暴擊時攻擊力 +30%，每局一次
+    const atkBladeActive = isPlayerAtk ? playerHasSkillById("infiniteBlade") : enemyHasSkillById("infiniteBlade");
+    if(atkBladeActive){
+      dmg = Math.round(dmg * 1.3);
+      msgExtra = "爆擊！無限之刃 +30%！";
+      if(isPlayerAtk) setPlayerSkillUsedById("infiniteBlade", true);
+      else setEnemySkillUsedById("infiniteBlade", true);
+    }
+    // 暴擊護盾：防禦方受暴擊當下該次傷害 -30%，每局一次
+    const defShieldActive = isPlayerDef ? playerHasSkillById("critShield") : enemyHasSkillById("critShield");
+    if(defShieldActive){
+      dmg = Math.round(dmg * 0.7);
+      msgExtra = "爆擊！暴擊護盾 -30%！";
+      shielded = true;
+      if(isPlayerDef) setPlayerSkillUsedById("critShield", true);
+      else setEnemySkillUsedById("critShield", true);
+    }
+  }
+  // 先制觸發（顯示在暴擊之後）
+  if(atkMult > 1){
+    msgExtra = msgExtra ? (msgExtra + " +先制攻擊") : "+先制攻擊";
   }
   // 屬性相剋
   const aType = atkr.attr || "none";
@@ -9224,7 +9487,7 @@ function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef){
   const attrAdv = attrMult > 1.0;
   const attrDis = attrMult < 1.0;
   const msg = msgExtra ? (msgExtra + " " + dmg + " 傷害！") : (dmg + " 傷害！");
-  return { dodged: false, dmg, msg, crit: isCrit, attrAdv: attrAdv, attrDis: attrDis };
+  return { dodged: false, dmg, msg, crit: isCrit, attrAdv: attrAdv, attrDis: attrDis, shielded };
 }
 
 // 跨版本對戰輔助函數：取得敵方所屬版本的數據
@@ -9453,6 +9716,7 @@ function getBattleSlotSnapshot(slotIdx){
       critBonus: gameCritBonus || 0,
       dodgeBonus: gameDodgeBonus || 0,
       affBonus: gameAffBonus || 0,
+      selectedSkill: gameSelectedSkill || "strikeFirst",
       isDead: !!isDead
     };
   }
@@ -9476,6 +9740,7 @@ function getBattleSlotSnapshot(slotIdx){
       critBonus: save.gameCritBonus || 0,
       dodgeBonus: save.gameDodgeBonus || 0,
       affBonus: save.gameAffBonus || 0,
+      selectedSkill: save.selectedSkill || "strikeFirst",
       isDead: !!save.isDead
     };
   } catch(e){
@@ -9637,7 +9902,14 @@ function buildQuickBattle3v3EnemyTeam(stage){
         name: info.name,
         stage: info.stage,
         maxHp: info.hp || 0,
-        currentHp: info.hp || 0
+        currentHp: info.hp || 0,
+        selectedSkill: rollRandomSkill(),
+        skillUsed: false,
+        critShieldUsed: false,
+        undyingUsed: false,
+        infiniteBladeUsed: false,
+        dodgeFollowUpUsed: false,
+        hpRecoverUsed: false
       });
     }
   }
@@ -9686,6 +9958,13 @@ function startQuickBattle3v3(){
       critBonus: snapshot.critBonus || 0,
       dodgeBonus: snapshot.dodgeBonus || 0,
       affBonus: snapshot.affBonus || 0,
+      selectedSkill: snapshot.selectedSkill || "strikeFirst",
+      skillUsed: false,
+      critShieldUsed: false,
+      undyingUsed: false,
+      infiniteBladeUsed: false,
+      dodgeFollowUpUsed: false,
+      hpRecoverUsed: false,
       maxHp,
       currentHp: maxHp,
       adversityTries: 0
@@ -9771,6 +10050,7 @@ function handleQuickBattle3v3RoundEnd(result){
 }
 
 function continueQuickBattle3v3Round(result, outgoingSide){
+  let hpRecoverNotice = "";
   if(result === "win"){
     // 日常任務：統計擊敗的敵人階段（battleEnemyRow 此刻仍是被擊敗的敵人）
     const _dailyEnemy = getEnemyStats(battleEnemyRow);
@@ -9780,11 +10060,35 @@ function continueQuickBattle3v3Round(result, outgoingSide){
       finishQuickBattle3v3Match(true);
       return;
     }
+    // 血量回復：我方勝利進入下一場時，消耗技能回復當前龍 20% 最大血量（每局一次）
+    if(playerHasSkillById("hpRecover")){
+      const pf = getBattlePlayerFighter();
+      if(pf){
+        const pMax = getBattlePlayerTotalHp();
+        const pBefore = pf.currentHp;
+        pf.currentHp = Math.min(pMax, pBefore + Math.round(pMax * 0.2));
+        setPlayerSkillUsedById("hpRecover", true);
+        hpRecoverNotice = " " + getBattlePlayerStats().name + " 發動回血技能 血量回復 +" + (pf.currentHp - pBefore) + "！";
+        battlePendingHpRecoverLog = { name: getBattlePlayerStats().name, msg: "發動回血技能 血量回復 +" + (pf.currentHp - pBefore) };
+      }
+    }
   } else {
     battleQuick3v3PlayerIdx++;
     if(battleQuick3v3PlayerIdx >= battleQuick3v3PlayerTeam.length){
       finishQuickBattle3v3Match(false);
       return;
+    }
+    // 血量回復：敵方勝利進入下一場時，消耗技能回復其當前龍 20% 最大血量（每局一次）
+    if(enemyHasSkillById("hpRecover")){
+      const ef = getBattleEnemyFighter();
+      if(ef){
+        const eMax = ef.maxHp || getEnemyStats(ef.row).hp || 1;
+        const eBefore = ef.currentHp;
+        ef.currentHp = Math.min(eMax, eBefore + Math.round(eMax * 0.2));
+        setEnemySkillUsedById("hpRecover", true);
+        hpRecoverNotice = " " + getEnemyStats(ef.row).name + " 發動回血技能 血量回復 +" + (ef.currentHp - eBefore) + "！";
+        battlePendingHpRecoverLog = { name: getEnemyStats(ef.row).name, msg: "發動回血技能 血量回復 +" + (ef.currentHp - eBefore) };
+      }
     }
   }
 
@@ -9812,7 +10116,7 @@ function continueQuickBattle3v3Round(result, outgoingSide){
   updateBattleHpDisplay();
   document.getElementById("battlePlayerName").innerHTML = formatBattleNameHtml(ps.name, ps.attr, pAttrColor, getBattlePlayerLevel());
   document.getElementById("battleEnemyName").innerHTML = formatBattleNameHtml(es.name, es.attr, eAttrColor, battleEnemyLevel);
-  document.getElementById("battleMsg").textContent = ((outgoingSide === "enemy") ? es.name : ps.name) + " 上場！";
+  document.getElementById("battleMsg").textContent = ((outgoingSide === "enemy") ? es.name : ps.name) + " 上場！" + hpRecoverNotice;
 
   if(outgoingSide === "enemy"){
     battleEnemyOffsetX = -28;
@@ -9893,6 +10197,7 @@ function startQuickBattle3v3NextRound(){
 }
 
 function finishQuickBattle3v3Match(playerWon){
+  battlePendingHpRecoverLog = null;
   // 3V3 整場結束：清除所選 3 隻龍（含未輪到出場的）的食物 BUFF
   for(const bSlot of battleQuick3v3SelectedSlots){
     clearSlotBuff(bSlot);
@@ -10072,6 +10377,153 @@ function getStatsForVersion(ver) {
   if (ver === "V10") return DIGIMON_STATS_V10;
   return DIGIMON_STATS_V1;
 }
+
+// ========== 技能系統 ==========
+const SKILLS = {
+  strikeFirst: { id: "strikeFirst", name: "先制", desc: "先手時首次攻擊力 +30%", color: "#ff8800" },
+  critShield: { id: "critShield", name: "暴擊護盾", desc: "受到暴擊時，該次傷害 -30%", color: "#3399ff" },
+  undyingHeart: { id: "undyingHeart", name: "不死之心", desc: "血量 ≤10 時，受到致死攻擊改為剩 1 血", color: "#ff3366" },
+  infiniteBlade: { id: "infiniteBlade", name: "無限之刃", desc: "暴擊時攻擊力 +30%", color: "#ffcc00" },
+  dodgeFollowUp: { id: "dodgeFollowUp", name: "閃避追加", desc: "敵人閃避時，馬上追加一次 70% 攻擊（可暴擊）", color: "#00cc66" },
+  hpRecover: { id: "hpRecover", name: "血量回復", desc: "勝利進入下一場時回復 20% 血量", color: "#cc66ff" },
+};
+// 數碼暴龍（成長期及以上）通用擁有技能；蛋 / 幼年期無技能
+const DIGIMON_STAGES = ["成長期", "成熟期", "完全體", "究極體"];
+// 成長期及以上數碼獸擁有全部技能（每個技能每局只能用一次）
+function getSkillIds(stage){
+  return (stage && DIGIMON_STAGES.includes(stage)) ? ["strikeFirst", "critShield", "undyingHeart", "infiniteBlade", "dodgeFollowUp", "hpRecover"] : [];
+}
+function getSkillId(stage){
+  const ids = getSkillIds(stage);
+  return ids.length ? ids[0] : null;
+}
+function getSkill(id){ return id ? SKILLS[id] : null; }
+
+// ========== 技能狀態管理 ==========
+// 「先制」：先手方首次攻擊 +30%；「暴擊護盾」：受暴擊傷害 -30%；「不死之心」：≤10 血受致死攻擊改為剩 1 血；「無限之刃」：暴擊時攻擊力 +30%；「閃避追加」：敵人閃避時追加一次 70% 攻擊（可暴擊）；「血量回復」：勝利進入下一場回復 20% 血量。
+// 每次「出場」每個技能只用一次：1V1 每場獨立判定；3V3 車輪戰中同一隻龍連勝時僅首場生效，換龍上場後重新可用。
+// 是否已用僅由戰鬥內記憶體變數管理（不持久化到存檔）。
+let skillUsed = false;                        // 玩家先制（1V1 兼容變數，3V3 用 fighter.skillUsed）
+let battlePlayerCritShieldUsed = false;       // 玩家暴擊護盾（1V1）
+let battleEnemyCritShieldUsed = false;        // 敵方暴擊護盾（1V1）
+let battlePlayerUndyingUsed = false;          // 玩家不死之心（1V1）
+let battleEnemyUndyingUsed = false;           // 敵方不死之心（1V1）
+let battlePlayerInfiniteBladeUsed = false;    // 玩家無限之刃（1V1）
+let battleEnemyInfiniteBladeUsed = false;     // 敵方無限之刃（1V1）
+let battlePlayerDodgeFollowUpUsed = false;    // 玩家閃避追加（1V1）
+let battleEnemyDodgeFollowUpUsed = false;     // 敵方閃避追加（1V1）
+let gameSelectedSkill = "strikeFirst";        // 玩家當前槽位已選技能（每隻龍只能有一個，持久化到存檔）
+let battleEnemySelectedSkill = "strikeFirst"; // 敵方本場已選技能（1V1 每場隨機）
+
+// 隨機擲一個技能（敵方 AI 每場隨機一個技能）
+function rollRandomSkill(){
+  const ids = ["strikeFirst", "critShield", "undyingHeart", "infiniteBlade", "dodgeFollowUp", "hpRecover"];
+  return ids[Math.floor(Math.random() * ids.length)];
+}
+// 玩家當前已選技能（1V1 用當前槽位；3V3/主線任務用 fighter 欄位）
+function getPlayerSelectedSkill(){
+  const f = getBattlePlayerFighter();
+  if(f && f.selectedSkill) return f.selectedSkill;
+  return gameSelectedSkill || "strikeFirst";
+}
+// 敵方當前已選技能（1V1 用本場隨機；3V3 用 fighter 欄位）
+function getEnemySelectedSkill(){
+  const e = getBattleEnemyFighter();
+  if(e && e.selectedSkill) return e.selectedSkill;
+  return battleEnemySelectedSkill || "strikeFirst";
+}
+
+function getPlayerSkillUsed(){
+  const f = getBattlePlayerFighter();
+  if(f) return !!f.skillUsed;
+  return !!skillUsed;
+}
+
+// 玩家是否擁有指定技能且尚未使用（含階段判定）
+function playerHasSkillById(skillId){
+  if(skillId !== getPlayerSelectedSkill()) return false; // 每隻龍只能有一個技能
+  const s = getBattlePlayerStats();
+  if(!getSkillIds(s ? s.stage : "").includes(skillId)) return false;
+  const f = getBattlePlayerFighter();
+  if(battleQuick3v3Active && f){
+    if(skillId === "strikeFirst") return !f.skillUsed;
+    if(skillId === "critShield") return !f.critShieldUsed;
+    if(skillId === "undyingHeart") return !f.undyingUsed;
+    if(skillId === "infiniteBlade") return !f.infiniteBladeUsed;
+    if(skillId === "dodgeFollowUp") return !f.dodgeFollowUpUsed;
+    if(skillId === "hpRecover") return !f.hpRecoverUsed;
+    return false;
+  }
+  if(skillId === "strikeFirst") return true;          // 1V1 先制每場獨立
+  if(skillId === "critShield") return !battlePlayerCritShieldUsed;
+  if(skillId === "undyingHeart") return !battlePlayerUndyingUsed;
+  if(skillId === "infiniteBlade") return !battlePlayerInfiniteBladeUsed;
+  if(skillId === "dodgeFollowUp") return !battlePlayerDodgeFollowUpUsed;
+  if(skillId === "hpRecover") return false;           // 1V1 無連續戰鬥，不觸發
+  return false;
+}
+// 敵方是否擁有指定技能且尚未使用（含階段判定）
+function enemyHasSkillById(skillId){
+  if(skillId !== getEnemySelectedSkill()) return false; // 每隻龍只能有一個技能
+  const es = getEnemyStats(battleEnemyRow);
+  if(!getSkillIds(es ? es.stage : "").includes(skillId)) return false;
+  const e = getBattleEnemyFighter();
+  if(battleQuick3v3Active && e){
+    if(skillId === "strikeFirst") return !e.skillUsed;
+    if(skillId === "critShield") return !e.critShieldUsed;
+    if(skillId === "undyingHeart") return !e.undyingUsed;
+    if(skillId === "infiniteBlade") return !e.infiniteBladeUsed;
+    if(skillId === "dodgeFollowUp") return !e.dodgeFollowUpUsed;
+    if(skillId === "hpRecover") return !e.hpRecoverUsed;
+    return false;
+  }
+  if(skillId === "strikeFirst") return true;
+  if(skillId === "critShield") return !battleEnemyCritShieldUsed;
+  if(skillId === "undyingHeart") return !battleEnemyUndyingUsed;
+  if(skillId === "infiniteBlade") return !battleEnemyInfiniteBladeUsed;
+  if(skillId === "dodgeFollowUp") return !battleEnemyDodgeFollowUpUsed;
+  if(skillId === "hpRecover") return false;           // 敵方 1V1 無連續戰鬥，3V3 由 fighter 欄位管理
+  return false;
+}
+// 標記玩家指定技能已用/未用
+function setPlayerSkillUsedById(skillId, value){
+  const f = getBattlePlayerFighter();
+  if(battleQuick3v3Active && f){
+    if(skillId === "strikeFirst") f.skillUsed = value;
+    else if(skillId === "critShield") f.critShieldUsed = value;
+    else if(skillId === "undyingHeart") f.undyingUsed = value;
+    else if(skillId === "infiniteBlade") f.infiniteBladeUsed = value;
+    else if(skillId === "dodgeFollowUp") f.dodgeFollowUpUsed = value;
+    else if(skillId === "hpRecover") f.hpRecoverUsed = value;
+  }
+  if(skillId === "strikeFirst") skillUsed = value;
+  else if(skillId === "critShield") battlePlayerCritShieldUsed = value;
+  else if(skillId === "undyingHeart") battlePlayerUndyingUsed = value;
+  else if(skillId === "infiniteBlade") battlePlayerInfiniteBladeUsed = value;
+  else if(skillId === "dodgeFollowUp") battlePlayerDodgeFollowUpUsed = value;
+}
+// 標記敵方指定技能已用/未用
+function setEnemySkillUsedById(skillId, value){
+  const e = getBattleEnemyFighter();
+  if(battleQuick3v3Active && e){
+    if(skillId === "strikeFirst") e.skillUsed = value;
+    else if(skillId === "critShield") e.critShieldUsed = value;
+    else if(skillId === "undyingHeart") e.undyingUsed = value;
+    else if(skillId === "infiniteBlade") e.infiniteBladeUsed = value;
+    else if(skillId === "dodgeFollowUp") e.dodgeFollowUpUsed = value;
+    else if(skillId === "hpRecover") e.hpRecoverUsed = value;
+  }
+  if(skillId === "critShield") battleEnemyCritShieldUsed = value;
+  else if(skillId === "undyingHeart") battleEnemyUndyingUsed = value;
+  else if(skillId === "infiniteBlade") battleEnemyInfiniteBladeUsed = value;
+  else if(skillId === "dodgeFollowUp") battleEnemyDodgeFollowUpUsed = value;
+}
+
+// ===== 先制技能舊介面兼容包裝 =====
+function playerHasSkill(){ return playerHasSkillById("strikeFirst"); }
+function enemyHasSkill(){ return enemyHasSkillById("strikeFirst"); }
+function setPlayerSkillUsed(value){ setPlayerSkillUsedById("strikeFirst", value); }
+function setEnemySkillUsed(value){ setEnemySkillUsedById("strikeFirst", value); }
 
 // 屬性克制：疫苗 > 病毒 > 資料 > 疫苗（a 克制 b）
 function attrBeats(a, b) {
@@ -10404,8 +10856,16 @@ function executeAttack(who, onDone, isSpeedBonus = false){
   const defrRow = who === "player" ? battleEnemyRow : getBattlePlayerRow();
   const atkrName = (who === "player") ? getBattlePlayerStats(atkrRow).name : getEnemyStats(atkrRow).name;
 
-  const { dodged, dmg, msg, crit, attrAdv, attrDis } = calcBattleDamage(atkrRow, defrRow, who === "player", who !== "player");
+  // 「先制」技能：先手方首次攻擊生效（攻擊力+30%）
+  const strikeActive = (who === "player") ? battleStrikeFirstPlayer : battleStrikeFirstEnemy;
+  const { dodged, dmg, msg, crit, attrAdv, attrDis, shielded } = calcBattleDamage(atkrRow, defrRow, who === "player", who !== "player", strikeActive ? 1.3 : 1);
   battleIsCrit = crit;
+  // 消耗「先制」（無論命中/閃避，首次攻擊後即用完）
+  if(strikeActive){
+    if(who === "player"){ battleStrikeFirstPlayer = false; battlePlayerSkillState = "spent"; setPlayerSkillUsed(true); }
+    else { battleStrikeFirstEnemy = false; battleEnemySkillState = "spent"; setEnemySkillUsed(true); }
+    drawBattleItemIcons();  // 技能用完 → 顯示 X
+  }
 
   if(dodged){
     // 顯示攻擊幀 & 發射火球
@@ -10461,6 +10921,17 @@ function executeAttack(who, onDone, isSpeedBonus = false){
           battlePlayerDodge = false;
           battleEnemyDodge = false;
           renderBattleScene();
+
+          // 閃避追加：攻擊方擁有此技能時，敵人閃避後立即追加一次 70% 攻擊（可暴擊，每局一次）
+          const followActive = (who === "player") ? playerHasSkillById("dodgeFollowUp") : enemyHasSkillById("dodgeFollowUp");
+          if(followActive){
+            if(who === "player") setPlayerSkillUsedById("dodgeFollowUp", true);
+            else setEnemySkillUsedById("dodgeFollowUp", true);
+            executeFollowUpAttack(who, () => {
+              setTimeout(onDone, 300);
+            });
+            return;
+          }
           setTimeout(onDone, 300);
         }, 700);
         return;
@@ -10518,14 +10989,28 @@ function executeAttack(who, onDone, isSpeedBonus = false){
           battleBoomTimer = null;
           battleBoomActive = false;
 
+          // 不死之心：防禦方血量 ≤10 且本次攻擊致死 → 改為剩 1 血，每局一次
+          let undyingMsg = "";
           if(isEnemyAttack){
-            battlePlayerHp = Math.max(0, battlePlayerHp - dmg);
+            if(battlePlayerHp <= 10 && (battlePlayerHp - dmg) <= 0 && playerHasSkillById("undyingHeart")){
+              battlePlayerHp = 1;
+              setPlayerSkillUsedById("undyingHeart", true);
+              undyingMsg = "不死之心！";
+            } else {
+              battlePlayerHp = Math.max(0, battlePlayerHp - dmg);
+            }
           } else {
-            battleEnemyHp = Math.max(0, battleEnemyHp - dmg);
+            if(battleEnemyHp <= 10 && (battleEnemyHp - dmg) <= 0 && enemyHasSkillById("undyingHeart")){
+              battleEnemyHp = 1;
+              setEnemySkillUsedById("undyingHeart", true);
+              undyingMsg = "不死之心！";
+            } else {
+              battleEnemyHp = Math.max(0, battleEnemyHp - dmg);
+            }
           }
           updateBattleHpDisplay();
 
-          battleMsg = msg;
+          battleMsg = undyingMsg ? (msg + " " + undyingMsg) : msg;
           document.getElementById("battleMsg").textContent = battleMsg;
           let typeLabel = "";
           if(crit && attrAdv) typeLabel = "爆擊！屬性剋制！";
@@ -10533,6 +11018,9 @@ function executeAttack(who, onDone, isSpeedBonus = false){
           else if(attrAdv) typeLabel = "屬性剋制！";
           else if(attrDis) typeLabel = "屬性劣勢…";
           else typeLabel = "普通攻擊";
+          if(shielded) typeLabel += " 暴擊護盾 -30%！";
+          if(strikeActive) typeLabel += " +先制攻擊";
+          if(undyingMsg) typeLabel += " " + undyingMsg;
           addBattleLog(atkrName, `${typeLabel} → -${dmg} HP`, crit, false, attrAdv, attrDis, isSpeedBonus);
           renderBattleScene();
 
@@ -10544,6 +11032,113 @@ function executeAttack(who, onDone, isSpeedBonus = false){
             endBattle("win");
             return;
           }
+
+          setTimeout(onDone, 600);
+          return;
+        }
+        renderBattleScene();
+      }, 200);
+
+      renderBattleScene();
+      return;
+    }
+    renderBattleScene();
+  }, 80);
+}
+
+// 閃避追加攻擊動畫：攻擊方龍再次發出一發 70% 攻擊（可暴擊），命中防禦方（不可再閃避）
+function executeFollowUpAttack(who, onDone){
+  if(!battleActive || battleResult) return;
+  const atkrRow = who === "player" ? getBattlePlayerRow() : battleEnemyRow;
+  const atkrName = (who === "player") ? getBattlePlayerStats(atkrRow).name : getEnemyStats(atkrRow).name;
+
+  // 70% 攻擊，可暴擊（按攻擊方暴擊率判定）
+  const followAtk = (who === "player") ? getBattlePlayerTotalAtk() : ((getEnemyStats(atkrRow).atk || 0) + (battleIsSelfBattle ? battleSelfEnemyAtkBonus : battleEnemyAtkBonus));
+  const followCrit = (who === "player") ? getBattlePlayerTotalCrit() : ((getEnemyStats(atkrRow).critRate || 0) + (battleIsSelfBattle ? battleSelfEnemyCritBonus : Math.min(0.40, battleEnemyCritBonus)));
+  let dmg = Math.max(1, Math.round(followAtk * 0.7));
+  let isCrit = false;
+  if(Math.random() < followCrit){
+    dmg = Math.max(1, Math.round(followAtk * 0.7 * CRIT_MULT));
+    isCrit = true;
+  }
+
+  // 攻擊動畫：攻擊方龍發出攻擊（火球）
+  battleMsg = atkrName + " 閃避追加！";
+  document.getElementById("battleMsg").textContent = battleMsg;
+  if(who === "player"){
+    battlePlayerFrame = 11;
+    battleProjectileX = 38;
+    battleProjectileDir = 1;
+  } else {
+    battleEnemyFrame = 11;
+    battleProjectileX = 8;
+    battleProjectileDir = 0;
+  }
+  battleProjectileActive = true;
+  playSFX("attack");
+  renderBattleScene();
+
+  const dx = who === "player" ? -4 : 4;
+  const isEnemyAttack = who === "enemy";
+  const animTimer = setInterval(() => {
+    if(!battleActive && !battleResult){ clearInterval(animTimer); return; }
+    battleProjectileX += dx;
+    if(who === "player") battlePlayerFrame = 11;
+    else battleEnemyFrame = 11;
+
+    if((who === "player" && battleProjectileX <= 0) || (who === "enemy" && battleProjectileX >= 48)){
+      clearInterval(animTimer);
+      battleProjectileX = 0;
+      battleProjectileActive = false;
+      battlePlayerFrame = 0;
+      battleEnemyFrame = 0;
+
+      // 爆炸動畫
+      battleBoomActive = true;
+      playSFX("hit");
+      battleBoomX = (who === "player") ? 0 : 48;
+      battleBoomFrame = 0;
+      battleBoomCycles = 0;
+      if(battleBoomTimer){ clearInterval(battleBoomTimer); }
+
+      battleBoomTimer = setInterval(() => {
+        if(!battleActive && !battleResult){ clearInterval(battleBoomTimer); battleBoomTimer = null; return; }
+        battleBoomFrame = battleBoomFrame === 0 ? 1 : 0;
+        if(battleBoomFrame === 0) battleBoomCycles++;
+        if(battleBoomCycles >= 2){
+          clearInterval(battleBoomTimer);
+          battleBoomTimer = null;
+          battleBoomActive = false;
+
+          // 不死之心判定
+          let undyingMsg = "";
+          if(isEnemyAttack){
+            if(battlePlayerHp <= 10 && (battlePlayerHp - dmg) <= 0 && playerHasSkillById("undyingHeart")){
+              battlePlayerHp = 1;
+              setPlayerSkillUsedById("undyingHeart", true);
+              undyingMsg = "不死之心！";
+            } else {
+              battlePlayerHp = Math.max(0, battlePlayerHp - dmg);
+            }
+          } else {
+            if(battleEnemyHp <= 10 && (battleEnemyHp - dmg) <= 0 && enemyHasSkillById("undyingHeart")){
+              battleEnemyHp = 1;
+              setEnemySkillUsedById("undyingHeart", true);
+              undyingMsg = "不死之心！";
+            } else {
+              battleEnemyHp = Math.max(0, battleEnemyHp - dmg);
+            }
+          }
+          updateBattleHpDisplay();
+
+          battleMsg = atkrName + " 閃避追加" + (isCrit ? " 爆擊！" : "") + " -" + dmg + " HP！" + undyingMsg;
+          document.getElementById("battleMsg").textContent = battleMsg;
+          addBattleLog(atkrName, (isCrit ? "閃避追加 爆擊" : "閃避追加") + " → -" + dmg + " HP", isCrit, false, false);
+          drawBattleItemIcons();
+          renderBattleScene();
+
+          if(battlePlayerHp <= 0){ endBattle("lose"); return; }
+          if(battleEnemyHp <= 0){ endBattle("win"); return; }
 
           setTimeout(onDone, 600);
           return;
@@ -10659,6 +11254,8 @@ function startBattle(targetSlotIdx){
   document.getElementById("foodDisplay").style.display = "none";
   document.getElementById("digidexDisplay").style.display = "none";
   document.getElementById("trainingDisplay").style.display = "none";
+  const skillBt = document.getElementById("skillDisplay");
+  if(skillBt) skillBt.style.display = "none";
   const pveMapBt = document.getElementById("pveMapDisplay");
   if(pveMapBt) pveMapBt.style.display = "none";
   const pveEncBt = document.getElementById("pveEncounterDisplay");
@@ -10718,6 +11315,7 @@ function startBattle(targetSlotIdx){
     battleSelfEnemyCritBonus = save.gameCritBonus || 0;
     battleSelfEnemyDodgeBonus = save.gameDodgeBonus || 0;
     battleSelfEnemyAffBonus = save.gameAffBonus || 0;
+    battleEnemySelectedSkill = save.selectedSkill || rollRandomSkill(); // 敵方用目標槽位已選技能
   } else if(window._speedTestActive){
     // 速度測試模式：使用已預設的敵方版本和行號
     battleIsSelfBattle = false;
@@ -10749,6 +11347,9 @@ function startBattle(targetSlotIdx){
   }
 
   battleEnemyRow = enemyRow;
+  if(!battleQuick3v3Active && !isSelfBattle){
+    battleEnemySelectedSkill = rollRandomSkill(); // 1V1（普通/速度測試）敵方每場隨機技能
+  }
   // 敵方等級：自家對戰用目標槽位等級，其餘用玩家等級 ±偏移
   battleEnemyLevel = isSelfBattle ? getSlotLevelExp(targetSlotIdx).level : rollEnemyLevel();
   if(battleQuick3v3Active){
@@ -10794,6 +11395,13 @@ function startBattle(targetSlotIdx){
   battleEnemyDodge = false;
   battleResult = "";
   battleMsg = "";
+  // 進入對戰界面：重置 1V1 每局一次的技能狀態，並依「是否擁有技能」正常顯示圖標（尚未判定先手）
+  battlePlayerCritShieldUsed = false;
+  battleEnemyCritShieldUsed = false;
+  battlePlayerUndyingUsed = false;
+  battleEnemyUndyingUsed = false;
+  battlePlayerSkillState = playerHasSkill() ? "ready" : "none";
+  battleEnemySkillState = enemyHasSkill() ? "ready" : "none";
   setBattleActive(true);
   // 按鈕顯示：快速對戰（電腦）與 3V3 自動開始，隱藏 🔄/攻擊/退出；自家保留攻擊/退出
   const battleBtnsEl = document.getElementById("battleBtns");
@@ -10954,6 +11562,11 @@ function beginBattle(){
   // 清空對戰記錄
   battleLogEntries = [];
   document.getElementById("battleLog").innerHTML = "";
+  // 3V3 連勝回血：插入為本場第一條對戰記錄
+  if(battlePendingHpRecoverLog){
+    addBattleLog(battlePendingHpRecoverLog.name, battlePendingHpRecoverLog.msg, false, false, false);
+    battlePendingHpRecoverLog = null;
+  }
 
   // 速度決定先後手（玩家使用總速度含訓練加成，相同時隨機）
   // 速度優勢：≥對方1.25倍 → 5:4連擊；≥對方1.35倍 → 4:3連擊；≥對方1.5倍 → 3:2交替連擊；≥對方2倍 → 全程2:1連擊
@@ -10988,6 +11601,26 @@ function beginBattle(){
   }
   battleTurnIdx = 0;
   battleTurn = battleOrder[0];
+
+  // 「先制」技能：僅最先出手方生效（首擊+30%）；後手方保留技能（不觸發，下一場可再用）
+  battleStrikeFirstPlayer = false;
+  battleStrikeFirstEnemy = false;
+  const firstWho = battleOrder[0];
+  const pHasSkill = playerHasSkill();
+  const eHasSkill = enemyHasSkill();
+  if(pHasSkill){
+    battlePlayerSkillState = "active";
+    if(firstWho === "player") battleStrikeFirstPlayer = true;
+  } else {
+    battlePlayerSkillState = "none";
+  }
+  if(eHasSkill){
+    battleEnemySkillState = "active";
+    if(firstWho === "enemy") battleStrikeFirstEnemy = true;
+  } else {
+    battleEnemySkillState = "none";
+  }
+  drawBattleItemIcons();  // 刷新技能圖標（先手方用完顯示 X，後手方保留）
 
   renderBattleScene();
   setTimeout(() => runBattleAuto(), 300);
@@ -11470,7 +12103,7 @@ function runEnemyDevoAnim(result){
       clearInterval(downInterval);
       // 敵方退化！
       battleEnemyRow = battleEnemyOriginalRow;
-      battleEnemyAdversityEvoRow = -1;
+      battleEnemyAdversityEvoRow = yEvoRow = -1;
       battleEnemyOriginalRow = -1;
       battleEnemyAdversityTries = 0;
       battleEnemyEvoNextRow = -1;
@@ -14143,6 +14776,21 @@ appleImage.onerror = onImageError;
 strikeFirstImage.src = "Player skills/Strike first.png";
 strikeFirstImage.onload = onImageLoaded;
 strikeFirstImage.onerror = onImageError;
+critShieldImage.src = "Player skills/Critical Shield.png";
+critShieldImage.onload = onImageLoaded;
+critShieldImage.onerror = onImageError;
+undyingHeartImage.src = "Player skills/Phoenix.png";
+undyingHeartImage.onload = onImageLoaded;
+undyingHeartImage.onerror = onImageError;
+infiniteBladeImage.src = "Player skills/Infinite Blade.png";
+infiniteBladeImage.onload = onImageLoaded;
+infiniteBladeImage.onerror = onImageError;
+hpRecoverImage.src = "Player skills/Health recovery.png";
+hpRecoverImage.onload = onImageLoaded;
+hpRecoverImage.onerror = onImageError;
+dodgeFollowUpImage.src = "Player skills/Miss add to attack.png";
+dodgeFollowUpImage.onload = onImageLoaded;
+dodgeFollowUpImage.onerror = onImageError;
 
 // 訓練用圖片
 powerImage.src = "BG/Power.png";
@@ -14770,7 +15418,8 @@ function startMainQuest(questId) {
     spdBonus: snapshot.spdBonus || 0,
     critBonus: snapshot.critBonus || 0,
     dodgeBonus: snapshot.dodgeBonus || 0,
-    affBonus: snapshot.affBonus || 0
+    affBonus: snapshot.affBonus || 0,
+    selectedSkill: snapshot.selectedSkill || "strikeFirst"
   };
   // 設置主線任務對戰參數
   window._mainQuestId = questId;
@@ -14905,7 +15554,8 @@ function confirmMainQuestDragon() {
     spdBonus: snapshot.spdBonus || 0,
     critBonus: snapshot.critBonus || 0,
     dodgeBonus: snapshot.dodgeBonus || 0,
-    affBonus: snapshot.affBonus || 0
+    affBonus: snapshot.affBonus || 0,
+    selectedSkill: snapshot.selectedSkill || "strikeFirst"
   };
   // 設置主線任務對戰參數
   window._mainQuestId = mainQuestPendingId;
@@ -15362,6 +16012,7 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx, enemyLevel) {
   const es = getEnemyStats(battleEnemyRow);
   battleEnemyLevel = (enemyLevel !== undefined) ? enemyLevel : rollEnemyLevel();
   rollEnemyTrainingBonus(0); // PVE 暫無隨機訓練加成，清零避免殘留
+  battleEnemySelectedSkill = rollRandomSkill(); // 主線任務/PVE 敵方每場隨機技能
 
   // 設置背景（使用 PVE 地圖對應背景或傳入值）
   if (bgIdx !== undefined) {
@@ -15454,4 +16105,3 @@ function pveLeaveEncounter() {
 }
 </script>
 </body>
-</html>
