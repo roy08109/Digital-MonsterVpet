@@ -2134,8 +2134,8 @@ canvas {
       <div class="bm-battle-option" onclick="showToast('玩家對戰努力開發中，敬請期待！');">玩家對戰</div>
     </div>
     <div id="bmQuickBattle3v3Panel" class="self-battle-panel" style="display:none;">
-      <div class="self-battle-title">⚔ 快速對戰3V3（電腦）</div>
-      <div class="qb3v3-desc">第1位自動為「本機」，再選擇第2、3位「同一階段」的自己龍作為出戰順序，點開始後自動開打。</div>
+      <div class="self-battle-title" id="qb3v3Title">⚔ 快速對戰3V3（電腦）</div>
+      <div class="qb3v3-desc" id="qb3v3Desc">第1位自動為「本機」，再選擇第2、3位「同一階段」的自己龍作為出戰順序，點開始後自動開打。</div>
       <div class="qb3v3-order-box" id="qb3v3OrderBox"></div>
       <div id="qb3v3CardList"></div>
       <button class="self-battle-confirm-btn" id="qb3v3StartBtn" onclick="startQuickBattle3v3()" disabled>⚔ 開始 3V3 對戰</button>
@@ -2160,6 +2160,7 @@ canvas {
       <button id="bmCat_main" class="bm-quest-cat active" onclick="switchQuestCategory('main')">主線</button>
       <button id="bmCat_daily" class="bm-quest-cat" onclick="switchQuestCategory('daily')">日常</button>
       <button id="bmCat_evo" class="bm-quest-cat" onclick="switchQuestCategory('evo')">進化</button>
+      <button id="bmCat_dungeon" class="bm-quest-cat" onclick="switchQuestCategory('dungeon')">副本</button>
     </div>
     <div id="bmQuestList" class="bm-quest-list"></div>
   </div>
@@ -2204,23 +2205,23 @@ canvas {
       <span class="food-label"><img src="Food/vitamin.png" class="food-icon" alt="">2.維他命</span>
       <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">攻擊+1 血量+3 速度+0.2 暴擊+1% 閃避+1%</span><span style="color:#e8a33d;">(10💰)</span></span>
     </div>
-    <div class="food-item" id="foodItemSteak" onclick="feedDigimon('steak')">
+    <div class="food-item" id="foodItemSteak" onclick="feedDigimon('steak')" style="display:none;">
       <span class="food-label"><img src="Food/Tomahawk Steak.png" class="food-icon" alt="">3.戰斧牛扒</span>
       <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">攻擊+4</span><span style="color:#e8a33d;">(12💰)</span></span>
     </div>
-    <div class="food-item" id="foodItemChicken" onclick="feedDigimon('chicken')">
+    <div class="food-item" id="foodItemChicken" onclick="feedDigimon('chicken')" style="display:none;">
       <span class="food-label"><img src="Food/Chicken Leg.png" class="food-icon" alt="">4.雞腿</span>
       <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">爆擊+3%</span><span style="color:#e8a33d;">(12💰)</span></span>
     </div>
-    <div class="food-item" id="foodItemCarrot" onclick="feedDigimon('carrot')">
+    <div class="food-item" id="foodItemCarrot" onclick="feedDigimon('carrot')" style="display:none;">
       <span class="food-label"><img src="Food/carrot.png" class="food-icon" alt="">5.紅蘿蔔</span>
       <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">速度+0.06</span><span style="color:#e8a33d;">(12💰)</span></span>
     </div>
-    <div class="food-item" id="foodItemPotato" onclick="feedDigimon('potato')">
+    <div class="food-item" id="foodItemPotato" onclick="feedDigimon('potato')" style="display:none;">
       <span class="food-label"><img src="Food/Potato.png" class="food-icon" alt="">6.土豆</span>
       <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">血量+15</span><span style="color:#e8a33d;">(12💰)</span></span>
     </div>
-    <div class="food-item" id="foodItemApple" onclick="feedDigimon('apple')">
+    <div class="food-item" id="foodItemApple" onclick="feedDigimon('apple')" style="display:none;">
       <span class="food-label"><img src="Food/apple.png" class="food-icon" alt="">7.蘋果</span>
       <span style="font-size:10px;margin-right:6px;display:inline-block;text-align:right;line-height:1.5;"><span style="color:#4caf50;">閃避率+3%</span><span style="color:#e8a33d;">(12💰)</span></span>
     </div>
@@ -2415,6 +2416,10 @@ canvas {
         <input type="number" id="debugAddGold" value="100" min="1" max="999999">
       </div>
       <button class="debug-evo-btn" id="debugAddGoldBtn" style="background:#FF9800;">💰 增加金錢</button>
+    </div>
+    <div style="margin-top:14px;padding-top:10px;border-top:1px solid #333;">
+      <div style="font-size:12px;color:#aaa;margin-bottom:6px;">🎲 副本（今日剩餘：<span id="debugDungeonShow" style="color:#ffcc00;">0</span> / <span id="debugDungeonLimit">2</span> 次）</div>
+      <button class="debug-evo-btn" id="debugDungeonAddBtn" style="background:#FF9800;">🎲 副本次數 +1</button>
     </div>
     <div style="margin-top:14px;padding-top:10px;border-top:1px solid #333;">
       <button class="debug-evo-btn child" id="debugEvoChildBtn" style="background:#4CAF50;">🐣 一鍵成長期</button>
@@ -4409,6 +4414,7 @@ function setBattleActive(val){
 // 取得指定技能的顯示狀態："none"無技能 | "ready"可用 | "active"本輪生效 | "spent"已用完
 function getPlayerSkillDisplayState(skillId){
   if(getPlayerSelectedSkill() !== skillId) return "none";  // 未選中的技能不顯示
+  if(getSkillLevel(gameSkillFragments[skillId] || 0) <= 0) return "none";  // 未獲得不顯示
   const s = getBattlePlayerStats();
   if(!getSkillIds(s ? s.stage : "").includes(skillId)) return "none";
   if(skillId === "strikeFirst") return battlePlayerSkillState;
@@ -4501,14 +4507,14 @@ function drawSkillIconOnCanvas(canvas, skillId, state){
 
 // 繪製對戰資訊兩側（敵方/我方）上方的食物圖＋三個技能圖
 function drawBattleItemIcons(){
-  // 玩家當前出戰龍是否有食物 BUFF；敵方（AI）無食物加成，固定顯示 "-"
+  // 玩家當前出戰龍是否有食物 BUFF；敵方為副本隨機食物加成（非副本顯示 "-"）
   const fighter = getBattlePlayerFighter();
   const buffSlotIdx = fighter ? fighter.slotIdx : activeSlotIndex;
   const curFoodName = getSlotFoodName(buffSlotIdx);
   const hasVitBuff = curFoodName !== "";
   const SKILL_KEYS = ["strikeFirst", "critShield", "undyingHeart", "infiniteBlade", "hpRecover", "dodgeFollowUp", "dodgeRecover"];
   const slots = [
-    { food: 'battleEnemyFoodIcon', skillPrefix: 'battleEnemySkillIcon', hasBuff: false, isPlayer: false },
+    { food: 'battleEnemyFoodIcon', skillPrefix: 'battleEnemySkillIcon', hasBuff: battleEnemyFoodName !== "", isPlayer: false },
     { food: 'battlePlayerFoodIcon', skillPrefix: 'battlePlayerSkillIcon', hasBuff: hasVitBuff, isPlayer: true }
   ];
   slots.forEach(slot => {
@@ -4518,17 +4524,20 @@ function drawBattleItemIcons(){
       ctx.imageSmoothingEnabled = false;
       ctx.clearRect(0, 0, 16, 16);
       if(slot.hasBuff){
+        const foodName = slot.isPlayer ? curFoodName : battleEnemyFoodName;
+        foodCanvas.title = "食物：" + foodName;
         // 依當前生效食物取第一幀（均為 64×16，4 幀）
         let buffImg = vitaminImage;
-        if(curFoodName === "戰斧牛扒") buffImg = steakImage;
-        else if(curFoodName === "雞腿") buffImg = chickenImage;
-        else if(curFoodName === "紅蘿蔔") buffImg = carrotImage;
-        else if(curFoodName === "土豆") buffImg = potatoImage;
-        else if(curFoodName === "蘋果") buffImg = appleImage;
+        if(foodName === "戰斧牛扒") buffImg = steakImage;
+        else if(foodName === "雞腿") buffImg = chickenImage;
+        else if(foodName === "紅蘿蔔") buffImg = carrotImage;
+        else if(foodName === "土豆") buffImg = potatoImage;
+        else if(foodName === "蘋果") buffImg = appleImage;
         if(buffImg && buffImg.complete && buffImg.naturalWidth > 0){
           ctx.drawImage(buffImg, 0, 0, 16, 16, 0, 0, 16, 16);
         }
       } else {
+        foodCanvas.title = "食物：無";
         // 無加成：灰色底 + 黑色粗線 "-"
         ctx.fillStyle = "#999999";
         ctx.fillRect(0, 0, 16, 16);
@@ -4617,6 +4626,7 @@ let battleEnemyAtkBonus = 0;             // 敵方隨機訓練加成：攻擊
 let battleEnemySpdBonus = 0;             // 敵方隨機訓練加成：速度
 let battleEnemyCritBonus = 0;            // 敵方隨機訓練加成：暴擊
 let battleEnemyDodgeBonus = 0;           // 敵方隨機訓練加成：閃避
+let battleEnemyFoodName = "";            // 敵方隨機食物加成名稱（副本 3V3 專用，用於圖標顯示）
 let battleEvoExclaimImg = new Image();
 let battleEvoEffectImg = new Image();
 
@@ -6606,6 +6616,9 @@ function initLauncher(){
   loadLauncherMeta();
   loadGlobalQuestDone();
   loadGlobalGold();
+  loadGlobalSkill();
+  loadGlobalDungeon();
+  ensureDungeonReset();
   loadDaily();
   ensureDailyReset();
   activeSlotIndex = -1;
@@ -6879,6 +6892,98 @@ function loadGlobalGold(){
 // 寫入全域共享金幣
 function saveGlobalGold(){
   try { localStorage.setItem(GLOBAL_GOLD_KEY, String(gameGold)); } catch(e){}
+}
+
+// ========== 技能碎片 / 等級系統（副本掉落，全局共享） ==========
+const GLOBAL_SKILL_KEY = "digimon_global_skill";
+const SKILL_MAX_LEVEL = 3;
+// 每個技能的累計碎片數（0 = 未獲得）
+let gameSkillFragments = {
+  strikeFirst: 0, critShield: 0, undyingHeart: 0,
+  infiniteBlade: 0, dodgeFollowUp: 0, hpRecover: 0, dodgeRecover: 0
+};
+function loadGlobalSkill(){
+  try {
+    const raw = localStorage.getItem(GLOBAL_SKILL_KEY);
+    if(raw){
+      const obj = JSON.parse(raw);
+      if(obj && typeof obj === "object"){
+        for(const k in gameSkillFragments){
+          const n = parseInt(obj[k], 10);
+          gameSkillFragments[k] = (Number.isFinite(n) && n > 0) ? n : 0;
+        }
+      }
+    }
+  } catch(_){}
+}
+function saveGlobalSkill(){
+  try { localStorage.setItem(GLOBAL_SKILL_KEY, JSON.stringify(gameSkillFragments)); } catch(_){}
+}
+// 碎片數 → 等級：首次 1 片 = LV1，累計 5 片 = LV2，累計 13 片 = LV3
+function getSkillLevel(frag){
+  const n = frag || 0;
+  if(n >= 13) return 3;
+  if(n >= 5) return 2;
+  if(n >= 1) return 1;
+  return 0;
+}
+// 升到下一級所需的「累計碎片數」（0 = 已滿級）
+function getSkillNextLevelFrag(frag){
+  const n = frag || 0;
+  if(n < 1) return 1;
+  if(n < 5) return 5;
+  if(n < 13) return 13;
+  return 0;
+}
+// 玩家是否已獲得某技能（碎片 ≥1 → 等級 ≥1；未獲得不可選擇／使用）
+function playerOwnsSkill(skillId){
+  return getSkillLevel(gameSkillFragments[skillId] || 0) > 0;
+}
+
+// ========== 副本系統 ==========
+const GLOBAL_DUNGEON_KEY = "digimon_global_dungeon";
+const DUNGEON_DAILY_LIMIT = 2;
+let gameDungeon = { date: "", plays: 0 };
+function loadGlobalDungeon(){
+  try {
+    const raw = localStorage.getItem(GLOBAL_DUNGEON_KEY);
+    if(raw){
+      const obj = JSON.parse(raw);
+      if(obj && typeof obj === "object"){
+        gameDungeon.date = obj.date || "";
+        gameDungeon.plays = parseInt(obj.plays, 10) || 0;
+      }
+    }
+  } catch(_){}
+}
+function saveGlobalDungeon(){
+  try { localStorage.setItem(GLOBAL_DUNGEON_KEY, JSON.stringify(gameDungeon)); } catch(_){}
+}
+function getTodayStr(){
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function ensureDungeonReset(){
+  const today = getTodayStr();
+  if(gameDungeon.date !== today){
+    gameDungeon.date = today;
+    gameDungeon.plays = 0;
+    saveGlobalDungeon();
+  }
+}
+// 副本日程：7 個技能分星期一到星期日每天指定刷不同技能（waves 為 3 波敵人 stage row：成長→成熟→完全體 Boss）
+const DUNGEON_SCHEDULE = [
+  { dow: 1, skillId: "strikeFirst",   title: "先制試煉", waves: [2, 4, 11] },
+  { dow: 2, skillId: "critShield",    title: "護盾試煉", waves: [2, 4, 12] },
+  { dow: 3, skillId: "undyingHeart",  title: "不死試煉", waves: [3, 5, 11] },
+  { dow: 4, skillId: "infiniteBlade", title: "利刃試煉", waves: [3, 5, 12] },
+  { dow: 5, skillId: "dodgeFollowUp", title: "追擊試煉", waves: [3, 6, 13] },
+  { dow: 6, skillId: "hpRecover",     title: "回復試煉", waves: [2, 4, 13] },
+  { dow: 0, skillId: "dodgeRecover",  title: "閃避試煉", waves: [2, 5, 12] },
+];
+function getTodayDungeon(){
+  const dow = new Date().getDay(); // 0=週日 ... 6=週六
+  return DUNGEON_SCHEDULE.find(d => d.dow === dow) || null;
 }
 
 // ========== 日常任務系統 ==========
@@ -9240,7 +9345,7 @@ function updateSdSkillIcon(){
   const s = getBattlePlayerStats();
   const ids = getSkillIds(s ? s.stage : "");
   const sel = getPlayerSelectedSkill();
-  if(ids.length && ids.includes(sel)){
+  if(ids.length && ids.includes(sel) && playerOwnsSkill(sel)){
     icon.style.display = "inline-block";
     drawSkillIconOnCanvas(icon, sel, "ready");
     icon.title = "當前技能：" + getSkill(sel).name + "（點擊查看／更換）";
@@ -9286,14 +9391,29 @@ function renderSkillList(){
     list.innerHTML = skillIds.map(id => {
       const sk = getSkill(id);
       const isSel = (id === sel);
+      const frag = gameSkillFragments[id] || 0;
+      const lv = getSkillLevel(frag);
+      const nextFrag = getSkillNextLevelFrag(frag);
+      const lvBadge = lv > 0
+        ? `<span style="display:inline-block;background:#ffcc00;color:#3a2a00;font-size:10px;font-weight:bold;padding:1px 5px;border-radius:8px;margin-left:4px;">LV${lv}</span>`
+        : '<span style="display:inline-block;background:#667;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px;margin-left:4px;">未獲得</span>';
+      const fragText = (lv >= SKILL_MAX_LEVEL)
+        ? '（已滿級）'
+        : (lv > 0 ? `（碎片 ${frag}/${nextFrag}）` : '（副本掉落解鎖）');
+      const owned = lv > 0;
+      const rowStyle = owned
+        ? `align-items:center;cursor:pointer;${isSel ? 'background:rgba(255,255,255,0.14);outline:2px solid #ffcc00;' : ''}`
+        : 'align-items:center;opacity:0.55;';
+      const action = owned ? (isSel ? '✔ 使用中' : '點擊選擇') : '🔒 未獲得';
+      const actionColor = owned ? (isSel ? 'color:#ffcc00;font-weight:bold;' : 'color:#aab;') : 'color:#889;';
       return `
-        <div class="detail-row" style="align-items:center;cursor:pointer;${isSel ? 'background:rgba(255,255,255,0.14);outline:2px solid #ffcc00;' : ''}" onclick="selectPlayerSkill('${id}')">
+        <div class="detail-row" style="${rowStyle}" onclick="${owned ? `selectPlayerSkill('${id}')` : `showToast('尚未獲得該技能，副本掉落碎片後才能使用')`}">
           <span style="display:flex;align-items:center;gap:6px;">
             <img src="${getSkillIconSrc(id)}" alt="" style="width:22px;height:22px;image-rendering:pixelated;border-radius:4px;background:${sk.color};flex:none;">
-            ${sk.name}
+            ${sk.name}${lvBadge}
           </span>
-          <span>${sk.desc}</span>
-          <span style="font-size:12px;${isSel ? 'color:#ffcc00;font-weight:bold;' : 'color:#aab;'}">${isSel ? '✔ 使用中' : '點擊選擇'}</span>
+          <span>${sk.desc}${fragText}</span>
+          <span style="font-size:12px;${actionColor}">${action}</span>
         </div>
       `;
     }).join("");
@@ -9306,6 +9426,10 @@ function renderSkillList(){
 // 選擇技能（持久化到當前槽位存檔）
 function selectPlayerSkill(skillId){
   if(!getSkill(skillId)) return;
+  if(!playerOwnsSkill(skillId)){
+    showToast("尚未獲得「" + getSkill(skillId).name + "」，副本掉落碎片後才能使用");
+    return;
+  }
   gameSelectedSkill = skillId;
   saveGameState();
   renderSkillList();
@@ -9327,10 +9451,20 @@ function showFood(){
     panel.style.display = "none";
     return;
   }
-  // 維他命配方：完成主線「巴達獸任務」(main_05) 後解鎖，否則隱藏
-  const vitaminEl = document.getElementById("foodItemVitamin");
-  if(vitaminEl){
-    vitaminEl.style.display = (gameMainQuestDone && gameMainQuestDone.includes("main_05")) ? "flex" : "none";
+  // 食物解鎖：完成對應主線任務後才出現（食物1肉 永久可用）
+  const foodUnlockMap = {
+    foodItemVitamin: "main_05",
+    foodItemSteak:   "main_10",
+    foodItemChicken: "main_15",
+    foodItemCarrot:  "main_20",
+    foodItemPotato:  "main_25",
+    foodItemApple:   "main_30"
+  };
+  for(const itemId in foodUnlockMap){
+    const el = document.getElementById(itemId);
+    if(el){
+      el.style.display = (gameMainQuestDone && gameMainQuestDone.includes(foodUnlockMap[itemId])) ? "flex" : "none";
+    }
   }
   // 關閉狀態面板與圖鑑面板
   statsPanel.style.display = "none";
@@ -9474,8 +9608,9 @@ function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef, at
     // 無限之刃：攻擊方暴擊時攻擊力 +30%，每局一次
     const atkBladeActive = isPlayerAtk ? playerHasSkillById("infiniteBlade") : enemyHasSkillById("infiniteBlade");
     if(atkBladeActive){
-      dmg = Math.round(dmg * 1.3);
-      msgExtra += "無限之刃 +30%！";
+      const bladeVal = isPlayerAtk ? getPlayerSkillValue("infiniteBlade") : getSkillValueById("infiniteBlade", 1);
+      dmg = Math.round(dmg * bladeVal);
+      msgExtra += "無限之刃 +" + Math.round((bladeVal - 1) * 100) + "%！";
       bladeTriggered = true;
       if(isPlayerAtk) setPlayerSkillUsedById("infiniteBlade", true);
       else setEnemySkillUsedById("infiniteBlade", true);
@@ -9589,15 +9724,40 @@ function rollEnemyTrainingBonus(level){
     else if(r < 0.80) battleEnemyCritBonus += 0.001;
     else battleEnemyDodgeBonus += 0.001;
   }
+  rollEnemyFoodBuff(); // 副本敵方額外隨機食物加成（疊加在訓練加成之上）
+}
+// 副本 3V3 敵方龍：隨機獲得一種食物加成（與玩家餵食同款），讓每隻敵人帶額外變化
+function rollEnemyFoodBuff(){
+  battleEnemyFoodName = "";
+  if(!battleQuick3v3Active || !window._dungeon) return; // 僅副本 3V3
+  const FOOD_POOL = [
+    { name: "維他命", buff: { atk: 1, hp: 3, spd: 0.2, crit: 0.01, dodge: 0.01 } },
+    { name: "戰斧牛扒", buff: { atk: 4 } },
+    { name: "雞腿", buff: { crit: 0.03 } },
+    { name: "紅蘿蔔", buff: { spd: 0.06 } },
+    { name: "土豆", buff: { hp: 15 } },
+    { name: "蘋果", buff: { dodge: 0.03 } }
+  ];
+  const f = FOOD_POOL[Math.floor(Math.random() * FOOD_POOL.length)];
+  battleEnemyFoodName = f.name;
+  battleEnemyHpBonus += (f.buff.hp || 0);
+  battleEnemyAtkBonus += (f.buff.atk || 0);
+  battleEnemySpdBonus += (f.buff.spd || 0);
+  battleEnemyCritBonus += (f.buff.crit || 0);
+  battleEnemyDodgeBonus += (f.buff.dodge || 0);
 }
 function rollEnemyLevel(){
+  const es = getEnemyStats(battleEnemyRow);
+  const cap = (es && es.stage) ? getStageLevelCapForStage(es.stage) : 100;
+  // 副本 3V6：敵方龍固定為其階段最高等級（成長期20 / 成熟期60 / 完全體·究極體100），
+  // 且訓練加成也按滿級點數隨機分配（敵人明顯更強、最具挑戰性）
+  if(window._dungeon){
+    rollEnemyTrainingBonus(cap);
+    return cap;
+  }
   let lv = Math.max(1, getBattlePlayerLevel() + Math.floor(Math.random() * 7) - 3); // 玩家等級 ±3
   // 敵方等級不能超過其自身階段上限（成長期20 / 成熟期60 / 完全體·究極體100）
-  const es = getEnemyStats(battleEnemyRow);
-  if(es && es.stage){
-    const cap = getStageLevelCapForStage(es.stage);
-    if(lv > cap) lv = cap;
-  }
+  if(lv > cap) lv = cap;
   rollEnemyTrainingBonus(lv);
   return lv;
 }
@@ -9715,6 +9875,7 @@ function resetQuickBattle3v3State(){
   battleQuick3v3EnemyTeam = [];
   battleQuick3v3PlayerIdx = 0;
   battleQuick3v3EnemyIdx = 0;
+  window._dungeon = null;
   // 對戰結束後恢復對戰主選單，避免下次進入停在 3V3 面板
   document.getElementById("bmQuickBattle3v3Panel").style.display = "none";
   document.getElementById("bmBattleMainMenu").style.display = "block";
@@ -9783,9 +9944,21 @@ function getQuickBattle3v3OrderText(){
   return html;
 }
 function renderQuickBattle3v3Panel(){
+  const isDungeon = !!window._dungeon;
+  const titleEl = document.getElementById("qb3v3Title");
+  const descEl = document.getElementById("qb3v3Desc");
   const orderBox = document.getElementById("qb3v3OrderBox");
   const list = document.getElementById("qb3v3CardList");
   const startBtn = document.getElementById("qb3v3StartBtn");
+  if(isDungeon){
+    const d = window._dungeon;
+    const sk = getSkill(d.skillId);
+    if(titleEl) titleEl.textContent = "⚔ 副本挑戰（3V6）";
+    if(descEl) descEl.textContent = "敵方 6 隻（成長期×3 → 成熟期×2 → 完全體 Boss）。勝利固定掉 1 片「" + (sk ? sk.name : d.skillId) + "」，可派不同階段的龍出戰。";
+  } else {
+    if(titleEl) titleEl.textContent = "⚔ 快速對戰3V3（電腦）";
+    if(descEl) descEl.textContent = "第1位自動為「本機」，再選擇第2、3位「同一階段」的自己龍作為出戰順序，點開始後自動開打。";
+  }
   if(orderBox) orderBox.innerHTML = getQuickBattle3v3OrderText();
   let html = "";
   const total = Math.max(slotCount || 0, activeSlotIndex + 1);
@@ -9856,7 +10029,10 @@ function renderQuickBattle3v3Panel(){
       }
     });
   }
-  if(startBtn) startBtn.disabled = !(battleQuick3v3SelectedSlots.length === 3);
+  if(startBtn){
+    startBtn.disabled = !(battleQuick3v3SelectedSlots.length === 3);
+    startBtn.textContent = isDungeon ? "⚔ 開始副本挑戰" : "⚔ 開始 3V3 對戰";
+  }
 }
 function openQuickBattle3v3Menu(){
   saveGameState();
@@ -9879,6 +10055,7 @@ function closeQuickBattle3v3Menu(){
   document.getElementById("bmBattleMainMenu").style.display = "block";
   battleQuick3v3SelectedSlots = [];
   battleQuick3v3Stage = "";
+  window._dungeon = null;   // 取消副本選龍
 }
 function toggleQuickBattle3v3Slot(slotIdx){
   const snapshot = getBattleSlotSnapshot(slotIdx);
@@ -9904,7 +10081,8 @@ function setQuickBattle3v3Stage(stage){
   battleQuick3v3Stage = stage;
   renderQuickBattle3v3Panel();
 }
-function buildQuickBattle3v3EnemyTeam(stage){
+// 收集 V1~V10 中指定階段的敵方候選（帶 attr 供副本 Boss 屬性篩選）
+function collectEnemyPoolByStage(stage){
   const versions = ["V1","V2","V3","V4","V5","V6","V7","V8","V9","V10"];
   const pool = [];
   for(const ver of versions){
@@ -9913,36 +10091,64 @@ function buildQuickBattle3v3EnemyTeam(stage){
       const row = parseInt(rowKey, 10);
       if(!info || !["成長期","成熟期","完全體"].includes(info.stage)) continue;
       if(info.stage !== stage) continue;
-      pool.push({
-        version: ver,
-        row,
-        originalRow: row,
-        name: info.name,
-        stage: info.stage,
-        maxHp: info.hp || 0,
-        currentHp: info.hp || 0,
-        selectedSkill: rollRandomSkill(),
-        skillUsed: false,
-        critShieldUsed: false,
-        undyingUsed: false,
-        infiniteBladeUsed: false,
-        dodgeFollowUpUsed: false,
-        hpRecoverUsed: false,
-        dodgeRecoverUsed: false
-      });
+      pool.push({ version: ver, row, name: info.name, stage: info.stage, attr: info.attr || "", hp: info.hp || 0 });
     }
   }
+  return pool;
+}
+// 將候選條目轉為敵方 fighter 對象
+function makeEnemyFighter(entry){
+  return {
+    version: entry.version,
+    row: entry.row,
+    originalRow: entry.row,
+    name: entry.name,
+    stage: entry.stage,
+    maxHp: entry.hp,
+    currentHp: entry.hp,
+    selectedSkill: rollRandomSkill(),
+    skillUsed: false,
+    critShieldUsed: false,
+    undyingUsed: false,
+    infiniteBladeUsed: false,
+    dodgeFollowUpUsed: false,
+    hpRecoverUsed: false,
+    dodgeRecoverUsed: false
+  };
+}
+function buildQuickBattle3v3EnemyTeam(stage){
+  const pool = collectEnemyPoolByStage(stage);
   if(pool.length === 0) return [];
   const shuffled = pool.slice().sort(() => Math.random() - 0.5);
-  const team = shuffled.slice(0, Math.min(3, shuffled.length)).map(enemy => ({ ...enemy }));
+  const team = shuffled.slice(0, Math.min(3, shuffled.length)).map(enemy => makeEnemyFighter(enemy));
   while(team.length < 3){
     const pick = pool[Math.floor(Math.random() * pool.length)];
-    team.push({ ...pick });
+    team.push(makeEnemyFighter(pick));
   }
+  return team;
+}
+// 副本 3V6 敵方隊伍：成長期×3 → 成熟期×2 → 完全體 Boss×1
+// 完全體 Boss 屬性：周一~周六依「資料/病毒/疫苗」輪換；周日(0)不指定 → 全隨機
+function buildDungeonEnemyTeam(){
+  const children = collectEnemyPoolByStage("成長期");
+  const adults = collectEnemyPoolByStage("成熟期");
+  const perfects = collectEnemyPoolByStage("完全體");
+  const pick = (pool) => pool[Math.floor(Math.random() * pool.length)];
+  const team = [];
+  for(let i = 0; i < 3 && children.length > 0; i++) team.push(makeEnemyFighter(pick(children)));
+  for(let i = 0; i < 2 && adults.length > 0; i++) team.push(makeEnemyFighter(pick(adults)));
+  const BOSS_ATTR = ["", "data", "virus", "vaccine", "data", "virus", "vaccine"];
+  const bossAttr = BOSS_ATTR[new Date().getDay()] || "";
+  let bossPool = bossAttr ? perfects.filter(p => p.attr === bossAttr) : perfects;
+  if(bossPool.length === 0) bossPool = perfects; // 屬性缺失時退回全隨機
+  if(bossPool.length > 0) team.push(makeEnemyFighter(pick(bossPool)));
+  const all = [...children, ...adults, ...perfects];
+  while(team.length < 6 && all.length > 0) team.push(makeEnemyFighter(pick(all)));
   return team;
 }
 function startQuickBattle3v3(){
   dailyGoldThisBattle = 0;
+  const isDungeon = !!window._dungeon;
   if(battleQuick3v3SelectedSlots.length !== 3){
     showToast("請先選擇 3 隻龍的出戰順序");
     return;
@@ -9955,10 +10161,10 @@ function startQuickBattle3v3(){
       showToast("所選龍資料不足，請重新選擇");
       return;
     }
-    // 自動檢查是否同階段：以第一隻龍的階段為準
+    // 自動檢查是否同階段：以第一隻龍的階段為準（副本不限階段）
     if(!autoStage){
       autoStage = snapshot.stage;
-    } else if(snapshot.stage !== autoStage){
+    } else if(!isDungeon && snapshot.stage !== autoStage){
       showToast("3 隻自己龍必須是同一階段");
       return;
     }
@@ -9991,12 +10197,12 @@ function startQuickBattle3v3(){
     });
   }
   battleQuick3v3Stage = autoStage;
-  const enemyTeam = buildQuickBattle3v3EnemyTeam(battleQuick3v3Stage);
-  if(enemyTeam.length !== 3){
-    showToast("找不到可用的 3V3 對手");
+  const enemyTeam = isDungeon ? buildDungeonEnemyTeam() : buildQuickBattle3v3EnemyTeam(battleQuick3v3Stage);
+  if(isDungeon ? (enemyTeam.length !== 6) : (enemyTeam.length !== 3)){
+    showToast(isDungeon ? "找不到可用的副本對手" : "找不到可用的 3V3 對手");
     return;
   }
-  battleQuick3v3EnemyAdversityTries = [0, 0, 0];
+  battleQuick3v3EnemyAdversityTries = new Array(enemyTeam.length).fill(0);
   battleQuick3v3Active = true;
   battleQuick3v3PlayerTeam = team;
   battleQuick3v3EnemyTeam = enemyTeam;
@@ -10218,6 +10424,8 @@ function startQuickBattle3v3NextRound(){
 
 function finishQuickBattle3v3Match(playerWon){
   battlePendingHpRecoverLog = null;
+  const isDungeon = !!window._dungeon;
+  const dungeonInfo = window._dungeon || null;
   // 3V3 整場結束：清除所選 3 隻龍（含未輪到出場的）的食物 BUFF
   for(const bSlot of battleQuick3v3SelectedSlots){
     clearSlotBuff(bSlot);
@@ -10242,8 +10450,8 @@ function finishQuickBattle3v3Match(playerWon){
     playSFX("happy");
     // 對戰勝利減 1 體重（不低於最低體重）
     gameWeight = Math.max(DIGIMON_STATS[currentRow].minWeight, gameWeight - 1);
-    // 整場 3V3 勝利：3 隻龍（不管是否出過場）每隻都獲得完整階段經驗
-    const expPerDragon = getExpForEnemyStage(battleQuick3v3Stage);
+    // 整場勝利：3 隻龍（不管是否出過場）每隻都獲得完整階段經驗（副本固定按完全體）
+    const expPerDragon = isDungeon ? getExpForEnemyStage("完全體") : getExpForEnemyStage(battleQuick3v3Stage);
     const entries = [];
     for(const fighter of battleQuick3v3PlayerTeam){
       const before = getSlotLevelExp(fighter.slotIdx);
@@ -10266,22 +10474,50 @@ function finishQuickBattle3v3Match(playerWon){
     }
     saveGameState();
     window._pendingExpView = { entries };
-    // 3V3 勝利：獲得 5~15 金幣
-    const goldEarned = Math.floor(Math.random() * 11) + 5; // 5~15 隨機
-    gameGold += goldEarned;
-    saveGlobalGold();
-    window._pendingExpView.gold = goldEarned;
-    // 日常任務：3V3 整場勝利
-    completeDailyQuest("daily_3v3");
-    window._pendingExpView.dailyGold = dailyGoldThisBattle;
-    // 3V3 勝利：記錄再戰資訊（需在 resetQuickBattle3v3State 前保存所選槽位）
-    window._rematchMode = "quick3v3";
-    window._rematch3v3Slots = battleQuick3v3SelectedSlots.slice();
+    if(isDungeon){
+      // 副本勝利：固定掉 1 片技能碎片 + 記錄次數 + 金幣 15~30
+      const d = dungeonInfo;
+      if(d && d.skillId){
+        const sk = getSkill(d.skillId);
+        const oldFrag = gameSkillFragments[d.skillId] || 0;
+        gameSkillFragments[d.skillId] = oldFrag + 1;
+        saveGlobalSkill();
+        const oldLv = getSkillLevel(oldFrag);
+        const newLv = getSkillLevel(oldFrag + 1);
+        gameDungeon.plays++;
+        saveGlobalDungeon();
+        window._pendingDungeonResult = {
+          skillId: d.skillId,
+          skillName: sk ? sk.name : d.skillId,
+          fragAfter: oldFrag + 1,
+          levelBefore: oldLv,
+          levelAfter: newLv,
+          leveledUp: newLv > oldLv
+        };
+      }
+      const goldEarned = Math.floor(Math.random() * 16) + 15; // 15~30
+      gameGold += goldEarned;
+      saveGlobalGold();
+      window._pendingExpView.gold = goldEarned;
+    } else {
+      // 3V3 勝利：獲得 5~15 金幣
+      const goldEarned = Math.floor(Math.random() * 11) + 5; // 5~15 隨機
+      gameGold += goldEarned;
+      saveGlobalGold();
+      window._pendingExpView.gold = goldEarned;
+      // 日常任務：3V3 整場勝利
+      completeDailyQuest("daily_3v3");
+      window._pendingExpView.dailyGold = dailyGoldThisBattle;
+      // 3V3 勝利：記錄再戰資訊（需在 resetQuickBattle3v3State 前保存所選槽位）
+      window._rematchMode = "quick3v3";
+      window._rematch3v3Slots = battleQuick3v3SelectedSlots.slice();
+    }
   } else {
     playSFX("lose");
-    showToast("3V3 戰敗…");
+    showToast(isDungeon ? "副本挑戰失敗…" : "3V3 戰敗…");
   }
 
+  if(isDungeon) window._dungeon = null;
   resetQuickBattle3v3State();
   if(window._pendingExpView){
     const pv = window._pendingExpView;
@@ -10400,13 +10636,13 @@ function getStatsForVersion(ver) {
 
 // ========== 技能系統 ==========
 const SKILLS = {
-  strikeFirst: { id: "strikeFirst", name: "先制", desc: "先手時首次攻擊力 +30%", color: "#ff8800" },
-  critShield: { id: "critShield", name: "暴擊護盾", desc: "受到暴擊時，該次傷害 -30%", color: "#3399ff" },
-  undyingHeart: { id: "undyingHeart", name: "不死之心", desc: "血量 ≤10 時，受到致死攻擊改為剩 1 血", color: "#ff3366" },
-  infiniteBlade: { id: "infiniteBlade", name: "無限之刃", desc: "暴擊時攻擊力 +30%", color: "#ffcc00" },
-  dodgeFollowUp: { id: "dodgeFollowUp", name: "閃避追加", desc: "敵人閃避時，馬上追加一次 70% 攻擊（可暴擊）", color: "#00cc66" },
-  hpRecover: { id: "hpRecover", name: "血量回復", desc: "勝利進入下一場時回復 20% 血量", color: "#cc66ff" },
-  dodgeRecover: { id: "dodgeRecover", name: "閃避回復", desc: "閃避敵人攻擊時，回復自身 15% 血量", color: "#00cccc" },
+  strikeFirst:   { id: "strikeFirst",   name: "先制",     desc: "先手時首次攻擊力 +30%", color: "#ff8800", levels: { 1: 1.30, 2: 1.40, 3: 1.50 } },
+  critShield:    { id: "critShield",    name: "暴擊護盾", desc: "受到暴擊時，該次傷害 -30%", color: "#3399ff", levels: { 1: 0.70, 2: 0.60, 3: 0.50 } },
+  undyingHeart:  { id: "undyingHeart",  name: "不死之心", desc: "血量 ≤10 時，受到致死攻擊改為剩 1 血", color: "#ff3366", levels: { 1: 10, 2: 15, 3: 20 } },
+  infiniteBlade: { id: "infiniteBlade", name: "無限之刃", desc: "暴擊時攻擊力 +30%", color: "#ffcc00", levels: { 1: 1.30, 2: 1.40, 3: 1.50 } },
+  dodgeFollowUp: { id: "dodgeFollowUp", name: "閃避追加", desc: "敵人閃避時，馬上追加一次 70% 攻擊（可暴擊）", color: "#00cc66", levels: { 1: 0.70, 2: 0.80, 3: 0.90 } },
+  hpRecover:     { id: "hpRecover",     name: "血量回復", desc: "勝利進入下一場時回復 20% 血量", color: "#cc66ff", levels: { 1: 0.20, 2: 0.30, 3: 0.40 } },
+  dodgeRecover:  { id: "dodgeRecover",  name: "閃避回復", desc: "閃避敵人攻擊時，回復自身 15% 血量", color: "#00cccc", levels: { 1: 0.15, 2: 0.20, 3: 0.25 } },
 };
 // 數碼暴龍（成長期及以上）通用擁有技能；蛋 / 幼年期無技能
 const DIGIMON_STAGES = ["成長期", "成熟期", "完全體", "究極體"];
@@ -10419,6 +10655,17 @@ function getSkillId(stage){
   return ids.length ? ids[0] : null;
 }
 function getSkill(id){ return id ? SKILLS[id] : null; }
+// 取得技能在指定等級的數值（level 1-3，自動 clamp）
+function getSkillValueById(skillId, level){
+  const s = SKILLS[skillId];
+  if(!s || !s.levels) return 0;
+  const lv = Math.max(1, Math.min(SKILL_MAX_LEVEL, level || 1));
+  return s.levels[lv];
+}
+// 取得玩家某技能的當前等級數值（依全局碎片數）
+function getPlayerSkillValue(skillId){
+  return getSkillValueById(skillId, getSkillLevel(gameSkillFragments[skillId] || 0));
+}
 
 // ========== 技能狀態管理 ==========
 // 「先制」：先手方首次攻擊 +30%；「暴擊護盾」：受暴擊傷害 -30%；「不死之心」：≤10 血受致死攻擊改為剩 1 血；「無限之刃」：暴擊時攻擊力 +30%；「閃避追加」：敵人閃避時追加一次 70% 攻擊（可暴擊）；「血量回復」：勝利進入下一場回復 20% 血量。
@@ -10889,7 +11136,8 @@ function executeAttack(who, onDone, isSpeedBonus = false){
 
   // 「先制」技能：先手方首次攻擊生效（攻擊力+30%）
   const strikeActive = (who === "player") ? battleStrikeFirstPlayer : battleStrikeFirstEnemy;
-  const { dodged, dmg, msg, crit, attrAdv, attrDis, shielded, blade } = calcBattleDamage(atkrRow, defrRow, who === "player", who !== "player", strikeActive ? 1.3 : 1);
+  const strikeMult = strikeActive ? (who === "player" ? getPlayerSkillValue("strikeFirst") : getSkillValueById("strikeFirst", 1)) : 1;
+  const { dodged, dmg, msg, crit, attrAdv, attrDis, shielded, blade } = calcBattleDamage(atkrRow, defrRow, who === "player", who !== "player", strikeMult);
   battleIsCrit = crit;
   // 消耗「先制」（無論命中/閃避，首次攻擊後即用完）
   if(strikeActive){
@@ -10959,7 +11207,8 @@ function executeAttack(who, onDone, isSpeedBonus = false){
             if(who === "player") setEnemySkillUsedById("dodgeRecover", true);
             else setPlayerSkillUsedById("dodgeRecover", true);
             const healMax = (who === "player") ? battleEnemyMaxHp : battlePlayerMaxHp;
-            const heal = Math.max(1, Math.round(healMax * 0.15));
+            const recoverVal = (who === "player") ? getSkillValueById("dodgeRecover", 1) : getPlayerSkillValue("dodgeRecover");
+            const heal = Math.max(1, Math.round(healMax * recoverVal));
             if(who === "player") battleEnemyHp = Math.min(battleEnemyMaxHp, battleEnemyHp + heal);
             else battlePlayerHp = Math.min(battlePlayerMaxHp, battlePlayerHp + heal);
             updateBattleHpDisplay();
@@ -11037,7 +11286,7 @@ function executeAttack(who, onDone, isSpeedBonus = false){
           // 不死之心：防禦方血量 ≤10 且本次攻擊致死 → 改為剩 1 血，每局一次
           let undyingMsg = "";
           if(isEnemyAttack){
-            if(battlePlayerHp <= 10 && (battlePlayerHp - dmg) <= 0 && playerHasSkillById("undyingHeart")){
+            if(battlePlayerHp <= getPlayerSkillValue("undyingHeart") && (battlePlayerHp - dmg) <= 0 && playerHasSkillById("undyingHeart")){
               battlePlayerHp = 1;
               setPlayerSkillUsedById("undyingHeart", true);
               undyingMsg = "不死之心！";
@@ -11045,7 +11294,7 @@ function executeAttack(who, onDone, isSpeedBonus = false){
               battlePlayerHp = Math.max(0, battlePlayerHp - dmg);
             }
           } else {
-            if(battleEnemyHp <= 10 && (battleEnemyHp - dmg) <= 0 && enemyHasSkillById("undyingHeart")){
+            if(battleEnemyHp <= getSkillValueById("undyingHeart", 1) && (battleEnemyHp - dmg) <= 0 && enemyHasSkillById("undyingHeart")){
               battleEnemyHp = 1;
               setEnemySkillUsedById("undyingHeart", true);
               undyingMsg = "不死之心！";
@@ -11059,11 +11308,11 @@ function executeAttack(who, onDone, isSpeedBonus = false){
           document.getElementById("battleMsg").textContent = battleMsg;
           let typeLabel = "";
           if(crit) typeLabel = "爆擊！";
-          if(blade) typeLabel += "無限之刃 +30%！";
+          if(blade) typeLabel += "無限之刃 +" + Math.round(((isEnemyAttack ? getSkillValueById("infiniteBlade", 1) : getPlayerSkillValue("infiniteBlade")) - 1) * 100) + "%！";
           if(attrAdv) typeLabel += "屬性剋制！";
           else if(attrDis) typeLabel += "屬性劣勢…";
           if(!typeLabel) typeLabel = "普通攻擊";
-          if(shielded) typeLabel += " 暴擊護盾 -30%！";
+          if(shielded) typeLabel += " 暴擊護盾 -" + Math.round((1 - (isEnemyAttack ? getPlayerSkillValue("critShield") : getSkillValueById("critShield", 1))) * 100) + "%！";
           if(strikeActive) typeLabel += " +先制攻擊";
           if(undyingMsg) typeLabel += " " + undyingMsg;
           addBattleLog(atkrName, `${typeLabel} → -${dmg} HP`, crit, false, attrAdv, attrDis, isSpeedBonus, !!(blade || shielded || strikeActive || undyingMsg));
@@ -11101,10 +11350,11 @@ function executeFollowUpAttack(who, onDone){
   // 70% 攻擊，可暴擊（按攻擊方暴擊率判定）
   const followAtk = (who === "player") ? getBattlePlayerTotalAtk() : ((getEnemyStats(atkrRow).atk || 0) + (battleIsSelfBattle ? battleSelfEnemyAtkBonus : battleEnemyAtkBonus));
   const followCrit = (who === "player") ? getBattlePlayerTotalCrit() : ((getEnemyStats(atkrRow).critRate || 0) + (battleIsSelfBattle ? battleSelfEnemyCritBonus : Math.min(0.40, battleEnemyCritBonus)));
-  let dmg = Math.max(1, Math.round(followAtk * 0.7));
+  const followMult = (who === "player") ? getPlayerSkillValue("dodgeFollowUp") : getSkillValueById("dodgeFollowUp", 1);
+  let dmg = Math.max(1, Math.round(followAtk * followMult));
   let isCrit = false;
   if(Math.random() < followCrit){
-    dmg = Math.max(1, Math.round(followAtk * 0.7 * CRIT_MULT));
+    dmg = Math.max(1, Math.round(followAtk * followMult * CRIT_MULT));
     isCrit = true;
   }
 
@@ -11159,7 +11409,7 @@ function executeFollowUpAttack(who, onDone){
           // 不死之心判定
           let undyingMsg = "";
           if(isEnemyAttack){
-            if(battlePlayerHp <= 10 && (battlePlayerHp - dmg) <= 0 && playerHasSkillById("undyingHeart")){
+            if(battlePlayerHp <= getPlayerSkillValue("undyingHeart") && (battlePlayerHp - dmg) <= 0 && playerHasSkillById("undyingHeart")){
               battlePlayerHp = 1;
               setPlayerSkillUsedById("undyingHeart", true);
               undyingMsg = "不死之心！";
@@ -11167,7 +11417,7 @@ function executeFollowUpAttack(who, onDone){
               battlePlayerHp = Math.max(0, battlePlayerHp - dmg);
             }
           } else {
-            if(battleEnemyHp <= 10 && (battleEnemyHp - dmg) <= 0 && enemyHasSkillById("undyingHeart")){
+            if(battleEnemyHp <= getSkillValueById("undyingHeart", 1) && (battleEnemyHp - dmg) <= 0 && enemyHasSkillById("undyingHeart")){
               battleEnemyHp = 1;
               setEnemySkillUsedById("undyingHeart", true);
               undyingMsg = "不死之心！";
@@ -11231,7 +11481,21 @@ function updateBattleTeamSprites(){
 }
 
 function drawTeamSprites(container, team, reverse){
-  const canvases = container.querySelectorAll("canvas");
+  // 依隊伍大小動態增減 canvas 數量（副本 6 隻 / 3V3 三隻）
+  let canvases = container.querySelectorAll("canvas");
+  const need = team.length;
+  if(canvases.length < need){
+    for(let i = canvases.length; i < need; i++){
+      const c = document.createElement("canvas");
+      c.width = 28; c.height = 28;
+      c.className = "bt-sprite";
+      c.dataset.idx = i;
+      container.appendChild(c);
+    }
+  } else if(canvases.length > need){
+    for(let i = canvases.length - 1; i >= need; i--) canvases[i].remove();
+  }
+  canvases = container.querySelectorAll("canvas");
   canvases.forEach(function(canvas, displayIdx){
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, 28, 28);
@@ -11943,7 +12207,7 @@ function endBattle(result){
           const gained = (before.level === after.level && before.exp === after.exp) ? 0 : expGained;
           const snapshot = getBattleSlotSnapshot(_questSlot);
           // 快速對戰（1V1）勝利展示經驗結算；主線任務勝利也展示（含金幣）；其餘 PVE 維持現狀不展示
-          if(!window._pveActive || window._mainQuestId){
+          if(!window._pveActive || window._mainQuestId || window._dungeon){
             // 只有「快速對戰（電腦）1V1」提供「再戰一場」；主線/自家/PVE 不提供
             window._rematchMode = (!window._pveActive && !window._mainQuestId && !battleQuick3v3Active && !battleIsSelfBattle) ? "quick1v1" : null;
             window._pendingExpView = {
@@ -12043,10 +12307,11 @@ function endBattle(result){
       }
     }
   }
-  // 非勝利（失敗/逃跑）時清除主線任務對戰狀態
-  if(result !== "win"){
+  // 非勝利（失敗/逃跑）時清除主線任務對戰狀態（3V3 車輪戰中途換龍不算整場結束，保留副本標記）
+  if(result !== "win" && !battleQuick3v3Active){
     window._mainQuestId = null;
     window._evoTask = null;
+    window._dungeon = null;
   }
   // 無論勝負，清除主線任務出戰龍 fighter
   battleMainQuestFighter = null;
@@ -12380,7 +12645,14 @@ function showBattleExpResult(entries, gold, attrBonus, vitaminUnlock, dailyGold)
   }
   const specialEl = document.getElementById("battleExpSpecialNote");
   if(specialEl){
-    if(vitaminUnlock){
+    const dr = window._pendingDungeonResult;
+    if(dr){
+      window._pendingDungeonResult = null;
+      specialEl.style.display = "flex";
+      specialEl.innerHTML = '<span>🎯</span><span>' +
+        (dr.leveledUp ? '技能升級！' : '獲得技能碎片！') + '「' + dr.skillName + '」LV' +
+        dr.levelBefore + ' → LV' + dr.levelAfter + '（碎片 ' + dr.fragAfter + '）</span>';
+    } else if(vitaminUnlock){
       specialEl.style.display = "flex";
       specialEl.innerHTML = '<span>💊</span><span>巴達獸交出維他命圖配方！食品頁已解鎖「維他命」。</span>';
     } else {
@@ -13524,9 +13796,21 @@ document.getElementById("debugBtn").onclick = () => {
   document.getElementById("debugMistakes").value = gameCareMistakes;
   document.getElementById("debugWeight").value = gameWeight;
   document.getElementById("debugGoldShow").textContent = gameGold;
+  ensureDungeonReset();
+  document.getElementById("debugDungeonLimit").textContent = DUNGEON_DAILY_LIMIT;
+  document.getElementById("debugDungeonShow").textContent = (DUNGEON_DAILY_LIMIT - gameDungeon.plays);
   refreshChildSelect();
   refreshPerfectSelect();
   document.getElementById("debugOverlay").classList.add("open");
+};
+// 增加副本次數（剩餘 +1）
+document.getElementById("debugDungeonAddBtn").onclick = () => {
+  ensureDungeonReset();
+  gameDungeon.plays = Math.max(0, gameDungeon.plays - 1);
+  saveGlobalDungeon();
+  const remain = DUNGEON_DAILY_LIMIT - gameDungeon.plays;
+  document.getElementById("debugDungeonShow").textContent = remain;
+  showToast("副本剩餘次數 +1（今日剩餘 " + remain + " / " + DUNGEON_DAILY_LIMIT + " 次）");
 };
 // 點擊遮罩關閉
 document.getElementById("debugOverlay").onclick = () => {
@@ -15286,7 +15570,7 @@ let currentQuestCategory = "main";
 
 function switchQuestCategory(cat) {
   currentQuestCategory = cat;
-  ["main", "daily", "evo"].forEach(c => {
+  ["main", "daily", "evo", "dungeon"].forEach(c => {
     const btn = document.getElementById("bmCat_" + c);
     if (btn) btn.classList.toggle("active", c === cat);
   });
@@ -15302,6 +15586,10 @@ function renderQuestList() {
   }
   if (currentQuestCategory === "daily") {
     renderDailyTaskList(listEl);
+    return;
+  }
+  if (currentQuestCategory === "dungeon") {
+    renderDungeonList(listEl);
     return;
   }
   // 只顯示已解鎖的任務：可進行（已解鎖未完成）排在上方，已完成排在下方的「已完成」區
@@ -15349,6 +15637,47 @@ function renderQuestList() {
       ctx.drawImage(img, 0, 0, 16, 16, 0, 0, 32, 32);
     }
   });
+}
+
+// 副本列表：顯示今日副本（依星期幾掉落指定技能）+ 3 波結構 + 剩餘次數
+function renderDungeonList(listEl){
+  const today = getTodayDungeon();
+  if(!today){
+    listEl.innerHTML = '<div class="bm-quest-empty">今日無副本。</div>';
+    return;
+  }
+  const sk = getSkill(today.skillId);
+  const skillName = sk ? sk.name : today.skillId;
+  const frag = gameSkillFragments[today.skillId] || 0;
+  const lv = getSkillLevel(frag);
+  const nextFrag = getSkillNextLevelFrag(frag);
+  const remain = Math.max(0, DUNGEON_DAILY_LIMIT - gameDungeon.plays);
+
+  let fragText;
+  if(lv >= SKILL_MAX_LEVEL){
+    fragText = '已滿級 LV' + lv + '（碎片 ' + frag + '）';
+  } else if(lv === 0){
+    fragText = '尚未獲得（首次掉落解鎖 LV1）';
+  } else {
+    fragText = 'LV' + lv + ' · 碎片 ' + frag + ' / ' + nextFrag;
+  }
+
+  const ver = currentVersion || "V1";
+  const BOSS_ATTR = ["", "data", "virus", "vaccine", "data", "virus", "vaccine"];
+  const bossAttr = BOSS_ATTR[new Date().getDay()] || "";
+  const attrCn = { data: "資料", virus: "病毒", vaccine: "疫苗" };
+  const bossAttrText = bossAttr ? ('「' + (attrCn[bossAttr] || bossAttr) + '」種') : '（隨機屬性）';
+
+  const disabledAttr = remain <= 0 ? ' disabled style="opacity:.5;"' : '';
+  listEl.innerHTML =
+    '<div class="bm-quest-section">今日副本（剩餘 ' + remain + ' / ' + DUNGEON_DAILY_LIMIT + ' 次）</div>' +
+    '<div class="bm-quest-card">' +
+      '<div class="bm-quest-title">' + today.title + '</div>' +
+      '<div style="font-size:11px;color:#ffd9a0;margin:4px 0;">掉落技能：' + skillName + ' · ' + fragText + '</div>' +
+      '<div style="font-size:11px;color:#ccc;margin:4px 0;">3V6 隊伍戰：成長期×3 → 成熟期×2 → 完全體 Boss' + bossAttrText + '</div>' +
+      '<div style="font-size:11px;color:#ccc;margin:4px 0;">勝利固定掉 1 片 · 經驗按完全體 · 金幣 15~30</div>' +
+      '<button class="bm-quest-btn" onclick="startDungeon()"' + disabledAttr + '>⚔ 挑戰</button>' +
+    '</div>';
 }
 
 // 進化任務列表：左 = 目標名 + 精靈圖，右 = 當前進化率
@@ -15488,6 +15817,23 @@ function startMainQuest(questId) {
   pveCurrentEnemyName = pveGetEnemyName(q.enemyRow, q.enemyVersion);
   closeBattleMenu();
   startBattlePVE(q.enemyVersion, q.enemyRow, 0);
+}
+
+// === 副本任務：波次制連戰 ===
+function startDungeon(){
+  const today = getTodayDungeon();
+  if(!today){
+    showToast("今日無副本！");
+    return;
+  }
+  if(gameDungeon.plays >= DUNGEON_DAILY_LIMIT){
+    showToast("今日副本次數已用完！");
+    return;
+  }
+  // 副本標記（3V6 隊伍戰）：僅記 skillId，選龍面板第 1 位固定本機、自由選第 2、3 位（不限階段）
+  window._dungeon = { skillId: today.skillId, title: today.title };
+  switchBattleTab("battle");  // 選龍面板在「對戰」標籤頁內，從地圖進入需先切換，否則會被父容器遮住
+  openQuickBattle3v3Menu();
 }
 
 function openMainQuestPanel(questId) {
@@ -16077,9 +16423,14 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx, enemyLevel) {
     battleBgIdx = map ? map.bgIdx : Math.floor(Math.random() * BATTLE_BG_SOURCES.length);
   }
 
-  // 初始化 HP
+  // 初始化 HP（副本後續波次：保留上一波剩餘血量）
   battlePlayerMaxHp = getBattlePlayerTotalHp();
-  battlePlayerHp = getBattlePlayerTotalHp();
+  if(window._dungeon && window._dungeon.carryHp > 0){
+    battlePlayerHp = Math.min(window._dungeon.carryHp, battlePlayerMaxHp);
+    window._dungeon.carryHp = 0;
+  } else {
+    battlePlayerHp = getBattlePlayerTotalHp();
+  }
   battleEnemyMaxHp = es.hp;
   battleEnemyHp = es.hp;
 
@@ -16159,4 +16510,3 @@ function pveLeaveEncounter() {
   if (mapPanel) mapPanel.style.display = "flex";
 }
 </script>
-</body>
