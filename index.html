@@ -11400,6 +11400,10 @@ function startBattle(targetSlotIdx){
   battleEnemyCritShieldUsed = false;
   battlePlayerUndyingUsed = false;
   battleEnemyUndyingUsed = false;
+  battlePlayerInfiniteBladeUsed = false;
+  battleEnemyInfiniteBladeUsed = false;
+  battlePlayerDodgeFollowUpUsed = false;
+  battleEnemyDodgeFollowUpUsed = false;
   battlePlayerSkillState = playerHasSkill() ? "ready" : "none";
   battleEnemySkillState = enemyHasSkill() ? "ready" : "none";
   setBattleActive(true);
