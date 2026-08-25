@@ -658,6 +658,18 @@ body{
 .battle-log .log-entry.attr-adv{ color:#ffcc00; }
 .battle-log .log-entry.attr-dis{ color:#8888cc; }
 .battle-log .log-entry.speed-bonus{ color:#4eff4e; font-weight:bold; }
+.battle-log .skill-mark{
+  display:inline-block;
+  margin-left:4px;
+  font-weight:900;
+  color:#ffd23f;
+  text-shadow:0 0 4px rgba(255,180,0,0.8);
+  animation:skillMarkBlink 0.6s ease-in-out infinite alternate;
+}
+@keyframes skillMarkBlink{
+  from{ opacity:0.15; }
+  to{ opacity:1; }
+}
 .battle-btns{
   display:flex;
   gap:8px;
@@ -1987,6 +1999,10 @@ canvas {
           <canvas class="battle-item-icon battle-skill-icon" id="battleEnemySkillIcon0" width="16" height="16" title="技能"></canvas>
           <canvas class="battle-item-icon battle-skill-icon" id="battleEnemySkillIcon1" width="16" height="16" title="技能"></canvas>
           <canvas class="battle-item-icon battle-skill-icon" id="battleEnemySkillIcon2" width="16" height="16" title="技能"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battleEnemySkillIcon3" width="16" height="16" title="技能"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battleEnemySkillIcon4" width="16" height="16" title="技能"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battleEnemySkillIcon5" width="16" height="16" title="技能"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battleEnemySkillIcon6" width="16" height="16" title="技能"></canvas>
         </div>
         <div class="battle-side-name" id="battleEnemyName"></div>
         <div class="battle-side-hp" id="battleEnemyHpText"></div>
@@ -1999,6 +2015,10 @@ canvas {
           <canvas class="battle-item-icon battle-skill-icon" id="battlePlayerSkillIcon0" width="16" height="16" title="技能"></canvas>
           <canvas class="battle-item-icon battle-skill-icon" id="battlePlayerSkillIcon1" width="16" height="16" title="技能"></canvas>
           <canvas class="battle-item-icon battle-skill-icon" id="battlePlayerSkillIcon2" width="16" height="16" title="技能"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battlePlayerSkillIcon3" width="16" height="16" title="技能"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battlePlayerSkillIcon4" width="16" height="16" title="技能"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battlePlayerSkillIcon5" width="16" height="16" title="技能"></canvas>
+          <canvas class="battle-item-icon battle-skill-icon" id="battlePlayerSkillIcon6" width="16" height="16" title="技能"></canvas>
         </div>
         <div class="battle-side-name" id="battlePlayerName"></div>
         <div class="battle-side-hp" id="battlePlayerHpText"></div>
@@ -2923,6 +2943,7 @@ let critShieldImage = new Image();    // 技能圖（暴擊護盾）
 let undyingHeartImage = new Image();  // 技能圖（不死之心）
 let infiniteBladeImage = new Image(); // 技能圖（無限之刃）
 let hpRecoverImage = new Image();     // 技能圖（血量回復）
+let dodgeRecoverImage = new Image();  // 技能圖（閃避回復）
 let dodgeFollowUpImage = new Image(); // 技能圖（閃避追加）
 let bgImages = {};
 let currentBgName = "Noon";
@@ -4387,14 +4408,14 @@ function setBattleActive(val){
 
 // 取得指定技能的顯示狀態："none"無技能 | "ready"可用 | "active"本輪生效 | "spent"已用完
 function getPlayerSkillDisplayState(skillId){
-  if(skillId !== getPlayerSelectedSkill()) return "none"; // 只顯示當前已選技能
+  if(getPlayerSelectedSkill() !== skillId) return "none";  // 未選中的技能不顯示
   const s = getBattlePlayerStats();
   if(!getSkillIds(s ? s.stage : "").includes(skillId)) return "none";
   if(skillId === "strikeFirst") return battlePlayerSkillState;
   return playerHasSkillById(skillId) ? "ready" : "spent";
 }
 function getEnemySkillDisplayState(skillId){
-  if(skillId !== getEnemySelectedSkill()) return "none"; // 只顯示當前已選技能
+  if(getEnemySelectedSkill() !== skillId) return "none";  // 未選中的技能不顯示
   const es = getEnemyStats(battleEnemyRow);
   if(!getSkillIds(es ? es.stage : "").includes(skillId)) return "none";
   if(skillId === "strikeFirst") return battleEnemySkillState;
@@ -4409,6 +4430,7 @@ function getSkillImage(skillId){
     undyingHeart: undyingHeartImage,
     infiniteBlade: infiniteBladeImage,
     hpRecover: hpRecoverImage,
+    dodgeRecover: dodgeRecoverImage,
     dodgeFollowUp: dodgeFollowUpImage
   };
   return map[skillId] || null;
@@ -4422,6 +4444,7 @@ function getSkillIconSrc(skillId){
     undyingHeart: "Player skills/Phoenix.png",
     infiniteBlade: "Player skills/Infinite Blade.png",
     hpRecover: "Player skills/Health recovery.png",
+    dodgeRecover: "Player skills/Miss Recover health.png",
     dodgeFollowUp: "Player skills/Miss add to attack.png"
   };
   return map[skillId] || "";
@@ -4483,7 +4506,7 @@ function drawBattleItemIcons(){
   const buffSlotIdx = fighter ? fighter.slotIdx : activeSlotIndex;
   const curFoodName = getSlotFoodName(buffSlotIdx);
   const hasVitBuff = curFoodName !== "";
-  const SKILL_KEYS = ["strikeFirst", "critShield", "undyingHeart"];
+  const SKILL_KEYS = ["strikeFirst", "critShield", "undyingHeart", "infiniteBlade", "hpRecover", "dodgeFollowUp", "dodgeRecover"];
   const slots = [
     { food: 'battleEnemyFoodIcon', skillPrefix: 'battleEnemySkillIcon', hasBuff: false, isPlayer: false },
     { food: 'battlePlayerFoodIcon', skillPrefix: 'battlePlayerSkillIcon', hasBuff: hasVitBuff, isPlayer: true }
@@ -4516,22 +4539,18 @@ function drawBattleItemIcons(){
         ctx.fillText("-", 8, 8);
       }
     }
-    // 每隻龍只有一個技能：只顯示當前已選技能（icon0），隱藏其餘兩個技能槽
-    const curSkill = slot.isPlayer ? getPlayerSelectedSkill() : getEnemySelectedSkill();
+    // 每隻龍只選 1 個技能：僅顯示所選技能那一格，其餘 5 格隱藏
+    const selSkill = slot.isPlayer ? getPlayerSelectedSkill() : getEnemySelectedSkill();
     SKILL_KEYS.forEach((skId, i) => {
       const skillCanvas = document.getElementById(slot.skillPrefix + i);
       if(!skillCanvas) return;
-      if(i !== 0){
+      if(skId !== selSkill){
         skillCanvas.style.display = "none";
         return;
       }
       skillCanvas.style.display = "inline-block";
-      if(curSkill){
-        const state = slot.isPlayer ? getPlayerSkillDisplayState(curSkill) : getEnemySkillDisplayState(curSkill);
-        drawSkillIconOnCanvas(skillCanvas, curSkill, state);
-      } else {
-        drawSkillIconOnCanvas(skillCanvas, "strikeFirst", "none");
-      }
+      const state = slot.isPlayer ? getPlayerSkillDisplayState(skId) : getEnemySkillDisplayState(skId);
+      drawSkillIconOnCanvas(skillCanvas, skId, state);
     });
   });
 }
@@ -9214,18 +9233,17 @@ function showStats(){
   panel.style.display = "block";
 }
 
-// ========== 技能選擇頁 ==========
+// ========== 技能頁（查看已擁有技能） ==========
 function updateSdSkillIcon(){
   const icon = document.getElementById("sdSkillIcon");
   if(!icon) return;
   const s = getBattlePlayerStats();
   const ids = getSkillIds(s ? s.stage : "");
-  const cur = getPlayerSelectedSkill();
-  if(ids.length && cur){
-    const sk = getSkill(cur);
+  const sel = getPlayerSelectedSkill();
+  if(ids.length && ids.includes(sel)){
     icon.style.display = "inline-block";
-    drawSkillIconOnCanvas(icon, cur, "ready");
-    icon.title = "技能：" + sk.name + "（" + sk.desc + "）";
+    drawSkillIconOnCanvas(icon, sel, "ready");
+    icon.title = "當前技能：" + getSkill(sel).name + "（點擊查看／更換）";
   } else {
     icon.style.display = "none";
     icon.title = "技能：無";
@@ -9253,7 +9271,7 @@ function showSkillDisplay(){
   const bmPanel = document.getElementById("battleMenuDisplay");
   if(bmPanel) bmPanel.style.display = "none";
 
-  // 生成技能選擇列表（成長期及以上可從 3 個技能中點選 1 個）
+  // 生成技能列表（成長期及以上擁有全部技能）
   renderSkillList();
   panel.style.display = "block";
 }
@@ -9263,38 +9281,36 @@ function renderSkillList(){
   if(!list) return;
   const ps = getBattlePlayerStats();
   const skillIds = getSkillIds(ps ? ps.stage : "");
-  const cur = getPlayerSelectedSkill();
   if(skillIds.length){
+    const sel = getPlayerSelectedSkill();
     list.innerHTML = skillIds.map(id => {
       const sk = getSkill(id);
-      const selected = (id === cur);
+      const isSel = (id === sel);
       return `
-        <div class="detail-row" data-skill-id="${id}" style="align-items:center;cursor:pointer;${selected ? "background:rgba(255,255,255,0.16);" : ""}" onclick="selectSkill('${id}')">
+        <div class="detail-row" style="align-items:center;cursor:pointer;${isSel ? 'background:rgba(255,255,255,0.14);outline:2px solid #ffcc00;' : ''}" onclick="selectPlayerSkill('${id}')">
           <span style="display:flex;align-items:center;gap:6px;">
             <img src="${getSkillIconSrc(id)}" alt="" style="width:22px;height:22px;image-rendering:pixelated;border-radius:4px;background:${sk.color};flex:none;">
             ${sk.name}
-            ${selected ? '<span style="color:#7CFC00;font-weight:700;">✔</span>' : ""}
           </span>
           <span>${sk.desc}</span>
+          <span style="font-size:12px;${isSel ? 'color:#ffcc00;font-weight:bold;' : 'color:#aab;'}">${isSel ? '✔ 使用中' : '點擊選擇'}</span>
         </div>
       `;
     }).join("");
-    list.insertAdjacentHTML("beforeend", `<div class="detail-row" style="opacity:0.7;"><span>提示</span><span>點擊技能即可切換（每局只能用一次）</span></div>`);
+    list.insertAdjacentHTML("beforeend", `<div class="detail-row" style="opacity:0.7;"><span>提示</span><span>點擊技能即可更換；戰鬥中僅所選技能生效</span></div>`);
   } else {
-    list.innerHTML = `<div class="detail-row"><span>技能</span><span>成長期後可選擇</span></div>`;
+    list.innerHTML = `<div class="detail-row"><span>技能</span><span>成長期後可獲得</span></div>`;
   }
 }
 
-// 玩家點選技能：切換當前已選技能並存檔
-function selectSkill(id){
-  const ps = getBattlePlayerStats();
-  const ids = getSkillIds(ps ? ps.stage : "");
-  if(!ids.includes(id)) return;
-  gameSelectedSkill = id;
+// 選擇技能（持久化到當前槽位存檔）
+function selectPlayerSkill(skillId){
+  if(!getSkill(skillId)) return;
+  gameSelectedSkill = skillId;
   saveGameState();
-  renderSkillList();   // 重新渲染列表，更新高亮
+  renderSkillList();
   updateSdSkillIcon();
-  showToast("已選擇技能：" + getSkill(id).name);
+  showToast("已選擇技能：" + getSkill(skillId).name);
 }
 
 function closeSkillDisplay(){
@@ -9337,7 +9353,7 @@ function showFood(){
 // ========== 對戰系統 ==========
 
 // 新增對戰記錄條目
-function addBattleLog(name, msg, crit, dodged, attrAdv, attrDis, speedBonus){
+function addBattleLog(name, msg, crit, dodged, attrAdv, attrDis, speedBonus, hasSkill){
   let cls = "";
   if(speedBonus){
     cls = "speed-bonus";
@@ -9347,7 +9363,7 @@ function addBattleLog(name, msg, crit, dodged, attrAdv, attrDis, speedBonus){
   else if(crit) cls = "crit";
   else if(attrAdv) cls = "attr-adv";
   else if(attrDis) cls = "attr-dis";
-  const entry = { name, msg, cls };
+  const entry = { name, msg, cls, hasSkill: !!hasSkill };
   battleLogEntries.push(entry);
   renderBattleLog();
 }
@@ -9358,7 +9374,7 @@ function renderBattleLog(){
   if(!logEl) return;
   let html = "";
   for(const e of battleLogEntries){
-    html += `<div class="log-entry${e.cls ? " " + e.cls : ""}">[${e.name}] ${e.msg}</div>`;
+    html += `<div class="log-entry${e.cls ? " " + e.cls : ""}">[${e.name}] ${e.msg}${e.hasSkill ? '<span class="skill-mark">技</span>' : ""}</div>`;
   }
   logEl.innerHTML = html;
   logEl.scrollTop = logEl.scrollHeight;
@@ -9447,6 +9463,7 @@ function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef, at
   dmg = Math.round(dmg * atkMult);   // 先制：先手方首次攻擊力+30%
   let msgExtra = "";
   let shielded = false; // 暴擊護盾是否觸發
+  let bladeTriggered = false; // 無限之刃是否觸發
   // 暴擊（攻擊方用總暴擊）
   const atkCrit = isPlayerAtk ? getBattlePlayerTotalCrit() : (isSelfEnemyAtk ? ((atkr.critRate || 0) + battleSelfEnemyCritBonus) : Math.min(0.40, (atkr.critRate || 0) + battleEnemyCritBonus));
   let isCrit = false;
@@ -9458,7 +9475,8 @@ function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef, at
     const atkBladeActive = isPlayerAtk ? playerHasSkillById("infiniteBlade") : enemyHasSkillById("infiniteBlade");
     if(atkBladeActive){
       dmg = Math.round(dmg * 1.3);
-      msgExtra = "爆擊！無限之刃 +30%！";
+      msgExtra += "無限之刃 +30%！";
+      bladeTriggered = true;
       if(isPlayerAtk) setPlayerSkillUsedById("infiniteBlade", true);
       else setEnemySkillUsedById("infiniteBlade", true);
     }
@@ -9466,7 +9484,7 @@ function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef, at
     const defShieldActive = isPlayerDef ? playerHasSkillById("critShield") : enemyHasSkillById("critShield");
     if(defShieldActive){
       dmg = Math.round(dmg * 0.7);
-      msgExtra = "爆擊！暴擊護盾 -30%！";
+      msgExtra += "暴擊護盾 -30%！";
       shielded = true;
       if(isPlayerDef) setPlayerSkillUsedById("critShield", true);
       else setEnemySkillUsedById("critShield", true);
@@ -9487,7 +9505,7 @@ function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef, at
   const attrAdv = attrMult > 1.0;
   const attrDis = attrMult < 1.0;
   const msg = msgExtra ? (msgExtra + " " + dmg + " 傷害！") : (dmg + " 傷害！");
-  return { dodged: false, dmg, msg, crit: isCrit, attrAdv: attrAdv, attrDis: attrDis, shielded };
+  return { dodged: false, dmg, msg, crit: isCrit, attrAdv: attrAdv, attrDis: attrDis, shielded, blade: bladeTriggered };
 }
 
 // 跨版本對戰輔助函數：取得敵方所屬版本的數據
@@ -9909,7 +9927,8 @@ function buildQuickBattle3v3EnemyTeam(stage){
         undyingUsed: false,
         infiniteBladeUsed: false,
         dodgeFollowUpUsed: false,
-        hpRecoverUsed: false
+        hpRecoverUsed: false,
+        dodgeRecoverUsed: false
       });
     }
   }
@@ -9965,6 +9984,7 @@ function startQuickBattle3v3(){
       infiniteBladeUsed: false,
       dodgeFollowUpUsed: false,
       hpRecoverUsed: false,
+      dodgeRecoverUsed: false,
       maxHp,
       currentHp: maxHp,
       adversityTries: 0
@@ -10386,12 +10406,13 @@ const SKILLS = {
   infiniteBlade: { id: "infiniteBlade", name: "無限之刃", desc: "暴擊時攻擊力 +30%", color: "#ffcc00" },
   dodgeFollowUp: { id: "dodgeFollowUp", name: "閃避追加", desc: "敵人閃避時，馬上追加一次 70% 攻擊（可暴擊）", color: "#00cc66" },
   hpRecover: { id: "hpRecover", name: "血量回復", desc: "勝利進入下一場時回復 20% 血量", color: "#cc66ff" },
+  dodgeRecover: { id: "dodgeRecover", name: "閃避回復", desc: "閃避敵人攻擊時，回復自身 15% 血量", color: "#00cccc" },
 };
 // 數碼暴龍（成長期及以上）通用擁有技能；蛋 / 幼年期無技能
 const DIGIMON_STAGES = ["成長期", "成熟期", "完全體", "究極體"];
 // 成長期及以上數碼獸擁有全部技能（每個技能每局只能用一次）
 function getSkillIds(stage){
-  return (stage && DIGIMON_STAGES.includes(stage)) ? ["strikeFirst", "critShield", "undyingHeart", "infiniteBlade", "dodgeFollowUp", "hpRecover"] : [];
+  return (stage && DIGIMON_STAGES.includes(stage)) ? ["strikeFirst", "critShield", "undyingHeart", "infiniteBlade", "dodgeFollowUp", "hpRecover", "dodgeRecover"] : [];
 }
 function getSkillId(stage){
   const ids = getSkillIds(stage);
@@ -10412,12 +10433,14 @@ let battlePlayerInfiniteBladeUsed = false;    // 玩家無限之刃（1V1）
 let battleEnemyInfiniteBladeUsed = false;     // 敵方無限之刃（1V1）
 let battlePlayerDodgeFollowUpUsed = false;    // 玩家閃避追加（1V1）
 let battleEnemyDodgeFollowUpUsed = false;     // 敵方閃避追加（1V1）
+let battlePlayerDodgeRecoverUsed = false;     // 玩家閃避回復（1V1）
+let battleEnemyDodgeRecoverUsed = false;      // 敵方閃避回復（1V1）
 let gameSelectedSkill = "strikeFirst";        // 玩家當前槽位已選技能（每隻龍只能有一個，持久化到存檔）
 let battleEnemySelectedSkill = "strikeFirst"; // 敵方本場已選技能（1V1 每場隨機）
 
 // 隨機擲一個技能（敵方 AI 每場隨機一個技能）
 function rollRandomSkill(){
-  const ids = ["strikeFirst", "critShield", "undyingHeart", "infiniteBlade", "dodgeFollowUp", "hpRecover"];
+  const ids = ["strikeFirst", "critShield", "undyingHeart", "infiniteBlade", "dodgeFollowUp", "hpRecover", "dodgeRecover"];
   return ids[Math.floor(Math.random() * ids.length)];
 }
 // 玩家當前已選技能（1V1 用當前槽位；3V3/主線任務用 fighter 欄位）
@@ -10439,9 +10462,9 @@ function getPlayerSkillUsed(){
   return !!skillUsed;
 }
 
-// 玩家是否擁有指定技能且尚未使用（含階段判定）
+// 玩家是否擁有指定技能且尚未使用（僅「已選技能」生效，含階段判定）
 function playerHasSkillById(skillId){
-  if(skillId !== getPlayerSelectedSkill()) return false; // 每隻龍只能有一個技能
+  if(getPlayerSelectedSkill() !== skillId) return false;  // 只有選中的技能生效
   const s = getBattlePlayerStats();
   if(!getSkillIds(s ? s.stage : "").includes(skillId)) return false;
   const f = getBattlePlayerFighter();
@@ -10452,6 +10475,7 @@ function playerHasSkillById(skillId){
     if(skillId === "infiniteBlade") return !f.infiniteBladeUsed;
     if(skillId === "dodgeFollowUp") return !f.dodgeFollowUpUsed;
     if(skillId === "hpRecover") return !f.hpRecoverUsed;
+    if(skillId === "dodgeRecover") return !f.dodgeRecoverUsed;
     return false;
   }
   if(skillId === "strikeFirst") return true;          // 1V1 先制每場獨立
@@ -10459,12 +10483,13 @@ function playerHasSkillById(skillId){
   if(skillId === "undyingHeart") return !battlePlayerUndyingUsed;
   if(skillId === "infiniteBlade") return !battlePlayerInfiniteBladeUsed;
   if(skillId === "dodgeFollowUp") return !battlePlayerDodgeFollowUpUsed;
+  if(skillId === "dodgeRecover") return !battlePlayerDodgeRecoverUsed;
   if(skillId === "hpRecover") return false;           // 1V1 無連續戰鬥，不觸發
   return false;
 }
-// 敵方是否擁有指定技能且尚未使用（含階段判定）
+// 敵方是否擁有指定技能且尚未使用（僅「已選技能」生效，含階段判定）
 function enemyHasSkillById(skillId){
-  if(skillId !== getEnemySelectedSkill()) return false; // 每隻龍只能有一個技能
+  if(getEnemySelectedSkill() !== skillId) return false;  // 只有選中的技能生效
   const es = getEnemyStats(battleEnemyRow);
   if(!getSkillIds(es ? es.stage : "").includes(skillId)) return false;
   const e = getBattleEnemyFighter();
@@ -10475,6 +10500,7 @@ function enemyHasSkillById(skillId){
     if(skillId === "infiniteBlade") return !e.infiniteBladeUsed;
     if(skillId === "dodgeFollowUp") return !e.dodgeFollowUpUsed;
     if(skillId === "hpRecover") return !e.hpRecoverUsed;
+    if(skillId === "dodgeRecover") return !e.dodgeRecoverUsed;
     return false;
   }
   if(skillId === "strikeFirst") return true;
@@ -10482,6 +10508,7 @@ function enemyHasSkillById(skillId){
   if(skillId === "undyingHeart") return !battleEnemyUndyingUsed;
   if(skillId === "infiniteBlade") return !battleEnemyInfiniteBladeUsed;
   if(skillId === "dodgeFollowUp") return !battleEnemyDodgeFollowUpUsed;
+  if(skillId === "dodgeRecover") return !battleEnemyDodgeRecoverUsed;
   if(skillId === "hpRecover") return false;           // 敵方 1V1 無連續戰鬥，3V3 由 fighter 欄位管理
   return false;
 }
@@ -10495,12 +10522,14 @@ function setPlayerSkillUsedById(skillId, value){
     else if(skillId === "infiniteBlade") f.infiniteBladeUsed = value;
     else if(skillId === "dodgeFollowUp") f.dodgeFollowUpUsed = value;
     else if(skillId === "hpRecover") f.hpRecoverUsed = value;
+    else if(skillId === "dodgeRecover") f.dodgeRecoverUsed = value;
   }
   if(skillId === "strikeFirst") skillUsed = value;
   else if(skillId === "critShield") battlePlayerCritShieldUsed = value;
   else if(skillId === "undyingHeart") battlePlayerUndyingUsed = value;
   else if(skillId === "infiniteBlade") battlePlayerInfiniteBladeUsed = value;
   else if(skillId === "dodgeFollowUp") battlePlayerDodgeFollowUpUsed = value;
+  else if(skillId === "dodgeRecover") battlePlayerDodgeRecoverUsed = value;
 }
 // 標記敵方指定技能已用/未用
 function setEnemySkillUsedById(skillId, value){
@@ -10512,11 +10541,13 @@ function setEnemySkillUsedById(skillId, value){
     else if(skillId === "infiniteBlade") e.infiniteBladeUsed = value;
     else if(skillId === "dodgeFollowUp") e.dodgeFollowUpUsed = value;
     else if(skillId === "hpRecover") e.hpRecoverUsed = value;
+    else if(skillId === "dodgeRecover") e.dodgeRecoverUsed = value;
   }
   if(skillId === "critShield") battleEnemyCritShieldUsed = value;
   else if(skillId === "undyingHeart") battleEnemyUndyingUsed = value;
   else if(skillId === "infiniteBlade") battleEnemyInfiniteBladeUsed = value;
   else if(skillId === "dodgeFollowUp") battleEnemyDodgeFollowUpUsed = value;
+  else if(skillId === "dodgeRecover") battleEnemyDodgeRecoverUsed = value;
 }
 
 // ===== 先制技能舊介面兼容包裝 =====
@@ -10858,7 +10889,7 @@ function executeAttack(who, onDone, isSpeedBonus = false){
 
   // 「先制」技能：先手方首次攻擊生效（攻擊力+30%）
   const strikeActive = (who === "player") ? battleStrikeFirstPlayer : battleStrikeFirstEnemy;
-  const { dodged, dmg, msg, crit, attrAdv, attrDis, shielded } = calcBattleDamage(atkrRow, defrRow, who === "player", who !== "player", strikeActive ? 1.3 : 1);
+  const { dodged, dmg, msg, crit, attrAdv, attrDis, shielded, blade } = calcBattleDamage(atkrRow, defrRow, who === "player", who !== "player", strikeActive ? 1.3 : 1);
   battleIsCrit = crit;
   // 消耗「先制」（無論命中/閃避，首次攻擊後即用完）
   if(strikeActive){
@@ -10921,6 +10952,20 @@ function executeAttack(who, onDone, isSpeedBonus = false){
           battlePlayerDodge = false;
           battleEnemyDodge = false;
           renderBattleScene();
+
+          // 閃避回復：閃避方擁有此技能時，閃避後回復自身 15% 血量（每局一次）
+          const recoverActive = (who === "player") ? enemyHasSkillById("dodgeRecover") : playerHasSkillById("dodgeRecover");
+          if(recoverActive){
+            if(who === "player") setEnemySkillUsedById("dodgeRecover", true);
+            else setPlayerSkillUsedById("dodgeRecover", true);
+            const healMax = (who === "player") ? battleEnemyMaxHp : battlePlayerMaxHp;
+            const heal = Math.max(1, Math.round(healMax * 0.15));
+            if(who === "player") battleEnemyHp = Math.min(battleEnemyMaxHp, battleEnemyHp + heal);
+            else battlePlayerHp = Math.min(battlePlayerMaxHp, battlePlayerHp + heal);
+            updateBattleHpDisplay();
+            addBattleLog(defName, "閃避回復 +" + heal + " HP", false, false, false, false, false, true);
+            drawBattleItemIcons();
+          }
 
           // 閃避追加：攻擊方擁有此技能時，敵人閃避後立即追加一次 70% 攻擊（可暴擊，每局一次）
           const followActive = (who === "player") ? playerHasSkillById("dodgeFollowUp") : enemyHasSkillById("dodgeFollowUp");
@@ -11013,15 +11058,16 @@ function executeAttack(who, onDone, isSpeedBonus = false){
           battleMsg = undyingMsg ? (msg + " " + undyingMsg) : msg;
           document.getElementById("battleMsg").textContent = battleMsg;
           let typeLabel = "";
-          if(crit && attrAdv) typeLabel = "爆擊！屬性剋制！";
-          else if(crit) typeLabel = "爆擊！";
-          else if(attrAdv) typeLabel = "屬性剋制！";
-          else if(attrDis) typeLabel = "屬性劣勢…";
-          else typeLabel = "普通攻擊";
+          if(crit) typeLabel = "爆擊！";
+          if(blade) typeLabel += "無限之刃 +30%！";
+          if(attrAdv) typeLabel += "屬性剋制！";
+          else if(attrDis) typeLabel += "屬性劣勢…";
+          if(!typeLabel) typeLabel = "普通攻擊";
           if(shielded) typeLabel += " 暴擊護盾 -30%！";
           if(strikeActive) typeLabel += " +先制攻擊";
           if(undyingMsg) typeLabel += " " + undyingMsg;
-          addBattleLog(atkrName, `${typeLabel} → -${dmg} HP`, crit, false, attrAdv, attrDis, isSpeedBonus);
+          addBattleLog(atkrName, `${typeLabel} → -${dmg} HP`, crit, false, attrAdv, attrDis, isSpeedBonus, !!(blade || shielded || strikeActive || undyingMsg));
+          drawBattleItemIcons();  // 無限之刃 / 暴擊護盾 觸發後刷新圖標（顯示 X）
           renderBattleScene();
 
           if(battlePlayerHp <= 0){
@@ -11133,7 +11179,7 @@ function executeFollowUpAttack(who, onDone){
 
           battleMsg = atkrName + " 閃避追加" + (isCrit ? " 爆擊！" : "") + " -" + dmg + " HP！" + undyingMsg;
           document.getElementById("battleMsg").textContent = battleMsg;
-          addBattleLog(atkrName, (isCrit ? "閃避追加 爆擊" : "閃避追加") + " → -" + dmg + " HP", isCrit, false, false);
+          addBattleLog(atkrName, (isCrit ? "閃避追加 爆擊" : "閃避追加") + " → -" + dmg + " HP", isCrit, false, false, false, false, true);
           drawBattleItemIcons();
           renderBattleScene();
 
@@ -11404,6 +11450,8 @@ function startBattle(targetSlotIdx){
   battleEnemyInfiniteBladeUsed = false;
   battlePlayerDodgeFollowUpUsed = false;
   battleEnemyDodgeFollowUpUsed = false;
+  battlePlayerDodgeRecoverUsed = false;
+  battleEnemyDodgeRecoverUsed = false;
   battlePlayerSkillState = playerHasSkill() ? "ready" : "none";
   battleEnemySkillState = enemyHasSkill() ? "ready" : "none";
   setBattleActive(true);
@@ -11568,7 +11616,7 @@ function beginBattle(){
   document.getElementById("battleLog").innerHTML = "";
   // 3V3 連勝回血：插入為本場第一條對戰記錄
   if(battlePendingHpRecoverLog){
-    addBattleLog(battlePendingHpRecoverLog.name, battlePendingHpRecoverLog.msg, false, false, false);
+    addBattleLog(battlePendingHpRecoverLog.name, battlePendingHpRecoverLog.msg, false, false, false, false, false, true);
     battlePendingHpRecoverLog = null;
   }
 
@@ -14792,6 +14840,9 @@ infiniteBladeImage.onerror = onImageError;
 hpRecoverImage.src = "Player skills/Health recovery.png";
 hpRecoverImage.onload = onImageLoaded;
 hpRecoverImage.onerror = onImageError;
+dodgeRecoverImage.src = "Player skills/Miss Recover health.png";
+dodgeRecoverImage.onload = onImageLoaded;
+dodgeRecoverImage.onerror = onImageError;
 dodgeFollowUpImage.src = "Player skills/Miss add to attack.png";
 dodgeFollowUpImage.onload = onImageLoaded;
 dodgeFollowUpImage.onerror = onImageError;
