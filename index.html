@@ -1372,6 +1372,9 @@ canvas {
 }
 .bm-quest-cat:hover { color: #ddd; background: #252540; }
 .bm-quest-cat.active { color: #ffcc00; border-color: #ffcc00; background: #222244; }
+.bm-quest-sub-cats { display: flex; align-items: center; gap: 6px; margin: -2px 0 10px 0; padding-left: 16px; border-left: 2px solid #555; }
+.bm-quest-sub-cats .bm-quest-cat { padding: 5px 0; font-size: 12px; background: #151528; border-radius: 6px; }
+.bm-quest-sub-label { color: #ffcc00; font-size: 11px; font-weight: bold; white-space: nowrap; margin-right: 2px; }
 .bm-quest-list { display: flex; flex-direction: column; gap: 8px; }
 .bm-quest-card { 
   display: flex; align-items: center; gap: 12px;
@@ -2161,6 +2164,13 @@ canvas {
       <button id="bmCat_daily" class="bm-quest-cat" onclick="switchQuestCategory('daily')">日常</button>
       <button id="bmCat_evo" class="bm-quest-cat" onclick="switchQuestCategory('evo')">進化</button>
       <button id="bmCat_dungeon" class="bm-quest-cat" onclick="switchQuestCategory('dungeon')">副本</button>
+    </div>
+    <div id="bmQuestStageTabs" class="bm-quest-sub-cats" style="display:none;">
+      <span class="bm-quest-sub-label">階段 ▸</span>
+      <button id="bmQuestStage_成長期" class="bm-quest-cat active" onclick="switchMainQuestStage('成長期')">成長期</button>
+      <button id="bmQuestStage_成熟期" class="bm-quest-cat" onclick="switchMainQuestStage('成熟期')">成熟期</button>
+      <button id="bmQuestStage_完全體" class="bm-quest-cat" onclick="switchMainQuestStage('完全體')">完全體</button>
+      <button id="bmQuestStage_究極體" class="bm-quest-cat" onclick="switchMainQuestStage('究極體')">究極體</button>
     </div>
     <div id="bmQuestList" class="bm-quest-list"></div>
   </div>
@@ -12233,6 +12243,7 @@ function endBattle(result){
         window._mainQuestId = null;
         const q = MAIN_QUESTS.find(x => x.id === qid);
         if(q){
+          window._mainQuestGoldStage = q.stage; // 供下方按階段發金幣
           const firstClear = !gameMainQuestDone.includes(qid);
           if(firstClear){
             gameMainQuestDone.push(qid);
@@ -12244,9 +12255,17 @@ function endBattle(result){
           }
         }
       }
-      // 所有對戰勝利統一獲得 3~10 金幣（自家對戰已在上方排除；3V3 整場另以 5~15 在 finishQuickBattle3v3Match 結算）
+      // 所有對戰勝利獲得金幣（自家對戰已在上方排除；3V3 整場另在 finishQuickBattle3v3Match 結算）
+      // 主線任務按階段遞增：成長 3~10 / 成熟 5~15 / 完全 10~25 / 究極 20~40；其餘對戰 3~10
       if(!battleQuick3v3Active){
-        const goldEarned = Math.floor(Math.random() * 8) + 3; // 3~10 隨機
+        let goldEarned;
+        const range = window._mainQuestGoldStage ? MAIN_QUEST_GOLD_RANGE[window._mainQuestGoldStage] : null;
+        if(range){
+          goldEarned = Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
+          window._mainQuestGoldStage = null;
+        } else {
+          goldEarned = Math.floor(Math.random() * 8) + 3; // 3~10 隨機
+        }
         gameGold += goldEarned;
         saveGlobalGold();
         window._lastBattleGold = goldEarned;
@@ -15566,7 +15585,114 @@ const MAIN_QUESTS = [
   { id:"main_31", title:"突擊先鋒",   desc:"擊敗成長期數碼獸「突擊龍獸」，證明你的實力！", enemyVersion:"V10", enemyRow:5, stage:"成長期", recommendLevel:5, rewardGold: Math.floor(Math.random()*5)+1, unlockBy:"main_30" },
 ];
 
+// ===== 主線任務：成熟期 / 完全體 / 究極體（動態生成）=====
+const MAIN_QUEST_STAGE_LEVEL = { "成長期": 5, "成熟期": 25, "完全體": 60, "究極體": 100 };
+const MAIN_QUEST_GOLD_RANGE = { "成長期": [3, 10], "成熟期": [5, 15], "完全體": [10, 25], "究極體": [20, 40] };
+const MAIN_QUEST_STAGE_PREFIX = { "成長期": "main_", "成熟期": "mainM_", "完全體": "mainP_", "究極體": "mainU_" };
+// 每個數碼獸的 4 字稱號（鍵 = 版本_行號）
+const MAIN_QUEST_TITLES = {
+  "成熟期": {
+    "V1_4": "赤焰龍王", "V1_5": "龐然巨影", "V1_6": "暗夜使者", "V1_7": "烈火焚身",
+    "V1_8": "深淵巨浪", "V1_9": "蒼穹飛影", "V1_10": "黏滑突襲",
+    "V2_4": "甲殼戰將", "V2_5": "蒼藍疾風", "V2_6": "聖光降臨", "V2_7": "冰霜巨拳",
+    "V2_8": "赤羽翱翔", "V2_9": "汪洋巨物", "V2_10": "污穢之影",
+    "V3_4": "聖角疾馳", "V3_5": "神弓疾射", "V3_6": "狂野巨棒", "V3_7": "幽靈飄渺",
+    "V3_8": "堅殼固守", "V3_9": "地底突襲", "V3_10": "惡臭撲鼻",
+    "V4_4": "巨角衝鋒", "V4_5": "烈焰雞鳴", "V4_6": "百獸之王", "V4_7": "鍬形巨鉗",
+    "V4_8": "巨翼蔽天", "V4_9": "叢林野性", "V4_10": "亡靈低吟",
+    "V5_4": "闇影巨龍", "V5_5": "獨眼凶光", "V5_6": "邪氣逼人", "V5_7": "巨角力士",
+    "V5_8": "蜂群狂襲", "V5_9": "三首之威", "V5_10": "淤泥翻湧",
+    "V6_6": "甲殼守護", "V6_7": "鍬形戰士", "V6_8": "獨角衝鋒", "V6_9": "堅甲磐石",
+    "V6_10": "星輝閃耀", "V6_11": "蛙躍疾襲", "V6_12": "貓影疾風",
+    "V7_6": "獨角破浪", "V7_7": "海之獵手", "V7_8": "深藍巨浪", "V7_9": "深海古魚",
+    "V7_10": "八爪纏繞", "V7_11": "墨霧迷蹤", "V7_12": "海獸怒吼",
+    "V8_6": "猴王神威", "V8_7": "銀狼疾走", "V8_8": "烈焰焚城", "V8_9": "巫術秘法",
+    "V8_10": "暗黑魔影", "V8_11": "鬼影幢幢", "V8_12": "蛛網陷阱", "V8_13": "邪惡獵犬",
+    "V9_7": "勝利之龍", "V9_8": "炎羽展翅", "V9_9": "針刺密林", "V9_10": "怪鳥翱翔",
+    "V9_11": "枯木凶影", "V9_12": "猩紅蔬影", "V9_13": "疾風怒號",
+    "V10_6": "鋼鐵恐龍", "V10_7": "彈無虛發", "V10_8": "時光倒流", "V10_9": "鋼鐵碾壓",
+    "V10_10": "銅牆鐵壁", "V10_11": "裝甲出擊", "V10_12": "雷光一閃"
+  },
+  "完全體": {
+    "V1_11": "機械暴君", "V1_12": "彈跳奇襲", "V1_13": "巨熊揮掌",
+    "V2_11": "不死暴龍", "V2_12": "鋼鐵彈珠", "V2_13": "腦域支配",
+    "V3_11": "機械半獸", "V3_12": "火炮轟鳴", "V3_13": "棍掃千軍",
+    "V4_11": "鋼翼天翔", "V4_12": "精靈祝福", "V4_13": "破殼而出",
+    "V5_11": "鋼龍怒號", "V5_12": "分子瓦解", "V5_13": "強化暴龍",
+    "V6_13": "絨毛巨獅", "V6_14": "甲蟲戰神", "V6_15": "暗黑鍬形", "V6_16": "三鋒衝撞",
+    "V6_17": "掘地巨鼠", "V6_18": "鳥人天翔", "V6_19": "蛙王震吼", "V6_20": "天女降臨",
+    "V6_21": "巨獸撼地",
+    "V7_13": "電光水母", "V7_14": "海象巨力", "V7_15": "深洋巨影", "V7_16": "超龍破浪",
+    "V7_17": "古獸獵殺", "V7_18": "魚人突擊", "V7_19": "深淵惡魔", "V7_20": "觸手纏繞",
+    "V7_21": "海之女神", "V7_27": "巨蝌吞浪", "V7_28": "水靈幽影",
+    "V8_14": "猛獁巨力", "V8_15": "狼人戰魂", "V8_16": "業火焚身", "V8_17": "南瓜幽光",
+    "V8_18": "血月之影", "V8_19": "死神鐮刀", "V8_20": "妖魅惑心", "V8_21": "孤狼獨行",
+    "V9_14": "勝翼翱翔", "V9_15": "神鳥烈焰", "V9_16": "華麗盛宴", "V9_17": "巨樹守護",
+    "V9_18": "森林之靈", "V9_19": "廢棄深淵", "V9_20": "花仙曼舞", "V9_21": "颶風呼嘯",
+    "V10_13": "重裝突擊", "V10_14": "鋼鐵暴君", "V10_15": "機械戰士", "V10_16": "騎士之槍",
+    "V10_17": "巨型彈珠", "V10_18": "百萬火力", "V10_19": "惡霸巨熊", "V10_20": "網絡龍影",
+    "V10_21": "重裝運輸"
+  },
+  "究極體": {
+    "V1_14": "電光石火", "V1_15": "彈珠暴君", "V1_16": "惡魔巨熊",
+    "V2_14": "白骨猛獁", "V2_15": "蒼狼戰神", "V2_16": "深淵古獸",
+    "V3_14": "機械王者", "V3_15": "獄門開啟", "V3_16": "獅王威臨",
+    "V4_14": "闇龍降世", "V4_15": "巨龍咆哮", "V4_16": "頑固鐵壁",
+    "V5_14": "邪龍滅世", "V5_16": "大地之神", "V5_17": "混沌之龍",
+    "V6_22": "大力甲蟲", "V6_23": "劍獅怒吼", "V6_24": "鋼鐵猴王", "V6_25": "聖龍降臨",
+    "V6_26": "鍬形巨神", "V6_27": "轟天爆破", "V6_28": "黃金巨像", "V6_29": "巨兔蹬踏",
+    "V6_30": "雷雨之威", "V6_31": "獸王合體",
+    "V7_22": "海之聖光", "V7_23": "鋼龍深淵", "V7_24": "深淵之聲", "V7_25": "長頸巨龍",
+    "V7_26": "維京戰神", "V7_29": "雙棲獵手", "V7_30": "聖盾巨龍", "V7_31": "御魂守護",
+    "V8_22": "白骨巨象", "V8_23": "鋼鐵螺栓", "V8_24": "小丑魔影", "V8_25": "究極暗黑",
+    "V8_26": "冥界守門", "V8_27": "貴族幽光", "V8_28": "巨鉗獵殺", "V8_29": "芬里爾嚎",
+    "V8_30": "深淵巨口", "V8_31": "終極合體",
+    "V9_22": "鳳凰涅槃", "V9_23": "獅鷲翱翔", "V9_24": "木偶傀儡", "V9_25": "薔薇利刺",
+    "V9_26": "勝利之翼", "V9_27": "花之女神", "V9_28": "九首蛇威", "V9_29": "西風之刃",
+    "V9_30": "森林之神", "V9_31": "御魂之光",
+    "V10_22": "勇者暴龍", "V10_23": "鋼鐵蒼狼", "V10_24": "邪龍砲擊", "V10_25": "怨毒血魔",
+    "V10_26": "機械元帥", "V10_27": "拉格納神", "V10_28": "齊克之矛", "V10_29": "旅團之龍",
+    "V10_30": "終極奧米加", "V10_31": "混沌邪龍"
+  }
+};
+// 每個階段頁簽下的任務：每隻龍一個任務；頁內順序解鎖（unlockBy 鏈式）；
+// 究極體任務 allowAnyStage=true（不限階段出戰，幼年期仍不可戰鬥）
+function buildMainQuestsForStage(stageName) {
+  const list = [];
+  const prefix = MAIN_QUEST_STAGE_PREFIX[stageName];
+  const allowAny = (stageName === "究極體");
+  const titles = MAIN_QUEST_TITLES[stageName] || {}; // 4 字稱號
+  let n = 0;
+  for (const ver of SLOT_VERSIONS) {
+    const stats = getStatsForVersion(ver);
+    for (const r in stats) {
+      const row = parseInt(r, 10);
+      if (row < 2) continue; // 跳過幼年期（row 0、1）
+      const s = stats[r];
+      if (!s || s.stage !== stageName) continue;
+      n++;
+      list.push({
+        id: prefix + n,
+        title: titles[ver + "_" + row] || (stageName + "挑戰"),
+        desc: "擊敗" + stageName + "數碼獸「" + s.name + "」，證明你的實力！",
+        enemyVersion: ver,
+        enemyRow: row,
+        stage: stageName,
+        recommendLevel: MAIN_QUEST_STAGE_LEVEL[stageName],
+        rewardGold: 0,
+        unlockBy: (n > 1) ? (prefix + (n - 1)) : null, // 頁內順序解鎖
+        allowAnyStage: allowAny
+      });
+    }
+  }
+  return list;
+}
+MAIN_QUESTS.push(...buildMainQuestsForStage("成熟期"));
+MAIN_QUESTS.push(...buildMainQuestsForStage("完全體"));
+MAIN_QUESTS.push(...buildMainQuestsForStage("究極體"));
+
 let currentQuestCategory = "main";
+let mainQuestStage = "成長期"; // 主線任務當前階段頁簽
 
 function switchQuestCategory(cat) {
   currentQuestCategory = cat;
@@ -15577,9 +15703,21 @@ function switchQuestCategory(cat) {
   renderQuestList();
 }
 
+function switchMainQuestStage(stage) {
+  mainQuestStage = stage;
+  ["成長期", "成熟期", "完全體", "究極體"].forEach(s => {
+    const btn = document.getElementById("bmQuestStage_" + s);
+    if (btn) btn.classList.toggle("active", s === stage);
+  });
+  renderQuestList();
+}
+
 function renderQuestList() {
   const listEl = document.getElementById("bmQuestList");
   if (!listEl) return;
+  // 主線任務顯示階段頁簽，其餘類目隱藏
+  const stageTabs = document.getElementById("bmQuestStageTabs");
+  if (stageTabs) stageTabs.style.display = (currentQuestCategory === "main") ? "flex" : "none";
   if (currentQuestCategory === "evo") {
     renderEvoTaskList(listEl);
     return;
@@ -15592,8 +15730,9 @@ function renderQuestList() {
     renderDungeonList(listEl);
     return;
   }
-  // 只顯示已解鎖的任務：可進行（已解鎖未完成）排在上方，已完成排在下方的「已完成」區
-  const unlockedQuests = MAIN_QUESTS.filter(q => !q.unlockBy || gameMainQuestDone.includes(q.unlockBy));
+  // 主線任務：先按當前階段頁簽過濾，再顯示已解鎖的任務（可進行在上方，已完成在下方）
+  const stageQuests = MAIN_QUESTS.filter(q => q.stage === mainQuestStage);
+  const unlockedQuests = stageQuests.filter(q => !q.unlockBy || gameMainQuestDone.includes(q.unlockBy));
   const ongoing = unlockedQuests.filter(q => !gameMainQuestDone.includes(q.id));
   const done = unlockedQuests.filter(q => gameMainQuestDone.includes(q.id));
   const sorted = ongoing.concat(done);
@@ -15783,10 +15922,10 @@ function startMainQuest(questId) {
     return;
   }
   if (snapshot.row === undefined || snapshot.row < 2) {
-    showToast("只限「" + q.stage + "」階段進入（幼年期無法戰鬥）");
+    showToast(q.allowAnyStage ? "幼年期無法戰鬥，請先進化" : "只限「" + q.stage + "」階段進入（幼年期無法戰鬥）");
     return;
   }
-  if (snapshot.stage !== q.stage) {
+  if (!q.allowAnyStage && snapshot.stage !== q.stage) {
     showToast("只限「" + q.stage + "」階段進入");
     return;
   }
@@ -15844,7 +15983,9 @@ function openMainQuestPanel(questId) {
   mainQuestPendingId = questId;
   mainQuestSelectedSlot = -1;
   const desc = document.getElementById("mainQuestSelectDesc");
-  if (desc) desc.textContent = "挑戰「" + q.title + "」：只有「" + q.stage + "」的龍可以出戰，請選擇出戰的龍。";
+  if (desc) desc.textContent = q.allowAnyStage
+    ? "挑戰「" + q.title + "」：任何階段的龍都可以出戰，請選擇出戰的龍。"
+    : "挑戰「" + q.title + "」：只有「" + q.stage + "」的龍可以出戰，請選擇出戰的龍。";
   document.getElementById("bmBattleMainMenu").style.display = "none";
   document.getElementById("bmSelfBattlePanel").style.display = "none";
   document.getElementById("bmQuickBattle3v3Panel").style.display = "none";
@@ -15876,8 +16017,8 @@ function renderMainQuestDragonList() {
       disabled = true;
       name = snapshot.name || "階段不足";
       stage = snapshot.stage || "不可出戰";
-    } else if (snapshot.stage !== q.stage) {
-      // 非任務指定階段 → 灰顯不可選
+    } else if (!q.allowAnyStage && snapshot.stage !== q.stage) {
+      // 非任務指定階段 → 灰顯不可選（究極體 allowAnyStage 不限階段）
       disabled = true;
       name = snapshot.name;
       stage = snapshot.stage + "（不可選）";
@@ -15923,7 +16064,7 @@ function selectMainQuestDragon(slotIdx) {
   const q = MAIN_QUESTS.find(x => x.id === mainQuestPendingId);
   if (!q) return;
   const snapshot = getBattleSlotSnapshot(slotIdx);
-  if (!snapshot || snapshot.isDead || snapshot.row === undefined || snapshot.row < 2 || snapshot.stage !== q.stage) {
+  if (!snapshot || snapshot.isDead || snapshot.row === undefined || snapshot.row < 2 || (!q.allowAnyStage && snapshot.stage !== q.stage)) {
     return;
   }
   mainQuestSelectedSlot = slotIdx;
@@ -15939,7 +16080,7 @@ function confirmMainQuestDragon() {
   }
   const slotIdx = mainQuestSelectedSlot;
   const snapshot = getBattleSlotSnapshot(slotIdx);
-  if (!snapshot || snapshot.isDead || snapshot.row === undefined || snapshot.row < 2 || snapshot.stage !== q.stage) {
+  if (!snapshot || snapshot.isDead || snapshot.row === undefined || snapshot.row < 2 || (!q.allowAnyStage && snapshot.stage !== q.stage)) {
     showToast("所選龍無法出戰，請重新選擇");
     return;
   }
