@@ -1924,8 +1924,8 @@ canvas {
 .evo-result-down{ font-size:12px; font-weight:900; color:#ff6b6b; min-width:34px; text-align:right; }
 .evo-result-zero{ font-size:12px; font-weight:700; color:#888; min-width:34px; text-align:right; }
 
-/* 手機窄屏：保持一行兩列，卡片內「預覽圖 + 資訊」改為上下堆疊，避免「無/無/練點」橫向溢出卡片外 */
-@media (max-width: 480px) {
+/* 手機／窄螢幕（≤768px）：卡片內「預覽圖 + 資訊」改為上下堆疊，避免「無/無/練點」橫向溢出卡片外 */
+@media (max-width: 768px) {
   .slot-preview-row {
     flex-direction: column;
     align-items: center;
@@ -2043,6 +2043,8 @@ canvas {
 <div class="stats-display" id="statsDisplay">
   <div class="sd-title">
     <span id="sdName" style="flex:1;text-align:center;">Agumon</span>
+    <canvas id="sdFoodIcon" width="16" height="16" style="width:45px;height:45px;cursor:default;image-rendering:pixelated;border-radius:8px;box-sizing:border-box;margin-right:6px;"
+         title="食物"></canvas>
     <canvas id="sdSkillIcon" width="16" height="16" style="width:45px;height:45px;cursor:pointer;display:none;image-rendering:pixelated;border-radius:8px;box-sizing:border-box;"
          onclick="showSkillDisplay()" title="技能"></canvas>
   </div>
@@ -2471,6 +2473,13 @@ canvas {
 const canvas = document.getElementById('screen');
 const ctx = canvas.getContext('2d');
 
+// 蛋的價格：V1 免費，V2~V5 = 100，V6~V10 = 200
+function getEggPrice(version){
+  if(version === "V1") return 0;
+  if(version === "V2" || version === "V3" || version === "V4" || version === "V5") return 100;
+  return 200; // V6~V10
+}
+
 // 版本選擇點擊處理（左右箭頭輪播 + 確定按鈕）
 canvas.addEventListener('click', (e) => {
   if(!versionSelectMode) return;
@@ -2502,6 +2511,16 @@ canvas.addEventListener('click', (e) => {
   if(cx >= 28 && cx <= 100 && cy >= 150 && cy <= 182){
     const versions = ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10"];
     const version = versions[versionSelectIndex];
+    // 蛋的價格：V1 免費，V2~V5 💰100，V6~V10 💰200
+    const eggPrice = getEggPrice(version);
+    if(gameGold < eggPrice){
+      showToast("金幣不足！" + version + " 蛋需 💰 " + eggPrice);
+      return; // 保持版本選擇畫面，不進入蛋階段
+    }
+    if(eggPrice > 0){
+      gameGold -= eggPrice;
+      saveGlobalGold();
+    }
     versionSelectMode = false;
     versionSelectIndex = 0;
     currentVersion = version;
@@ -2510,6 +2529,8 @@ canvas.addEventListener('click', (e) => {
     canvas.height = 16;
     canvas.style.width = "";
     canvas.style.height = "";
+    // 恢復 LCD 外殼（outside.png）顯示
+    updateCssBackground("auto");
     // 停止版本選擇動畫
     if(versionSelectAnimTimer){ clearInterval(versionSelectAnimTimer); versionSelectAnimTimer = null; }
     startEggPhase(version);
@@ -3558,6 +3579,8 @@ function getColForAuto(){
 
 // ========== 版本選擇畫面（八版本輪播切換：V1藍 / V2紅 / V3綠 / V4橙 / V5紫 / V6青 / V7深海藍 / V8暗夜紫）==========
 function renderVersionSelect(){
+  // 選蛋畫面：隱藏 LCD 外殼（outside.png），不顯示外框
+  if(screenDeco) screenDeco.style.display = "none";
   canvas.width = 128;
   canvas.height = 192;
   canvas.style.width = "192px";
@@ -3576,31 +3599,28 @@ function renderVersionSelect(){
   const accentColor = accentColors[idx];
   const currentEggImage = eggImages[idx];
   
-  // 黑色背景
+  // 黑色背景（canvas 底色）
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, 128, 192);
-  
-  // === 標題欄 ===
-  ctx.fillStyle = "#1a1a2e";
-  ctx.fillRect(0, 0, 128, 48);
-  ctx.fillStyle = "#FFD700";
-  ctx.font = "16px 'Press Start 2P'";
-  ctx.textAlign = "center";
-  ctx.fillText(versionName, 64, 30);
-  
-  // === 蛋展示區域 ===
-  const boxX = 28, boxY = 54, boxW = 72, boxH = 84;
+
+  // === 大外框（充滿 canvas：所有內容收納在一個大圓角框內，隱藏原來蛋展示框外的 outside 黑色/裝飾區域） ===
   ctx.fillStyle = "#0a0a0a";
-  roundRect(ctx, boxX, boxY, boxW, boxH, 8, false, true);
+  roundRect(ctx, 0, 0, 128, 192, 8, false, true);
   ctx.strokeStyle = accentColor;
   ctx.lineWidth = 2;
-  roundRect(ctx, boxX, boxY, boxW, boxH, 8, true, false);
-  
-  // === 左箭頭按鈕（idx=0時灰色禁用） ===
+  roundRect(ctx, 0, 0, 128, 192, 8, true, false);
+
+  // === 頂部版本名 Vx（大框內頂部，取代原獨立標題欄） ===
+  ctx.fillStyle = "#FFD700";
+  ctx.font = "14px 'Press Start 2P'";
+  ctx.textAlign = "center";
+  ctx.fillText(versionName, 64, 18);
+
+  // === 左箭頭按鈕（命中區 4~26, 85~107） ===
   const arrW = 22, arrH = 22, arrY = 85;
   const leftX = 4;
   const leftDisabled = (idx === 0);
-  
+
   ctx.fillStyle = leftDisabled ? "#1a1a1a" : "#1a3050";
   roundRect(ctx, leftX, arrY, arrW, arrH, 5, false, true);
   ctx.strokeStyle = leftDisabled ? "#333" : accentColor;
@@ -3610,11 +3630,11 @@ function renderVersionSelect(){
   ctx.font = "12px 'Press Start 2P'";
   ctx.textAlign = "center";
   ctx.fillText("◀", leftX + arrW/2, arrY + 16);
-  
-  // === 右箭頭按鈕（idx=7時灰色禁用） ===
+
+  // === 右箭頭按鈕（命中區 102~124, 85~107） ===
   const rightX = 102;
   const rightDisabled = (idx === 9);
-  
+
   ctx.fillStyle = rightDisabled ? "#1a1a1a" : "#301a1a";
   roundRect(ctx, rightX, arrY, arrW, arrH, 5, false, true);
   ctx.strokeStyle = rightDisabled ? "#333" : accentColor;
@@ -3623,31 +3643,38 @@ function renderVersionSelect(){
   ctx.fillStyle = rightDisabled ? "#444" : accentColor;
   ctx.font = "12px 'Press Start 2P'";
   ctx.fillText("▶", rightX + arrW/2, arrY + 16);
-  
-  // === 蛋精靈 (frame 0, 16×16 → 放大到 48×48) ===
+
+  // === 蛋精靈（中央偏上，frame 0, 16×16 → 放大到 48×48） ===
   const eggSize = 48;
-  const eggX = 64 - eggSize/2;
-  const eggY = 96 - eggSize/2;
-  
+  const eggX = 64 - eggSize/2; // 40
+  const eggY = 62;             // 蛋中心 y=86（62~110）
+
   if(currentEggImage && currentEggImage.complete && currentEggImage.naturalWidth > 0){
     ctx.drawImage(currentEggImage, 0, 0, 16, 16, eggX, eggY, eggSize, eggSize);
   } else {
     // 備用圓形佔位
     ctx.fillStyle = accentColor;
     ctx.beginPath();
-    ctx.arc(64, 96, 20, 0, Math.PI * 2);
+    ctx.arc(64, 86, 20, 0, Math.PI * 2);
     ctx.fill();
   }
-  
-  // === 確定按鈕 ===
+
+  // === 價格顯示（蛋下方，大框內；V1 免費，V2~V5 = 100，V6~V10 = 200） ===
+  const eggPrice = getEggPrice(versionName);
+  ctx.fillStyle = "#FFD700";
+  ctx.font = "7px 'Press Start 2P'";
+  ctx.textAlign = "center";
+  ctx.fillText(eggPrice === 0 ? "免 費" : ("$ " + eggPrice), 64, 126);
+
+  // === 確定按鈕（命中區 28~100, 150~182） ===
   const btnX = 28, btnY = 150, btnW = 72, btnH = 32;
-  
+
   // 呼吸發光
   ctx.fillStyle = accentColor;
   ctx.globalAlpha = 0.2 + 0.1 * Math.sin(now / 500);
   roundRect(ctx, btnX - 3, btnY - 3, btnW + 6, btnH + 6, 10, false, true);
   ctx.globalAlpha = 1;
-  
+
   // 按鈕主體
   ctx.fillStyle = accentColor;
   roundRect(ctx, btnX, btnY, btnW, btnH, 8, false, true);
@@ -4050,14 +4077,15 @@ function startPoopTimer(){
       if(canPoop){
         poopsOnScreen++;
         if(currentRow <= 1) babyHasPooped = true;
-        saveGameState();
       }
       if(currentRow <= 1 && babyHasPooped){
         // 幼年期已排過屎，不再倒數
         poopCountdown = 0;
+        saveGameState();
         return;
       }
       resetPoopCountdown();
+      saveGameState(); // 先重置倒數再存檔，避免存檔記錄到 0 導致離線不補糞便
     }
   }, 1000);
 
@@ -6707,6 +6735,7 @@ function renderSlotCards(){
       addBtn.classList.add('hidden');
     } else {
       addBtn.classList.remove('hidden');
+      addBtn.textContent = "＋ 增加（💰 " + (slotCount * 500) + "）";
     }
   }
 }
@@ -6867,6 +6896,14 @@ function getEggImageForVersion(ver){
 
 function addSlot(){
   if(slotCount >= MAX_SLOTS) return;
+  // NO2~NO8 需花費金幣：500,1000,1500,2000,2500,3000,3500（第 slotCount+1 台 = slotCount*500）
+  const price = slotCount * 500;
+  if(gameGold < price){
+    showToast("金幣不足！新增暴龍機需 💰 " + price);
+    return;
+  }
+  gameGold -= price;
+  saveGlobalGold();
   slotCount++;
   saveLauncherMeta();
   renderSlotCards();
@@ -7461,8 +7498,9 @@ function loadGameState(slotIndex){
       if(elapsedSec > 0){
         const maxOfflinePoops = (currentRow <= 1) ? (babyHasPooped ? 0 : 1) : 8;
         const offlinePoopIv = (currentRow <= 1) ? randBabyPoopInterval() : randPoopInterval();
-        if(poopCountdown > 0 && maxOfflinePoops > 0){
-          let remaining = poopCountdown - elapsedSec;
+        if(maxOfflinePoops > 0){
+          // 存檔倒數為 0（如剛拉完）時，視為剛重置，第一坨需等一個完整間隔
+          let remaining = (poopCountdown > 0 ? poopCountdown : offlinePoopIv) - elapsedSec;
           while(remaining <= 0 && poopsOnScreen < maxOfflinePoops){
             poopsOnScreen++;
             if(currentRow <= 1) babyHasPooped = true;
@@ -8229,6 +8267,8 @@ function updateStatsDisplay(){
       sdFoodBuff.style.display = "none";
     }
   }
+  // 標題列食物圖示（技能左邊）：有 BUFF 顯示食物圖，否則顯示 "-"
+  updateSdFoodIcon();
   if(isEggPhase){
     const ids = ["sdHp","sdAtk","sdSpeed","sdDouble","sdEvade","sdAffinity"];
     ids.forEach(id => {
@@ -9348,6 +9388,43 @@ function showStats(){
   panel.style.display = "block";
 }
 
+// ========== 狀態頁食物圖示（技能左邊，有 BUFF 顯示食物圖，無則顯示 "-"） ==========
+function updateSdFoodIcon(){
+  const icon = document.getElementById("sdFoodIcon");
+  if(!icon) return;
+  const ctx = icon.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, 16, 16);
+  const foodName = getSlotFoodName(activeSlotIndex);
+  if(foodName){
+    icon.title = "食物：" + foodName;
+    icon.style.background = "transparent";
+    icon.style.border = "none";
+    // 依當前生效食物取第一幀（均為 64×16，4 幀，每幀 16×16）
+    let buffImg = vitaminImage;
+    if(foodName === "戰斧牛扒") buffImg = steakImage;
+    else if(foodName === "雞腿") buffImg = chickenImage;
+    else if(foodName === "紅蘿蔔") buffImg = carrotImage;
+    else if(foodName === "土豆") buffImg = potatoImage;
+    else if(foodName === "蘋果") buffImg = appleImage;
+    if(buffImg && buffImg.complete && buffImg.naturalWidth > 0){
+      ctx.drawImage(buffImg, 0, 0, 16, 16, 0, 0, 16, 16);
+    }
+  } else {
+    icon.title = "食物：無";
+    icon.style.background = "#999999";
+    icon.style.border = "none";
+    // 無加成：灰色底 + 黑色粗線 "-"
+    ctx.fillStyle = "#999999";
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = "#000000";
+    ctx.font = "bold 14px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("-", 8, 8);
+  }
+}
+
 // ========== 技能頁（查看已擁有技能） ==========
 function updateSdSkillIcon(){
   const icon = document.getElementById("sdSkillIcon");
@@ -9355,13 +9432,32 @@ function updateSdSkillIcon(){
   const s = getBattlePlayerStats();
   const ids = getSkillIds(s ? s.stage : "");
   const sel = getPlayerSelectedSkill();
-  if(ids.length && ids.includes(sel) && playerOwnsSkill(sel)){
-    icon.style.display = "inline-block";
+  // 蛋／幼年期尚無技能位 → 隱藏
+  if(!ids.length){
+    icon.style.display = "none";
+    icon.title = "成長期後可獲得技能";
+    return;
+  }
+  // 成長期及以上：技能位置始終顯示（已選中＋已獲得→彩色，否則灰色佔位）
+  icon.style.display = "inline-block";
+  if(ids.includes(sel) && playerOwnsSkill(sel)){
     drawSkillIconOnCanvas(icon, sel, "ready");
     icon.title = "當前技能：" + getSkill(sel).name + "（點擊查看／更換）";
   } else {
-    icon.style.display = "none";
-    icon.title = "技能：無";
+    const ctx = icon.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, 16, 16);
+    icon.style.background = "#3a3a44";
+    icon.style.border = "1px dashed #888888";
+    icon.style.boxShadow = "none";
+    ctx.fillStyle = "#666666";
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 10px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("?", 8, 9);
+    icon.title = "尚未選擇／獲得技能（點擊查看／更換）";
   }
 }
 
@@ -10138,22 +10234,44 @@ function buildQuickBattle3v3EnemyTeam(stage){
   return team;
 }
 // 副本 3V6 敵方隊伍：成長期×3 → 成熟期×2 → 完全體 Boss×1
+// 成長期×3、成熟期×2 不重複抽同一隻龍（按名字去重）
 // 完全體 Boss 屬性：周一~周六依「資料/病毒/疫苗」輪換；周日(0)不指定 → 全隨機
 function buildDungeonEnemyTeam(){
   const children = collectEnemyPoolByStage("成長期");
   const adults = collectEnemyPoolByStage("成熟期");
   const perfects = collectEnemyPoolByStage("完全體");
   const pick = (pool) => pool[Math.floor(Math.random() * pool.length)];
+  // 不重複抽樣：洗牌後依名字去重，取出 count 隻不同的龍
+  const pickDistinct = (pool, count) => {
+    const shuffled = pool.slice().sort(() => Math.random() - 0.5);
+    const seen = new Set();
+    const out = [];
+    for(const e of shuffled){
+      if(seen.has(e.name)) continue;
+      seen.add(e.name);
+      out.push(makeEnemyFighter(e));
+      if(out.length >= count) break;
+    }
+    return out;
+  };
   const team = [];
-  for(let i = 0; i < 3 && children.length > 0; i++) team.push(makeEnemyFighter(pick(children)));
-  for(let i = 0; i < 2 && adults.length > 0; i++) team.push(makeEnemyFighter(pick(adults)));
+  team.push(...pickDistinct(children, 3));
+  team.push(...pickDistinct(adults, 2));
   const BOSS_ATTR = ["", "data", "virus", "vaccine", "data", "virus", "vaccine"];
   const bossAttr = BOSS_ATTR[new Date().getDay()] || "";
   let bossPool = bossAttr ? perfects.filter(p => p.attr === bossAttr) : perfects;
   if(bossPool.length === 0) bossPool = perfects; // 屬性缺失時退回全隨機
   if(bossPool.length > 0) team.push(makeEnemyFighter(pick(bossPool)));
+  // 補足 6 隻（極端情況池子不足時），同樣避免與已出場的同名
+  const usedNames = new Set(team.map(t => t.name));
   const all = [...children, ...adults, ...perfects];
-  while(team.length < 6 && all.length > 0) team.push(makeEnemyFighter(pick(all)));
+  while(team.length < 6 && all.length > 0){
+    const cands = all.filter(e => !usedNames.has(e.name));
+    if(cands.length === 0) break;
+    const f = makeEnemyFighter(pick(cands));
+    usedNames.add(f.name);
+    team.push(f);
+  }
   return team;
 }
 function startQuickBattle3v3(){
@@ -14682,6 +14800,7 @@ function handleReturnBtn(){
     { id: "battleMenuDisplay", cleanup: null },
     { id: "foodDisplay",      cleanup: function(){ if(gameMode==="eating"){ gameMode="auto"; gameModeStep=0; } } },
     { id: "digidexDisplay",   cleanup: null },
+    { id: "skillDisplay",     cleanup: function(){ showStats(); } },
     { id: "statsDisplay",     cleanup: null },
   ];
   for(var pi = 0; pi < panels.length; pi++){
