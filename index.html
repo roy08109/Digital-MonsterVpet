@@ -265,6 +265,23 @@ body{
   transition:background 0.2s;
 }
 .settings-close:hover{ background:#e03030; }
+.settings-backup{
+  flex:1;
+  padding:9px 12px;
+  background:linear-gradient(180deg,#2a4a6a,#1a2a4a);
+  border:2px solid #4a7aaa;
+  border-radius:8px;
+  color:#cde;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+  font-family:'Courier New',monospace;
+  transition:all 0.2s;
+}
+.settings-backup:hover{
+  background:linear-gradient(180deg,#3a5a7a,#2a3a5a);
+  border-color:#8ab;
+}
 
 /* 測驗面板 */
 .debug-overlay{
@@ -610,7 +627,7 @@ body{
   display:flex;
   justify-content:center;
   align-items:center;
-  gap:4px;
+  gap:8px;
   margin-bottom:3px;
 }
 .battle-item-icon{
@@ -626,8 +643,8 @@ body{
     linear-gradient(to right, #ff3b30, #ff9500, #ffcc00, #34c759, #00c7be, #007aff, #af52de) border-box;
 }
 .battle-skill-icon{
-  width:24px;
-  height:24px;
+  width:32px;
+  height:32px;
 }
 .battle-msg{
   text-align:center;
@@ -1677,7 +1694,26 @@ canvas {
   margin: 10px 0 6px;
 }
 .launcher-subtitle {
-  color: #888; font-size: 11px; margin-bottom: 16px;
+  color: #888; font-size: 11px; margin-bottom: 12px;
+}
+.launcher-loading {
+  width: 100%; max-width: 320px;
+  margin: 0 auto 14px;
+  text-align: center;
+}
+.launcher-loading-text {
+  color: #8ab; font-size: 11px;
+  margin-bottom: 6px; letter-spacing: 1px;
+}
+.launcher-loading-bar {
+  width: 100%; height: 8px;
+  background: #1a1a2a; border: 1px solid #335;
+  border-radius: 6px; overflow: hidden;
+}
+.launcher-loading-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg,#4a7aaa,#66ccff);
+  border-radius: 6px; transition: width 0.2s;
 }
 .slot-cards-container {
   display: grid;
@@ -1947,6 +1983,10 @@ canvas {
 <div class="launcher-overlay" id="launcherScreen">
   <div class="launcher-title">數碼暴龍機</div>
   <div class="launcher-subtitle">選擇你的暴龍機</div>
+  <div class="launcher-loading" id="launcherLoading">
+    <div class="launcher-loading-text" id="launcherLoadingText">載入資源中… 0%</div>
+    <div class="launcher-loading-bar"><div class="launcher-loading-fill" id="launcherLoadingFill"></div></div>
+  </div>
   <div class="slot-cards-container" id="slotCardsContainer">
   </div>
   <button class="launcher-add-btn" id="launcherAddBtn" onclick="addSlot()">＋ 增加</button>
@@ -2402,6 +2442,19 @@ canvas {
       </div>
     </div>
 
+    <!-- 存檔備份 -->
+    <div class="settings-row" style="border-top:none;padding-top:2px;">
+      <div>
+        <div class="setting-label">📦 存檔備份</div>
+        <div class="setting-desc">匯出 / 匯入存檔，換裝置不遺失</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="settings-backup" id="settingsExportBtn" onclick="exportSaveData()">⬇ 匯出存檔</button>
+      <button class="settings-backup" id="settingsImportBtn" onclick="document.getElementById('importFileInput').click()">⬆ 匯入存檔</button>
+    </div>
+    <input type="file" id="importFileInput" accept=".json,application/json" style="display:none;" onchange="importSaveData(this.files && this.files[0])">
+
     <button class="settings-delete" id="settingsDeleteBtn">🗑 刪除存檔</button>
     <button class="settings-close" id="settingsCloseBtn">關閉</button>
   </div>
@@ -2736,19 +2789,33 @@ const CHILD_EVO_POOL = {
   V6:  { 2: [6,9,11,12],  3: [7,8,9,11],  4: [7,8,10,11], 5: [6,9,11,12] },
   V7:  { 2: [6,7,12],     3: [8,9,12],    4: [10,11,12],  5: [6,7,12] },
   V8:  { 2: [6,7,11],     3: [8,9,11],    4: [10,11,12],  5: [9,11,13] },
-  V9:  { 2: [7,8,10],     3: [9,10,13],   4: [10,11,12],  5: [9,10],     6: [7,8,10] },
+  V9:  { 2: [7,8,10,13],  3: [9,10,13],   4: [10,11,12],  5: [9,10],     6: [7,8,10,13] },
   V10: { 2: [6,7,12],     3: [8,9,12],    4: [10,11,12],  5: [6,7,12] },
 };
 
 // 進化任務進化率：惰性初始化為均分，儲存於 evoTaskRates
 function getEvoRates(ver, row){
   const key = ver + "|" + row;
+  const pool = CHILD_EVO_POOL[ver] || CHILD_EVO_POOL.V1;
+  const cands = pool[row] || [];
   if(!evoTaskRates[key]){
-    const pool = CHILD_EVO_POOL[ver] || CHILD_EVO_POOL.V1;
-    const cands = pool[row] || [];
     const obj = {};
     cands.forEach(t => obj[t] = +(100 / cands.length).toFixed(2));
     evoTaskRates[key] = obj;
+  } else {
+    // 相容：候選池新增目標（如翼龍獸→烈風獸）時，補齊缺失進化率並歸一化
+    const rates = evoTaskRates[key];
+    const missing = cands.filter(c => !(c in rates));
+    if(missing.length > 0){
+      const existing = cands.filter(c => (c in rates));
+      const existingSum = existing.reduce((s, c) => s + (rates[c] || 0), 0);
+      const avg = existing.length > 0 ? existingSum / existing.length : (100 / missing.length);
+      missing.forEach(c => rates[c] = +avg.toFixed(2));
+      const total = cands.reduce((s, c) => s + (rates[c] || 0), 0);
+      if(total > 0){
+        cands.forEach(c => rates[c] = +((rates[c] || 0) * 100 / total).toFixed(2));
+      }
+    }
   }
   return evoTaskRates[key];
 }
@@ -4058,7 +4125,7 @@ function restartAnimTimer(iv){
 }
 
 // === 排便系統 ===
-function randPoopInterval(){ return 10800 + Math.floor(Math.random() * 7201); } // 180~300分鐘 (10800~18000秒)
+function randPoopInterval(){ return 7200 + Math.floor(Math.random() * 3601); } // 120~180分鐘 (7200~10800秒)
 function randBabyPoopInterval(){ return 120 + Math.floor(Math.random() * 60); } // 2~3分鐘 (120~180秒)
 
 function resetPoopCountdown(){
@@ -4694,6 +4761,7 @@ let battleShowEnemySad = false;        // 顯示 Sad 圖（敵方）
 let battleShowEnemyHappy = false;      // 顯示 Happy 圖（敵方）
 // 新增常量
 const CRIT_MULT = 1.5;
+const SPEED_BONUS_DMG_MULT = 0.6; // 速度追擊（攻速連擊）額外攻擊的傷害倍率
 const ADVERSITY_EVO_MAX_TRIES = 1; // 每場對戰僅1次逆境進化
 const ATTR_TYPE_MULT = {
   vaccine:  { vaccine: 1.0, virus: 1.2, data: 0.8, none: 1.0 },
@@ -7010,6 +7078,75 @@ function getTodayStr(){
   const d = new Date();
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
+
+// ========== 存檔備份（匯出 / 匯入） ==========
+const BACKUP_KEY_PREFIXES = ["digimon_", "digivpet_", "digidex_"];
+function collectAllSaveData(){
+  const data = {};
+  for(let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if(k && BACKUP_KEY_PREFIXES.some(p => k.startsWith(p))){
+      data[k] = localStorage.getItem(k);
+    }
+  }
+  return data;
+}
+function exportSaveData(){
+  const data = collectAllSaveData();
+  const payload = {
+    app: "digimon-vpet",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: data
+  };
+  const json = JSON.stringify(payload);
+  // 下載備份檔
+  try {
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "digimon_vpet_backup_" + getTodayStr() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch(e){}
+  // 複製到剪貼簿（電腦端備用）
+  try {
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(json);
+    }
+  } catch(e){}
+  showToast("✅ 存檔已匯出（下載備份檔）");
+}
+function importSaveData(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const obj = JSON.parse(reader.result);
+      const data = (obj && obj.data) || obj || {};
+      let count = 0;
+      for(const k in data){
+        if(BACKUP_KEY_PREFIXES.some(p => k.startsWith(p))){
+          localStorage.setItem(k, data[k]);
+          count++;
+        }
+      }
+      if(count === 0){
+        showToast("❌ 匯入失敗：找不到存檔資料");
+        return;
+      }
+      showToast("✅ 已匯入 " + count + " 筆資料，重新載入中…");
+      setTimeout(() => location.reload(), 900);
+    } catch(e){
+      showToast("❌ 匯入失敗：檔案格式錯誤");
+    }
+  };
+  reader.onerror = () => showToast("❌ 匯入失敗：無法讀取檔案");
+  reader.readAsText(file);
+}
 function ensureDungeonReset(){
   const today = getTodayStr();
   if(gameDungeon.date !== today){
@@ -9117,7 +9254,9 @@ const EVO_PATHS_V9 = {
   11: [{ fromRow: 4, fromName: "蘑菇獸", conds: ["訓練≥6次", "攻擊加成最高"] }],
   12: [{ fromRow: 4, fromName: "蘑菇獸", conds: ["訓練≥6次", "血量加成最高"] },
        { fromRow: 4, fromName: "蘑菇獸", conds: ["訓練≥6次", "速度加成最高"] }],
-  13: [{ fromRow: 3, fromName: "花拉獸", conds: ["訓練≥6次", "血量加成最高"] }],
+  13: [{ fromRow: 3, fromName: "花拉獸", conds: ["訓練≥6次", "血量加成最高"] },
+       { fromRow: 6, fromName: "翼龍獸", conds: ["訓練≥6次", "血量加成最高"] },
+       { fromRow: 2, fromName: "比丘獸", conds: ["訓練≥6次", "血量加成最高"] }],
   // 成熟期→完全體 (分組隨機: 疫苗→14/15/21, 資料→16/17/20, 病毒→18/19)
   14: [{ fromRow: 7, fromName: "V龍獸", conds: ["疫苗系", "6歲必定進化"] },
        { fromRow: 8, fromName: "巴多拉獸", conds: ["疫苗系", "6歲必定進化"] },
@@ -9686,7 +9825,7 @@ function updateBattleStatsDisplay(){
 
 
 // 統一傷害計算（含閃避→暴擊→屬性→下限1）
-function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef, atkMult = 1){
+function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef, atkMult = 1, speedMult = 1){
   // 玩家攻擊用總屬性，敵方攻擊用基礎屬性
   const playerRow = getBattlePlayerRow();
   if (isPlayerAtk === undefined) isPlayerAtk = (attackerRow === playerRow);
@@ -9701,6 +9840,7 @@ function calcBattleDamage(attackerRow, defenderRow, isPlayerAtk, isPlayerDef, at
   // 基礎傷害（攻擊方用總攻擊）
   let dmg = isPlayerAtk ? getBattlePlayerTotalAtk() : (isSelfEnemyAtk ? ((atkr.atk || 0) + battleSelfEnemyAtkBonus) : (atkr.atk || 0) + battleEnemyAtkBonus);
   dmg = Math.round(dmg * atkMult);   // 先制：先手方首次攻擊力+30%
+  if(speedMult !== 1) dmg = Math.round(dmg * speedMult);   // 速度追擊：額外攻擊傷害 60%
   let msgExtra = "";
   let shielded = false; // 暴擊護盾是否觸發
   let bladeTriggered = false; // 無限之刃是否觸發
@@ -11265,7 +11405,7 @@ function executeAttack(who, onDone, isSpeedBonus = false){
   // 「先制」技能：先手方首次攻擊生效（攻擊力+30%）
   const strikeActive = (who === "player") ? battleStrikeFirstPlayer : battleStrikeFirstEnemy;
   const strikeMult = strikeActive ? (who === "player" ? getPlayerSkillValue("strikeFirst") : getSkillValueById("strikeFirst", 1)) : 1;
-  const { dodged, dmg, msg, crit, attrAdv, attrDis, shielded, blade } = calcBattleDamage(atkrRow, defrRow, who === "player", who !== "player", strikeMult);
+  const { dodged, dmg, msg, crit, attrAdv, attrDis, shielded, blade } = calcBattleDamage(atkrRow, defrRow, who === "player", who !== "player", strikeMult, isSpeedBonus ? SPEED_BONUS_DMG_MULT : 1);
   battleIsCrit = crit;
   // 消耗「先制」（無論命中/閃避，首次攻擊後即用完）
   if(strikeActive){
@@ -13271,16 +13411,18 @@ function getEvoCondDisplay(ver, fromRow, targetRow){
   return null; // 非成長期→成熟期，沿用原條件文字
 }
 
-// 合併相同 fromRow 的 inPaths：同來源的多條訓練條件合併成一條（conds 取並集）
+// 合併相同 fromRow 的 inPaths：不管是否相鄰，同來源全部合併成一條（conds 取並集）
 // 解決「路加獸 [38.34% 概率進化]」之類因條件不同但顯示概率時重複的問題
 function mergeEvoPaths(inPaths){
   const merged = [];
+  const index = new Map();
   for(const p of inPaths){
-    const last = merged[merged.length - 1];
-    if(last && last.fromRow === p.fromRow){
+    if(index.has(p.fromRow)){
+      const last = merged[index.get(p.fromRow)];
       const set = new Set([...last.conds, ...p.conds]);
       last.conds = [...set];
     } else {
+      index.set(p.fromRow, merged.length);
       merged.push({ fromRow: p.fromRow, fromName: p.fromName, conds: [...p.conds] });
     }
   }
@@ -14995,6 +15137,7 @@ let loadedCount = 0;
 const TOTAL_IMAGES = 18 + 17 + 17 + BG_NAMES.length + 1 + 15 + 1 + 17 + 1 + 3 + 3 + 4 + 1 + 1 + 2 + 1 + 17 + 1 + 17 + 17 + 17 + 17 + 17 + 1 + 1 + 1 + 1 + 32 + 1 + 1 + 2; // +V4/V5 rows(17+17) + V3/V4/V5 atk(17+17+17) + V4/V5 proj(1+1) + V4/V5 eggs(1+1) + V6 rows(32) + V6 proj(1) + V6 egg(1) + 對戰食物圖(1) + 對戰技能圖(1)
 function onImageLoaded(){
   loadedCount++;
+  updateLoadingProgress();
   if(loadedCount >= TOTAL_IMAGES) {
     generateHdBackgrounds(); // 生成高清像素背景
     // 如果在啟動頁，不做遊戲渲染
@@ -15018,6 +15161,16 @@ function onImageLoaded(){
 }
 function onImageError(){
   onImageLoaded();
+}
+// 更新啟動頁的資源載入進度條
+function updateLoadingProgress(){
+  const pct = Math.min(100, Math.round(loadedCount / TOTAL_IMAGES * 100));
+  const txt = document.getElementById("launcherLoadingText");
+  const fill = document.getElementById("launcherLoadingFill");
+  const box = document.getElementById("launcherLoading");
+  if(txt) txt.textContent = "載入資源中… " + pct + "%";
+  if(fill) fill.style.width = pct + "%";
+  if(pct >= 100 && box){ box.style.display = "none"; }
 }
 
 // 加載 18 張 V1 獨立行圖片
