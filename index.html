@@ -492,12 +492,25 @@ body{
   margin-bottom:6px;
 }
 .func-btn{
-  height:60px;
+  height:62px;
+  max-width:90%;
   background:#333;
   border:none;
   border-radius:8px;
   color:#fff;
-  font-size:14px;
+  font-size:11px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px;
+}
+.func-btn img.func-btn-icon{
+  width:96px;
+  height:72px;
+  object-fit:contain;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  pointer-events:none;
 }
 .func-btn.active{
   background:#c42222;
@@ -1999,7 +2012,7 @@ canvas {
   <button class="call-btn" id="callBtn" title="呼叫"><img src="BG/call.png" alt="呼叫"></button>
   <div id="notifArea" class="title notif-area">數碼暴龍一代</div>
   <button class="debug-btn" id="debugBtn" title="測驗" style="display:none;">🧪</button>
-  <button class="settings-btn" id="settingsBtn" title="設定">⚙</button>
+  <button class="settings-btn" id="settingsBtn" title="設定"><img src="BG/UI/settings.png" alt="設定" style="width:24px;height:24px;image-rendering:pixelated;pointer-events:none;"></button>
 </div>
 
 <!-- 單個主顯示屏 -->
@@ -2017,7 +2030,7 @@ canvas {
 <button class="reborn-btn" id="rebornBtn" onclick="rebornAsEgg()" title="重新開始育成" style="display:none;">重新育成數碼蛋</button>
 
 <!-- 返回按鈕 -->
-<button class="return-btn" id="returnBtn" onclick="handleReturnBtn()" title="返回暴龍機選擇">←</button>
+<button class="return-btn" id="returnBtn" onclick="handleReturnBtn()" title="返回暴龍機選擇"><img src="BG/UI/return.png" alt="返回" style="width:24px;height:24px;image-rendering:pixelated;pointer-events:none;"></button>
 
 <!-- 對戰面板（8個按鈕下方） -->
 <div class="stats-display" id="battleDisplay" style="display:none;">
@@ -6373,6 +6386,16 @@ function renderTrainingCanvas(){
 
 // ========== 功能按鈕 ==========
 const FUNCTION_BTNS = ["狀態","食物","訓練","對戰","清理","睡眠","治療","圖鑑"];
+const FUNCTION_BTN_ICONS = [
+  "BG/UI/state.png",
+  "BG/UI/food.png",
+  "BG/UI/train.png",
+  "BG/UI/battle.png",
+  "BG/UI/Cleaning.png",
+  "BG/UI/sleep.png",
+  "BG/UI/treat.png",
+  "BG/UI/Illustrated Guide.png"
+];
 
 // ========== 數值系統 ==========
 // ========== 多槽位存檔輔助函數 ==========
@@ -9364,8 +9387,13 @@ function buildFunctionButtons(){
   for(let i=0; i<FUNCTION_BTNS.length; i++){
     const btn = document.createElement('button');
     btn.className = 'func-btn';
-    btn.textContent = FUNCTION_BTNS[i];
     btn.dataset.idx = i;
+    btn.title = FUNCTION_BTNS[i];
+    const icon = document.createElement('img');
+    icon.className = 'func-btn-icon';
+    icon.src = FUNCTION_BTN_ICONS[i];
+    icon.alt = FUNCTION_BTNS[i];
+    btn.appendChild(icon);
     btn.onclick = () => clickFunction(i);
     panel.appendChild(btn);
   }
