@@ -487,14 +487,16 @@ body{
 /* 中間8個功能按鈕 */
 .btn-panel{
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(4,minmax(0,1fr));
   gap:1px;
   margin-bottom:6px;
+  overflow:hidden;
 }
 .func-btn{
   height:62px;
   width:100%;
   max-width:100%;
+  min-width:0;
   background:#333;
   border:none;
   border-radius:8px;
