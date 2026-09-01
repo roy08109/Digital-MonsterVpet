@@ -1,0 +1,6 @@
+[     494ms] [LOG] ✅ Service Worker 註冊成功 @ http://localhost:8899/index.html:14667
+[     498ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8899/index.html:0
+[     764ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8899/BG/Sandbag02.png:0
+[  325721ms] TypeError: Cannot read properties of undefined (reading 'spd')
+    at beginBattle (http://localhost:8899/index.html:12169:24)
+    at http://localhost:8899/index.html:12137:24

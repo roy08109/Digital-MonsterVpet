@@ -94,7 +94,7 @@ body{
   height:36px;
   background:#333;
   border:none;
-  border-radius:50%;
+  border-radius:0;
   color:#fff;
   font-size:20px;
   cursor:pointer;
@@ -106,6 +106,7 @@ body{
 }
 .settings-btn:hover{ background:#555; }
 .settings-btn:active{ transform:translateY(-50%) scale(0.92); }
+.settings-btn img{ width:42px; height:42px; image-rendering:pixelated; }
 /* 測驗按鈕（開發用，緊貼設定按鈕左側） */
 .debug-btn{
   position:absolute;
@@ -487,29 +488,27 @@ body{
 /* 中間8個功能按鈕 */
 .btn-panel{
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:1px;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
   margin-bottom:6px;
-  overflow:hidden;
 }
 .func-btn{
-  height:62px;
-  width:100%;
-  max-width:100%;
-  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:78px;
   background:#333;
   border:none;
   border-radius:8px;
   color:#fff;
   font-size:11px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
   padding:4px;
+  cursor:pointer;
 }
 .func-btn img.func-btn-icon{
-  width:96px;
-  height:72px;
+  width:auto;
+  height:104px;
+  max-width:100%;
   object-fit:contain;
   image-rendering:pixelated;
   image-rendering:crisp-edges;
@@ -1693,6 +1692,34 @@ canvas {
   border-color: #cc3333;
   opacity: 0.5;
 }
+.bt-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.bt-slot-name {
+  max-width: 46px;
+  font-size: 8px;
+  line-height: 1.1;
+  color: #aaa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bt-slot.active .bt-sprite {
+  border-color: #ffd700;
+  box-shadow: 0 0 4px #ffd700;
+}
+.bt-slot.active .bt-slot-name {
+  color: #ffd700;
+  font-weight: bold;
+}
+.bt-slot.defeated .bt-slot-name {
+  color: #666;
+  text-decoration: line-through;
+}
 
 /* ========== 機器選擇啟動頁 ========== */
 .launcher-overlay {
@@ -1861,6 +1888,7 @@ canvas {
   border-color: #ffcc00; color: #ffcc00;
   box-shadow: 0 0 12px rgba(255,204,0,0.3);
 }
+.return-btn img{ width:42px; height:42px; image-rendering:pixelated; }
 #mainGameArea { display: none; }
 
 /* === 對戰經驗結算視圖 === */
@@ -2015,7 +2043,7 @@ canvas {
   <button class="call-btn" id="callBtn" title="呼叫"><img src="BG/call.png" alt="呼叫"></button>
   <div id="notifArea" class="title notif-area">數碼暴龍一代</div>
   <button class="debug-btn" id="debugBtn" title="測驗" style="display:none;">🧪</button>
-  <button class="settings-btn" id="settingsBtn" title="設定"><img src="BG/UI/settings.png" alt="設定" style="width:24px;height:24px;image-rendering:pixelated;pointer-events:none;"></button>
+  <button class="settings-btn" id="settingsBtn" title="設定"><img src="BG/UI/settings.png" alt="設定"></button>
 </div>
 
 <!-- 單個主顯示屏 -->
@@ -2033,21 +2061,21 @@ canvas {
 <button class="reborn-btn" id="rebornBtn" onclick="rebornAsEgg()" title="重新開始育成" style="display:none;">重新育成數碼蛋</button>
 
 <!-- 返回按鈕 -->
-<button class="return-btn" id="returnBtn" onclick="handleReturnBtn()" title="返回暴龍機選擇"><img src="BG/UI/return.png" alt="返回" style="width:36px;height:36px;image-rendering:pixelated;pointer-events:none;"></button>
+<button class="return-btn" id="returnBtn" onclick="handleReturnBtn()" title="返回暴龍機選擇"><img src="BG/UI/return.png" alt="返回"></button>
 
 <!-- 對戰面板（8個按鈕下方） -->
 <div class="stats-display" id="battleDisplay" style="display:none;">
   <div class="sd-title battle-title-row" id="battleTitle">
     <div class="bt-team-sprites" id="btEnemySprites" style="display:none">
-      <canvas class="bt-sprite" width="28" height="28" data-idx="0"></canvas>
-      <canvas class="bt-sprite" width="28" height="28" data-idx="1"></canvas>
-      <canvas class="bt-sprite" width="28" height="28" data-idx="2"></canvas>
+      <div class="bt-slot"><canvas class="bt-sprite" width="28" height="28" data-idx="0"></canvas><span class="bt-slot-name"></span></div>
+      <div class="bt-slot"><canvas class="bt-sprite" width="28" height="28" data-idx="1"></canvas><span class="bt-slot-name"></span></div>
+      <div class="bt-slot"><canvas class="bt-sprite" width="28" height="28" data-idx="2"></canvas><span class="bt-slot-name"></span></div>
     </div>
     <span class="bt-label">對戰</span>
     <div class="bt-team-sprites" id="btPlayerSprites" style="display:none">
-      <canvas class="bt-sprite" width="28" height="28" data-idx="0"></canvas>
-      <canvas class="bt-sprite" width="28" height="28" data-idx="1"></canvas>
-      <canvas class="bt-sprite" width="28" height="28" data-idx="2"></canvas>
+      <div class="bt-slot"><canvas class="bt-sprite" width="28" height="28" data-idx="0"></canvas><span class="bt-slot-name"></span></div>
+      <div class="bt-slot"><canvas class="bt-sprite" width="28" height="28" data-idx="1"></canvas><span class="bt-slot-name"></span></div>
+      <div class="bt-slot"><canvas class="bt-sprite" width="28" height="28" data-idx="2"></canvas><span class="bt-slot-name"></span></div>
     </div>
   </div>
   <div class="battle-info" id="battleInfo">
@@ -2231,6 +2259,14 @@ canvas {
       <button id="bmQuestStage_究極體" class="bm-quest-cat" onclick="switchMainQuestStage('究極體')">究極體</button>
     </div>
     <div id="bmQuestList" class="bm-quest-list"></div>
+  </div>
+  <!-- 完美完全體增強面板（進化任務內入口，tab 層級外） -->
+  <div id="bmPerfectEnhancePanel" class="self-battle-panel" style="display:none;">
+    <div class="self-battle-title">💪 完美完全體增強</div>
+    <div class="qb3v3-desc">1V3 車輪戰：成長期 Lv.20 → 成熟期 Lv.60 → 完全體 Lv.100（克制你）。每場勝利回血並進入下一場，3 場全勝「選中屬性」+10%，戰敗不減。滿 100% 提升 1 級（最高 5 級）。</div>
+    <div id="peEnemyPreview"></div>
+    <div id="peEnhanceList"></div>
+    <button class="self-battle-close-btn" onclick="closePerfectEnhanceMenu();">返回</button>
   </div>
 </div>
 
@@ -7303,6 +7339,7 @@ function saveGameState(){
       autoFeedEnabled,
       selectedSkill: gameSelectedSkill,
       evoRates: evoTaskRates,
+      peProgress: window._peProgress || {},
       timestamp: Date.now()
     });
     localStorage.setItem(slotKey, jsonStr);
@@ -7610,6 +7647,7 @@ function loadGameState(slotIndex){
       eightPoopsStartTime = data.eightPoopsStartTime ?? 0;
       eightPoopsMistakeRecorded = data.eightPoopsMistakeRecorded ?? false;
       evoTaskRates = data.evoRates || {};
+      window._peProgress = data.peProgress || {};
       gameSelectedSkill = data.selectedSkill || "strikeFirst";
       // 離線期間大便生病檢查：存檔時已有≥8個大便且未記錄失誤 → 立即生病
       if(!isSick && poopsOnScreen >= 8 && !eightPoopsMistakeRecorded){
@@ -9451,6 +9489,12 @@ function clickFunction(idx){
   if(skillPanelEl && skillPanelEl.style.display === "block"){
     skillPanelEl.style.display = "none";
   }
+  // 完美完全體增強頁開啟時，點任何功能按鈕（含對戰）→ 先退出增強頁與對戰選單
+  const pePanelEl = document.getElementById("bmPerfectEnhancePanel");
+  if(pePanelEl && pePanelEl.style.display === "block"){
+    closePerfectEnhanceMenu();
+    closeBattleMenu();
+  }
   if(idx === 0) showStats();   // 狀態
   else if(idx === 1) showFood(); // 食物
   else if(idx === 2) startTraining(); // 訓練
@@ -10066,22 +10110,23 @@ function getBattlePlayerBonuses(){
   const fighter = getBattlePlayerFighter();
   const slotIdx = fighter ? fighter.slotIdx : activeSlotIndex;
   const buff = getSlotBuff(slotIdx);
+  const pe = getPerfectEnhancement();
   if(fighter){
     return {
-      hp: (fighter.hpBonus || 0) + buff.hp,
-      atk: (fighter.atkBonus || 0) + buff.atk,
-      spd: (fighter.spdBonus || 0) + buff.spd,
-      crit: (fighter.critBonus || 0) + buff.crit,
-      dodge: (fighter.dodgeBonus || 0) + buff.dodge,
+      hp: (fighter.hpBonus || 0) + buff.hp + pe.lv.hp * PERFECT_ENHANCE_TYPES[0].perLv,
+      atk: (fighter.atkBonus || 0) + buff.atk + pe.lv.atk * PERFECT_ENHANCE_TYPES[1].perLv,
+      spd: (fighter.spdBonus || 0) + buff.spd + pe.lv.spd * PERFECT_ENHANCE_TYPES[2].perLv,
+      crit: (fighter.critBonus || 0) + buff.crit + pe.lv.crit * PERFECT_ENHANCE_TYPES[3].perLv,
+      dodge: (fighter.dodgeBonus || 0) + buff.dodge + pe.lv.dodge * PERFECT_ENHANCE_TYPES[4].perLv,
       aff: fighter.affBonus || 0
     };
   }
   return {
-    hp: (gameHpBonus || 0) + buff.hp,
-    atk: (gameAtkBonus || 0) + buff.atk,
-    spd: (gameSpdBonus || 0) + buff.spd,
-    crit: (gameCritBonus || 0) + buff.crit,
-    dodge: (gameDodgeBonus || 0) + buff.dodge,
+    hp: (gameHpBonus || 0) + buff.hp + pe.lv.hp * PERFECT_ENHANCE_TYPES[0].perLv,
+    atk: (gameAtkBonus || 0) + buff.atk + pe.lv.atk * PERFECT_ENHANCE_TYPES[1].perLv,
+    spd: (gameSpdBonus || 0) + buff.spd + pe.lv.spd * PERFECT_ENHANCE_TYPES[2].perLv,
+    crit: (gameCritBonus || 0) + buff.crit + pe.lv.crit * PERFECT_ENHANCE_TYPES[3].perLv,
+    dodge: (gameDodgeBonus || 0) + buff.dodge + pe.lv.dodge * PERFECT_ENHANCE_TYPES[4].perLv,
     aff: gameAffBonus || 0
   };
 }
@@ -10145,6 +10190,9 @@ function getBattlePlayerEvoPaths(){
   return getEvoPathsForVersion(getBattlePlayerVersion());
 }
 function resetQuickBattle3v3State(){
+  // 3V3/副本整場結束：恢復底部功能按鈕欄
+  const _bp = document.getElementById('btnPanel');
+  if(_bp) _bp.style.display = '';
   battleQuick3v3Active = false;
   battleQuick3v3SelectedSlots = [];
   battleQuick3v3Stage = "";
@@ -11770,43 +11818,77 @@ function updateBattleTeamSprites(){
   const enemyContainer = document.getElementById("btEnemySprites");
   const playerContainer = document.getElementById("btPlayerSprites");
   const is3v3 = !!(battleQuick3v3Active && battleQuick3v3PlayerTeam && battleQuick3v3EnemyTeam);
-  
-  enemyContainer.style.display = is3v3 ? "flex" : "none";
-  playerContainer.style.display = is3v3 ? "flex" : "none";
-  if(!is3v3) return;
-  
-  drawTeamSprites(enemyContainer, battleQuick3v3EnemyTeam, true);
-  drawTeamSprites(playerContainer, battleQuick3v3PlayerTeam, false);
+  const isPe = !!window._peActive && Array.isArray(pePreviewEnemies) && pePreviewEnemies.length === 3;
+  const show = is3v3 || isPe;
+  enemyContainer.style.display = show ? "flex" : "none";
+  playerContainer.style.display = show ? "flex" : "none";
+  if(!show) return;
+  if(is3v3){
+    drawTeamSprites(enemyContainer, battleQuick3v3EnemyTeam, true, battleQuick3v3EnemyIdx);
+    drawTeamSprites(playerContainer, battleQuick3v3PlayerTeam, false, battleQuick3v3PlayerIdx);
+  } else {
+    // 完美增強：敵 3 隻依序出場，我方 1 隻
+    const ps = getBattlePlayerStats();
+    const pTeam = [{
+      version: getBattlePlayerVersion(),
+      row: getBattlePlayerRow(),
+      name: (ps && ps.name) || "我方",
+      stage: (ps && ps.stage) || "",
+      attr: (ps && ps.attr) || "",
+      currentHp: battlePlayerHp,
+      maxHp: battlePlayerMaxHp
+    }];
+    const eTeam = pePreviewEnemies.map((e, i) => ({
+      version: e.ver,
+      row: e.row,
+      name: e.name,
+      stage: e.stage,
+      level: e.level,
+      attr: e.attr,
+      currentHp: (window._peRound || 0) > i ? 0 : undefined
+    }));
+    drawTeamSprites(enemyContainer, eTeam, true, window._peRound || 0);
+    drawTeamSprites(playerContainer, pTeam, false, 0);
+  }
 }
 
-function drawTeamSprites(container, team, reverse){
-  // 依隊伍大小動態增減 canvas 數量（副本 6 隻 / 3V3 三隻）
-  let canvases = container.querySelectorAll("canvas");
+function drawTeamSprites(container, team, reverse, activeIdx){
+  // 依隊伍大小動態增刪 slot（副本 6 隻 / 3V3 三隻 / 完美增強 3+1）
+  let slots = container.querySelectorAll(".bt-slot");
   const need = team.length;
-  if(canvases.length < need){
-    for(let i = canvases.length; i < need; i++){
+  if(slots.length < need){
+    for(let i = slots.length; i < need; i++){
+      const s = document.createElement("div");
+      s.className = "bt-slot";
       const c = document.createElement("canvas");
       c.width = 28; c.height = 28;
       c.className = "bt-sprite";
       c.dataset.idx = i;
-      container.appendChild(c);
+      s.appendChild(c);
+      const n = document.createElement("span");
+      n.className = "bt-slot-name";
+      s.appendChild(n);
+      container.appendChild(s);
     }
-  } else if(canvases.length > need){
-    for(let i = canvases.length - 1; i >= need; i--) canvases[i].remove();
+  } else if(slots.length > need){
+    for(let i = slots.length - 1; i >= need; i--) slots[i].remove();
   }
-  canvases = container.querySelectorAll("canvas");
-  canvases.forEach(function(canvas, displayIdx){
+  slots = container.querySelectorAll(".bt-slot");
+  slots.forEach(function(slot, displayIdx){
+    const canvas = slot.querySelector("canvas");
+    const nameEl = slot.querySelector(".bt-slot-name");
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, 28, 28);
-    
+
     const teamIdx = reverse ? (team.length - 1 - displayIdx) : displayIdx;
     const member = team[teamIdx];
     if(!member){
       ctx.fillStyle = "#1a1a1a";
       ctx.fillRect(0, 0, 28, 28);
+      nameEl.textContent = "?";
       return;
     }
-    
+
     const img = getSpriteImage(member.version, member.originalRow || member.row);
     if(img && img.complete && img.naturalWidth > 0){
       ctx.imageSmoothingEnabled = false;
@@ -11822,7 +11904,20 @@ function drawTeamSprites(container, team, reverse){
       ctx.fillStyle = "#1a1a1a";
       ctx.fillRect(0, 0, 28, 28);
     }
-    
+
+    // 龍名不顯示在龍圖下方；hover 資訊改掛在龍圖上
+    nameEl.style.display = "none";
+    nameEl.textContent = "";
+    let memberAttr = member.attr || "";
+    if(!memberAttr){
+      const _stats = getStatsForVersion(member.version);
+      const _info = _stats && _stats[member.row];
+      memberAttr = (_info && _info.attr) || "";
+    }
+    canvas.title = (member.stage || "") + (member.level ? " Lv." + member.level : "") + (memberAttr ? " · " + memberAttr : "");
+    // 龍圖外圈：疫苗=紅圈、病毒=綠圈、資料=藍圈
+    const attrRingColor = { "vaccine": "#ff5555", "virus": "#44ff66", "data": "#4488ff" }[memberAttr] || "#444";
+    canvas.style.borderColor = attrRingColor;
     const hp = member.currentHp !== undefined ? member.currentHp : member.maxHp;
     if(hp <= 0){
       ctx.fillStyle = "rgba(180, 0, 0, 0.45)";
@@ -11835,6 +11930,13 @@ function drawTeamSprites(container, team, reverse){
       ctx.moveTo(24, 4);
       ctx.lineTo(4, 24);
       ctx.stroke();
+      canvas.classList.add("defeated");
+      slot.classList.add("defeated");
+      slot.classList.remove("active");
+    } else {
+      canvas.classList.remove("defeated");
+      slot.classList.remove("defeated");
+      slot.classList.toggle("active", activeIdx === teamIdx);
     }
   });
 }
@@ -12491,8 +12593,8 @@ function endBattle(result){
         gameWeight = Math.max(DIGIMON_STATS[currentRow].minWeight, gameWeight - 1);
       }
       // 3V3 模式下，經驗統一在 finishQuickBattle3v3Match 結算（輸贏皆然）
-      // 這裡跳過以避免每回合重複加經驗、以及戰敗時仍加經驗的問題
-      if(!battleQuick3v3Active){
+      // 完美增強連戰勝利跳過經驗視圖（避免中斷下一場）；這裡跳過以避免每回合重複加經驗、以及戰敗時仍加經驗的問題
+      if(!battleQuick3v3Active && !window._peActive){
         // 經驗獎勵：依擊敗敵方階段獲得經驗，升級時增加訓練點
         const _enemyStats = getEnemyStats(battleEnemyRow);
         if(_enemyStats){
@@ -12624,6 +12726,11 @@ function endBattle(result){
   // 無論勝負，清除主線任務出戰龍 fighter
   battleMainQuestFighter = null;
   setBattleActive(false);
+  // 連續對戰（3V3/副本/完美增強）單場結束 → 下一場出場前，不顯示底部功能按鈕欄
+  if(battleQuick3v3Active || window._peActive){
+    const _bp = document.getElementById('btnPanel');
+    if(_bp) _bp.style.display = 'none';
+  }
   if(battleAnimTimer){ clearInterval(battleAnimTimer); battleAnimTimer = null; }
   battleProjectileX = 0;
   battleProjectileActive = false;
@@ -12811,6 +12918,29 @@ function showBattleResult(result){
   // 2 秒後自動關閉
   setTimeout(() => {
     clearInterval(endAnimTimer);  // 防止 step 4 畫戰場畫面
+    // 完美完全體增強（1V3 連戰）
+    if(window._peActive){
+      if(result === "win"){
+        window._peRound++;
+        if(window._peRound >= 3){
+          // 3 場全勝 → 增強成功
+          applyPerfectEnhanceWin();
+          closePerfectEnhanceAfterBattle();
+        } else {
+          // 勝利回血 40% 後進入下一場
+          window._peCarryHp = Math.min(battlePlayerMaxHp, battlePlayerHp + Math.floor(battlePlayerMaxHp * 0.4));
+          startPerfectEnhanceRound();
+        }
+      } else if(result === "lose"){
+        applyPerfectEnhanceLose();
+        closePerfectEnhanceAfterBattle();
+      } else {
+        // 逃跑：不算勝負
+        window._peActive = false;
+        closePerfectEnhanceAfterBattle();
+      }
+      return;
+    }
     if(battleQuick3v3Active){
       battleResult = "";
       handleQuickBattle3v3RoundEnd(result);
@@ -16126,7 +16256,16 @@ function renderDungeonList(listEl){
 function renderEvoTaskList(listEl){
   const ver = currentVersion || "V1";
   const s = getStatsForVersion(ver)[currentRow];
-  if(!s || (s.stage !== "成長期" && s.stage !== "成熟期")){
+  if(!s){
+    listEl.innerHTML = '<div class="bm-quest-empty">本階段無進化任務（需為「成長期」或「成熟期」）。</div>';
+    return;
+  }
+  // 完全體 → 顯示「完美完全體增強」入口（1V3 車輪戰）
+  if(s.stage === "完全體"){
+    renderPerfectEnhanceEntry(listEl, s);
+    return;
+  }
+  if(s.stage !== "成長期" && s.stage !== "成熟期"){
     listEl.innerHTML = '<div class="bm-quest-empty">本階段無進化任務（需為「成長期」或「成熟期」）。</div>';
     return;
   }
@@ -16209,6 +16348,286 @@ function startEvoTask(targetRow){
   pveCurrentEnemyName = pveGetEnemyName(e.row, e.ver);
   closeBattleMenu();
   startBattlePVE(e.ver, e.row, 0);
+}
+
+// ========== 完美完全體增強（1V3 車輪戰，入口於進化任務） ==========
+const PERFECT_ENHANCE_TYPES = [
+  { key: "hp",    name: "HP",    desc: "每級 +10 血量上限", perLv: 10 },
+  { key: "atk",   name: "攻擊",  desc: "每級 +3 攻擊力",    perLv: 3 },
+  { key: "spd",   name: "速度",  desc: "每級 +0.1 速度",    perLv: 0.1 },
+  { key: "crit",  name: "爆擊",  desc: "每級 +1% 爆擊率",   perLv: 0.01 },
+  { key: "dodge", name: "閃避",  desc: "每級 +1% 閃避率",   perLv: 0.01 }
+];
+const PE_ENEMY_LEVELS = [20, 60, 100];
+let pePreviewEnemies = []; // 本次出戰的 3 名敵方（所見即所戰）
+
+// 讀取當前版本的增強進度（{ lv: {hp..dodge}, prog: {hp..dodge} }）
+function getPerfectEnhancement(){
+  const ver = currentVersion || "V1";
+  const prog = window._peProgress || (window._peProgress = {});
+  if(!prog[ver]) prog[ver] = {
+    lv:   { hp:0, atk:0, spd:0, crit:0, dodge:0 },
+    prog: { hp:0, atk:0, spd:0, crit:0, dodge:0 }
+  };
+  return prog[ver];
+}
+
+// 抽取 3 名出場對手：成長期 Lv20 → 成熟期 Lv60 → 完全體 Lv100（克制你）
+function buildPerfectEnhanceEnemies(){
+  const ps = getBattlePlayerStats();
+  const pAttr = ps ? ps.attr : "";
+  const stages = ["成長期", "成熟期", "完全體"];
+  const list = [];
+  for(let i = 0; i < 3; i++){
+    const pool = [];
+    for(const v of SLOT_VERSIONS){
+      const stats = getStatsForVersion(v);
+      for(const r in stats){
+        const st = stats[r];
+        if(st && st.stage === stages[i]){
+          pool.push({ ver: v, row: parseInt(r, 10), name: st.name, attr: st.attr || "free", level: PE_ENEMY_LEVELS[i], stage: stages[i] });
+        }
+      }
+    }
+    let e = null;
+    if(i === 2 && pAttr){
+      // 第 3 場完全體：優先選「克制你」的（更難）
+      const counter = pool.filter(x => attrBeats(x.attr, pAttr));
+      if(counter.length) e = counter[Math.floor(Math.random() * counter.length)];
+    }
+    if(!e && pool.length) e = pool[Math.floor(Math.random() * pool.length)];
+    if(!e) e = { ver: "V1", row: 11, name: "???", attr: "free", level: PE_ENEMY_LEVELS[i], stage: stages[i] };
+    list.push(e);
+  }
+  pePreviewEnemies = list;
+}
+
+// 進化任務（完全體）入口卡片
+function renderPerfectEnhanceEntry(listEl, s){
+  const pe = getPerfectEnhancement();
+  const lvTotal = pe.lv.hp + pe.lv.atk + pe.lv.spd + pe.lv.crit + pe.lv.dodge;
+  const lvReq = (gameLevel >= 50) ? "" : '<span style="color:#f66;">（需達 Lv.50，目前 Lv.' + gameLevel + '）</span>';
+  listEl.innerHTML =
+    '<div class="bm-quest-section">💪 完美完全體增強（1V3 車輪戰）</div>' +
+    '<div class="bm-quest-card evo-task-row" style="cursor:pointer;" onclick="openPerfectEnhanceMenu()">' +
+      '<div class="evo-task-left">' +
+        '<span class="evo-task-name">💪 完美完全體增強</span>' +
+        '<span style="font-size:10px;color:#aaa;display:block;margin-top:2px;">成長期 Lv.20 → 成熟期 Lv.60 → 完全體 Lv.100（克制你）· 勝利 +5% / 失敗 -3%' + lvReq + '</span>' +
+      '</div>' +
+      '<span class="evo-task-rate">' + lvTotal + '/25</span>' +
+    '</div>';
+}
+
+// 打開完美完全體增強面板
+function openPerfectEnhanceMenu(){
+  pePreviewEnemies = [];
+  const contentMap = document.getElementById("bmContentMap");
+  const contentBattle = document.getElementById("bmContentBattle");
+  window._peFromTab = (contentMap && contentMap.style.display === "block") ? "map" : "battle";
+  if(window._peFromTab === "map"){
+    if(contentMap) contentMap.style.display = "none";
+  } else {
+    const mm = document.getElementById("bmBattleMainMenu");
+    if(mm) mm.style.display = "none";
+  }
+  const panel = document.getElementById("bmPerfectEnhancePanel");
+  if(panel) panel.style.display = "block";
+  renderPerfectEnhanceList();
+}
+
+// 關閉面板（返回來源）
+function closePerfectEnhanceMenu(){
+  const panel = document.getElementById("bmPerfectEnhancePanel");
+  if(panel) panel.style.display = "none";
+  if(window._peFromTab === "map"){
+    const contentMap = document.getElementById("bmContentMap");
+    if(contentMap) contentMap.style.display = "block";
+    renderQuestList();
+  } else {
+    const mm = document.getElementById("bmBattleMainMenu");
+    if(mm) mm.style.display = "block";
+  }
+  window._peFromTab = "";
+}
+
+// 面板內容：出戰順序（左 3 敵方 / 右我方）+ 5 種增強卡片
+function renderPerfectEnhanceList(){
+  const el = document.getElementById("peEnhanceList");
+  if(!el) return;
+  const ver = currentVersion || "V1";
+  const s = getStatsForVersion(ver)[currentRow];
+  const reasons = [];
+  if(!s || s.stage !== "完全體") reasons.push("需為『完全體』階段");
+  if(gameLevel < 50) reasons.push("需達 Lv.50（目前 Lv." + gameLevel + "）");
+  const previewEl = document.getElementById("peEnemyPreview");
+  if(reasons.length > 0){
+    if(previewEl) previewEl.innerHTML = "";
+    el.innerHTML = '<div class="bm-quest-empty" style="color:#ff9c9c;">無法挑戰：' + reasons.join("，") + '。</div>';
+    return;
+  }
+  if(pePreviewEnemies.length !== 3) buildPerfectEnhanceEnemies();
+  renderPerfectEnhanceEnemyPreview();
+  const pe = getPerfectEnhancement();
+  let html = '<div class="bm-quest-section">選擇要增強的屬性（3 場全勝 +10%，滿 100% 升 1 級，最高 5 級）</div>';
+  PERFECT_ENHANCE_TYPES.forEach((t, i) => {
+    const lv = pe.lv[t.key];
+    const prog = pe.prog[t.key];
+    const maxed = lv >= 5;
+    html +=
+      '<div class="bm-quest-card">' +
+        '<div class="bm-quest-title">' + t.name + '（' + lv + '/5）</div>' +
+        '<div style="font-size:11px;color:#ccc;min-width:120px;">' + t.desc + ' · ' + (maxed ? '已滿級' : ('進度 ' + prog + '%')) + '</div>' +
+        '<button class="bm-quest-btn"' + (maxed ? ' disabled' : '') + ' onclick="startPerfectEnhance(' + i + ')">⚔ 開始挑戰</button>' +
+      '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// 出戰順序預覽：敵方 3 龍卡 + 我方龍卡（樣式對齊 3V3，無標題）
+function renderPerfectEnhanceEnemyPreview(){
+  const el = document.getElementById("peEnemyPreview");
+  if(!el) return;
+  if(pePreviewEnemies.length !== 3){ el.innerHTML = ""; return; }
+  const ps = getBattlePlayerStats();
+  const myName = ps && ps.name ? ps.name : "我方";
+  const myStage = ps && ps.stage ? ps.stage : "";
+  const myAttr = ps && ps.attr ? ps.attr : "";
+  const myVer = getBattlePlayerVersion();
+  const myRow = getBattlePlayerRow();
+  const stageColor = { "成長期": "#8fa", "成熟期": "#8cf", "完全體": "#f9a" };
+  let html = '<div style="display:flex;gap:8px;align-items:stretch;">';
+  // 左：敵方 3 張龍卡（依序出場）
+  html += '<div style="flex:2;display:flex;flex-direction:column;gap:6px;min-width:0;">';
+  pePreviewEnemies.forEach((e, i) => {
+    html +=
+      '<div style="display:flex;align-items:center;gap:6px;background:#2a2a4a;border:1px solid #3a3a55;border-radius:8px;padding:4px 8px;">' +
+        '<span class="qb3v3-card-order">#' + (i + 1) + '</span>' +
+        '<canvas class="qb3v3-card-sprite" width="32" height="32" data-version="' + e.ver + '" data-row="' + e.row + '"></canvas>' +
+        '<span style="flex:1;color:#ff9c9c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;font-weight:bold;">' + e.name + '</span>' +
+        '<span style="font-size:10px;color:' + (stageColor[e.stage] || "#aaa") + ';flex-shrink:0;">Lv.' + e.level + ' ' + e.stage + (i === 2 ? ' <span style="color:#f66;">克制</span>' : '') + '</span>' +
+      '</div>';
+  });
+  html += '</div>';
+  // 右：我方龍卡（滿血登場）
+  html += '<div style="flex:1;min-width:0;background:#1a3a1a;border:1px solid #3a6a3a;border-radius:8px;padding:8px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;">';
+  html += '<div style="font-size:10px;color:#4f4;margin-bottom:4px;">🛡 我方（滿血登場）</div>';
+  html += '<canvas class="qb3v3-card-sprite" width="48" height="48" style="width:48px;height:48px;margin-left:0;" data-version="' + myVer + '" data-row="' + myRow + '"></canvas>';
+  html += '<div style="font-size:13px;color:#fff;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;margin-top:4px;">' + myName + '</div>';
+  html += '<div style="font-size:10px;color:#aaa;">Lv.' + gameLevel + ' ' + myStage + (myAttr ? ' · ' + myAttr : '') + '</div>';
+  html += '</div>';
+  html += '</div>';
+  el.innerHTML = html;
+  // 繪製敵我雙方精靈圖
+  el.querySelectorAll('.qb3v3-card-sprite').forEach(function(c){
+    const ver = c.dataset.version;
+    const row = parseInt(c.dataset.row, 10);
+    const img = getSpriteImage(ver, row);
+    if(img && img.complete && img.naturalWidth > 0){
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0, 0, 16, 16, 0, 0, c.width, c.height);
+    }
+  });
+}
+
+// 開始挑戰（typeIdx = PERFECT_ENHANCE_TYPES 下標）
+function startPerfectEnhance(typeIdx){
+  const ver = currentVersion || "V1";
+  const s = getStatsForVersion(ver)[currentRow];
+  if(!s || s.stage !== "完全體"){ showToast("完美完全體增強任務需為『完全體』階段"); return; }
+  if(gameLevel < 50){ showToast("需達 Lv.50 才能挑戰完美完全體增強任務（目前 Lv." + gameLevel + "）"); return; }
+  if(pePreviewEnemies.length !== 3) buildPerfectEnhanceEnemies();
+  window._peActive = true;
+  window._peType = typeIdx;
+  window._peRound = 0;
+  window._peCarryHp = 0;
+  closeBattleMenu(); // 關閉任務地圖選單，進入對戰
+  startPerfectEnhanceRound();
+}
+
+// 開始第 n 場（n = _peRound）
+function startPerfectEnhanceRound(){
+  const e = pePreviewEnemies[window._peRound];
+  const level = PE_ENEMY_LEVELS[window._peRound];
+  window._pveActive = true;
+  window._pveFromMenu = true;
+  window._pveEnemyVersion = e.ver;
+  window._pveEnemyRow = e.row;
+  window._pveMapGold = null;
+  pveCurrentEnemyVersion = e.ver;
+  pveCurrentEnemyRow = e.row;
+  pveCurrentEnemyName = pveGetEnemyName(e.row, e.ver);
+  startBattlePVE(e.ver, e.row, 0, level);
+  // 敵方訓練加成按等級分配（20→19點 / 60→59點 / 100→99點，使敵人明顯更強）
+  rollEnemyTrainingBonus(level);
+  const es = getEnemyStats(battleEnemyRow);
+  if(es){
+    battleEnemyMaxHp = (es.hp || 0) + battleEnemyHpBonus;
+    battleEnemyHp = battleEnemyMaxHp;
+  }
+  showToast("第" + (window._peRound + 1) + "場：對手「" + e.name + "（Lv." + level + " " + e.stage + "）」登場！");
+}
+
+// 勝利：+10%，達 100% 升級；失敗：不減
+function applyPerfectEnhanceWin(){
+  const pe = getPerfectEnhancement();
+  const t = PERFECT_ENHANCE_TYPES[window._peType];
+  const lv = pe.lv[t.key];
+  if(lv >= 5){ showToast("「" + t.name + "」已達最高等級，無需再增強"); return; }
+  let p = pe.prog[t.key] + 10;
+  let leveled = false;
+  if(p >= 100){
+    p -= 100;
+    pe.lv[t.key] = lv + 1;
+    leveled = true;
+  }
+  pe.prog[t.key] = p;
+  saveGameState();
+  updateStatsDisplay();
+  if(leveled){
+    showToast("💪 完美增強成功！「" + t.name + "」提升至 Lv." + pe.lv[t.key] + "！");
+  } else {
+    showToast("💪 完美增強成功！「" + t.name + "」+10%（" + p + "%）");
+  }
+}
+function applyPerfectEnhanceLose(){
+  const pe = getPerfectEnhancement();
+  const t = PERFECT_ENHANCE_TYPES[window._peType];
+  showToast("💔 挑戰失敗…「" + t.name + "」進度不減（" + pe.prog[t.key] + "%）");
+}
+
+// 增強連戰結束 → 恢復環境並返回任務地圖（進化任務）
+function closePerfectEnhanceAfterBattle(){
+  battleResult = "";
+  battleEnemyRow = -1;
+  window._peActive = false;
+  // 完美增強整場結束：恢復底部功能按鈕欄
+  const _bp = document.getElementById('btnPanel');
+  if(_bp) _bp.style.display = '';
+  window._pveActive = false;
+  window._pveFromMenu = false;
+  window._pveEnemyRow = null;
+  window._pveEnemyVersion = null;
+  window._pveEnemyName = null;
+  window._pveMapGold = null;
+  const panel = document.getElementById("battleDisplay");
+  if(panel) panel.style.display = "none";
+  document.getElementById("returnBtn").style.display = "";
+  canvas.width = CANVAS_NORMAL_W;
+  canvas.height = 16;
+  canvas.style.width = "";
+  canvas.style.height = "";
+  gameMode = "auto";
+  playBGM("main");
+  updateCssBackground("auto");
+  saveGameState();
+  updateStatsDisplay();
+  const menu = document.getElementById("battleMenuDisplay");
+  if(menu) menu.style.display = "block";
+  const contentMap = document.getElementById("bmContentMap");
+  if(contentMap) contentMap.style.display = "block";
+  renderQuestList();
+  startAutoPlay();
 }
 
 function startMainQuest(questId) {
@@ -16479,6 +16898,11 @@ function closeBattleMenu() {
 }
 
 function switchBattleTab(tab) {
+  // 增強頁開啟時，點對戰/任務地圖分頁 → 先退出增強頁（返回來源）
+  const pePanelEl = document.getElementById("bmPerfectEnhancePanel");
+  if(pePanelEl && pePanelEl.style.display === "block"){
+    closePerfectEnhanceMenu();
+  }
   const tabMap = document.getElementById("bmTabMap");
   const tabBattle = document.getElementById("bmTabBattle");
   const contentMap = document.getElementById("bmContentMap");
@@ -16867,11 +17291,14 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx, enemyLevel) {
     battleBgIdx = map ? map.bgIdx : Math.floor(Math.random() * BATTLE_BG_SOURCES.length);
   }
 
-  // 初始化 HP（副本後續波次：保留上一波剩餘血量）
+  // 初始化 HP（副本後續波次：保留上一波剩餘血量；完美增強連戰：保留上一場回血後血量）
   battlePlayerMaxHp = getBattlePlayerTotalHp();
   if(window._dungeon && window._dungeon.carryHp > 0){
     battlePlayerHp = Math.min(window._dungeon.carryHp, battlePlayerMaxHp);
     window._dungeon.carryHp = 0;
+  } else if(window._peCarryHp > 0){
+    battlePlayerHp = Math.min(window._peCarryHp, battlePlayerMaxHp);
+    window._peCarryHp = 0;
   } else {
     battlePlayerHp = getBattlePlayerTotalHp();
   }

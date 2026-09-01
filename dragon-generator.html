@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐉 龍圖生成器 · 像素編輯器</title>
+<style>
+:root{--bg:#1a1d2e;--panel:#24283b;--panel2:#2e3350;--border:#3b4066;--text:#e6e8f0;--muted:#9aa0c0;--accent:#ff7a59;--accent2:#4ea1ff;--grid:#3a3f5c;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI","Microsoft JhengHei",system-ui,sans-serif;min-height:100vh;padding:12px;user-select:none;}
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 14px;background:var(--panel);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;}
+header h1{font-size:18px;white-space:nowrap;}
+.hint{font-size:12px;color:var(--muted);}
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+button{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;transition:.15s;white-space:nowrap;}
+button:hover{border-color:var(--accent);}
+button.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+button.ghost{background:transparent;}
+.sep{width:1px;height:24px;background:var(--border);margin:0 4px;}
+.layout{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;}
+.col-left{display:flex;flex-direction:column;gap:12px;flex:0 0 auto;}
+.col-right{display:flex;flex-direction:column;gap:12px;flex:1 1 320px;min-width:320px;}
+.canvas-wrap{position:relative;background:#0d0e16;border:1px solid var(--border);border-radius:10px;padding:8px;display:inline-block;}
+#mainCanvas{display:block;image-rendering:pixelated;cursor:crosshair;border-radius:4px;}
+.canvas-tools{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px;}
+.panel h2{font-size:14px;margin-bottom:10px;color:var(--muted);font-weight:600;}
+.panel h2 .tag{color:var(--accent);}
+.palette-btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.palette-btns button{padding:5px 10px;font-size:12px;}
+.colors{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;}
+.swatch{width:100%;aspect-ratio:1;border-radius:6px;cursor:pointer;border:2px solid transparent;}
+.swatch:hover{transform:scale(1.1);}
+.swatch.sel{border-color:#fff;box-shadow:0 0 0 2px var(--accent);}
+.current-color{display:flex;align-items:center;gap:10px;margin-top:12px;}
+.current-box{width:42px;height:42px;border-radius:8px;border:2px solid #fff;cursor:pointer;}
+.custom-input{width:46px;height:36px;border:none;border-radius:6px;cursor:pointer;background:transparent;}
+.frames-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+.frame-cell{background:var(--panel2);border:2px solid var(--border);border-radius:8px;cursor:pointer;padding:4px;text-align:center;transition:.12s;}
+.frame-cell.sel{border-color:var(--accent);background:#3a2b2e;}
+.frame-cell canvas{width:100%;image-rendering:pixelated;border-radius:3px;background:#0d0e16;}
+.fl{font-size:10px;color:var(--muted);line-height:1.1;}
+.fi{font-size:11px;}
+.frame-ops{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.anim-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.anim-checks{display:flex;gap:4px;flex-wrap:wrap;}
+.anim-checks label{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:3px 6px;cursor:pointer;}
+.anim-checks input{accent-color:var(--accent);}
+#animPreview{image-rendering:pixelated;border-radius:6px;background:#0d0e16;border:1px solid var(--border);}
+.ref-ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;}
+.ref-ctrl input[type=range]{flex:1;min-width:100px;}
+.drop-hint{font-size:12px;color:var(--muted);margin-top:8px;}
+.export-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.export-row input[type=text]{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:7px 10px;font-size:13px;width:130px;}
+.big{font-size:14px;padding:9px 18px;font-weight:600;}
+.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.status{font-size:12px;color:var(--muted);min-height:18px;}
+#codeInput{width:100%;height:130px;background:#0d0e16;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px;font-family:Consolas,"Courier New",monospace;font-size:11px;line-height:1.5;resize:vertical;white-space:pre;}
+.code-legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;font-size:11px;color:var(--muted);}
+.code-legend .lg{display:flex;align-items:center;gap:5px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:3px 7px;}
+.code-legend .lg input[type=color]{width:16px;height:16px;border:none;border-radius:3px;padding:0;background:transparent;cursor:pointer;}
+.code-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0;}
+.code-row select{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 8px;font-size:13px;}
+#codePreview{image-rendering:pixelated;border-radius:6px;background:#0d0e16;border:1px solid var(--border);display:block;margin-top:8px;}
+@media(max-width:900px){.layout{flex-direction:column;}.col-right{min-width:100%;}}
+</style>
+</head>
+<body>
+<header><h1>🐉 龍圖生成器</h1><span class="hint">16×16 × 12 幀像素編輯器 · 對稱繪製 · 參考圖描邊 · 導出 203×16</span></header>
+<div class="layout">
+<div class="col-left">
+  <div class="canvas-wrap"><canvas id="mainCanvas"></canvas></div>
+  <div class="canvas-tools">
+    <button id="btnUndo">↶ 撤銷</button>
+    <button id="btnRedo">↷ 重做</button>
+    <span class="sep"></span>
+    <button id="btnFlipH">⇆ 水平翻轉</button>
+    <button id="btnFlipV">⇅ 垂直翻轉</button>
+    <button id="btnClearFrame">🗑 清空本幀</button>
+  </div>
+</div>
+<div class="col-right">
+  <div class="panel">
+    <h2>繪圖工具</h2>
+    <div class="toolbar">
+      <button id="toolPencil" class="active">✏️ 鉛筆</button>
+      <button id="toolEraser">🧽 橡皮</button>
+      <button id="toolFill">🪣 填充</button>
+      <button id="toolPicker">💧 取色</button>
+      <span class="sep"></span>
+      <button id="btnMirror" class="active">🪞 對稱鏡像</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>調色板 <span class="tag">· 元素色系</span></h2>
+    <div class="palette-btns">
+      <button data-pal="火">🔥 火</button>
+      <button data-pal="冰">❄️ 冰</button>
+      <button data-pal="雷">⚡ 雷</button>
+      <button data-pal="毒">☠️ 毒</button>
+      <button data-pal="光">✨ 光</button>
+      <button data-pal="暗">🌑 暗</button>
+      <button data-pal="膚">🐉 膚</button>
+    </div>
+    <div class="colors" id="colorGrid"></div>
+    <div class="current-color">
+      <div class="current-box" id="currentBox"></div>
+      <div>
+        <div style="font-size:13px;">當前顏色 <span id="currentHex" style="color:var(--accent2);">#e33</span></div>
+        <div style="font-size:11px;color:var(--muted);">右鍵/Shift+點擊 快速取色</div>
+      </div>
+      <input type="color" id="customColor" class="custom-input" value="#ff3344">
+    </div>
+  </div>
+  <div class="panel">
+    <h2>幀管理 <span class="tag">· 點擊切換</span></h2>
+    <div class="frames-grid" id="framesGrid"></div>
+    <div class="frame-ops">
+      <button id="btnCopyFrame">📋 複製幀</button>
+      <button id="btnPasteFrame">📌 貼上幀</button>
+      <button id="btnDupFrame">➕ 複製到下一幀</button>
+      <button id="btnClearAll">🗑 清空全部</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>動畫預覽 <span class="tag">· 勾選要連播的幀</span></h2>
+    <div class="anim-row">
+      <canvas id="animPreview" width="96" height="96"></canvas>
+      <div style="flex:1;min-width:200px;">
+        <div class="anim-checks" id="animChecks"></div>
+        <div class="anim-row" style="margin-top:8px;">
+          <button id="btnPlay">▶ 播放</button>
+          <button id="btnStop">■ 停止</button>
+          <span class="sep"></span>
+          <button id="btnCheckAll" class="ghost">全選</button>
+          <button id="btnCheckNone" class="ghost">清空</button>
+          <button id="btnCheckMove" class="ghost">動作組</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>參考圖描邊 <span class="tag">· 縮到 16×16 半透明底圖</span></h2>
+    <div class="ref-ctrl">
+      <button id="btnLoadRef">📂 載入參考圖</button>
+      <input type="file" id="refFile" accept="image/*" style="display:none;">
+      <label style="font-size:12px;color:var(--muted);">透明度</label>
+      <input type="range" id="refAlpha" min="0" max="100" value="50">
+      <span id="refAlphaVal" style="font-size:12px;color:var(--accent2);width:34px;">50%</span>
+      <button id="btnRefToggle" class="active">👁 顯示</button>
+      <button id="btnRefClear" class="ghost">✖ 移除</button>
+    </div>
+    <div class="drop-hint">💡 也支援把圖片直接拖到畫布上 · 拖入後自動縮到 16×16 當底圖</div>
+  </div>
+  <div class="panel">
+    <h2>粘貼編碼 <span class="tag">· 文本 → 16×16 像素</span></h2>
+    <textarea id="codeInput" spellcheck="false" placeholder="貼上 16 行編碼，例如：&#10;R0  . . . . . . . . . . C . . . . .&#10;R1  . . . . . . . . . D C D . . . ."></textarea>
+    <div class="code-legend" id="codeLegend" title="點色塊可改該代號的顏色"></div>
+    <div class="code-row">
+      <button id="btnCodeParse">🔍 解析</button>
+      <button id="btnCodeClear" class="ghost">🗑 清空</button>
+      <span class="sep"></span>
+      <span style="font-size:12px;color:var(--muted);">寫入幀</span>
+      <select id="codeTarget"></select>
+      <button id="btnCodeApply" class="primary">✅ 寫入</button>
+    </div>
+    <canvas id="codePreview" width="96" height="96"></canvas>
+    <div class="drop-hint">💡 格式：16 行，每行 16 個值（`.`=透明、`#色號`、或字母代號如 R/C/D）。先「解析」預覽，再「寫入」到選定幀。</div>
+  </div>
+  <div class="panel">
+    <h2>導出 & 存檔</h2>
+    <div class="export-row">
+      <span style="font-size:13px;">檔名</span>
+      <input type="text" id="exportName" value="V11_00">
+      <button id="btnExportPng" class="big primary">⬇ 導出 PNG (203×16)</button>
+    </div>
+    <div class="export-row" style="margin-top:8px;">
+      <button id="btnSaveJson">💾 存檔(JSON)</button>
+      <button id="btnLoadJson">📂 讀檔(JSON)</button>
+      <input type="file" id="jsonFile" accept=".json" style="display:none;">
+      <button id="btnNew" class="ghost">🆕 新龍(清空)</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+</div>
+<script>
+/* ===== 常量 ===== */
+const GRID=16, FRAME_COUNT=12, SCALE=24, PITCH=17, OUT_W=203, CANVAS_SIZE=GRID*SCALE;
+const FRAME_LABELS=["idle","idle","eat","eat","sleep","sleep","refuse","happy","angry","hurt","sad","attack"];
+const PALETTES={
+"火":["#7a0e0e","#c41e1e","#ff3b3b","#ff7a3b","#ffb84d","#ffd98a","#5c0a0a","#ff5c1e"],
+"冰":["#0e3a6e","#1e6ec4","#3b9bff","#7ac4ff","#b8e6ff","#e6f7ff","#0a1e3c","#4d7ad8"],
+"雷":["#8a5a00","#c48a1e","#ffc93b","#ffe37a","#fff3b8","#ffffff","#5c3c00","#ffdf4d"],
+"毒":["#3c0e5c","#6e1e8a","#9b3bc4","#c47aff","#7ae6b8","#b8ffd8","#1e0a3c","#5cc43b"],
+"光":["#8a6e00","#c4a01e","#ffe23b","#fff7b8","#ffffff","#ffe89a","#5c4a00","#ffd27a"],
+"暗":["#1a1a2e","#3c3c5c","#6e3c8a","#9b5cc4","#5c5c7a","#2e2e4a","#0a0a14","#8a6ec4"],
+"膚":["#8a4a2e","#c4704d","#e69a7a","#ffc4a8","#ffdcc4","#6e301e","#a85c3c","#ffe8d8"]};
+/* ===== 狀態 ===== */
+let frames=[], currentFrame=0, currentColor="#e33", backupColor="#ffffff";
+const CODE_LEGEND={D:"#8a1a1a",R:"#e03a3a",C:"#ffd98c",W:"#ffffff",K:"#2a1414"};
+let codeParsed=null;
+let tool="pencil", mirror=true, showRef=true, refPixels=null, refAlpha=0.5;
+let undoStack=[], redoStack=[], clipboard=null, animPlaying=false, animTimer=null, animIndex=0, animSpeed=280;
+let checkedFrames=new Set([0,1]);
+const mainCanvas=document.getElementById("mainCanvas");
+mainCanvas.width=CANVAS_SIZE; mainCanvas.height=CANVAS_SIZE;
+const mctx=mainCanvas.getContext("2d");
+const animPreview=document.getElementById("animPreview");
+const actx=animPreview.getContext("2d");
+const colorGrid=document.getElementById("colorGrid");
+const currentBox=document.getElementById("currentBox");
+const currentHex=document.getElementById("currentHex");
+const statusEl=document.getElementById("status");
+/* ===== 初始化 ===== */
+function initFrames(){frames=Array.from({length:FRAME_COUNT},()=>Array(GRID*GRID).fill(null));}
+const idx=(x,y)=>y*GRID+x;
+function saveLocal(){try{localStorage.setItem("dg_frames",JSON.stringify(frames));localStorage.setItem("dg_checked",JSON.stringify([...checkedFrames]));}catch(e){}}
+function loadLocal(){try{const s=localStorage.getItem("dg_frames");if(s){frames=JSON.parse(s);if(frames.length!==FRAME_COUNT)initFrames();}const c=localStorage.getItem("dg_checked");if(c)checkedFrames=new Set(JSON.parse(c));}catch(e){initFrames();}}
+/* ===== 渲染 ===== */
+function render(){
+  mctx.fillStyle="#10111c"; mctx.fillRect(0,0,CANVAS_SIZE,CANVAS_SIZE);
+  if(showRef&&refPixels){
+    for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
+      const p=refPixels[idx(x,y)]; if(!p||p[3]===0)continue;
+      mctx.fillStyle=`rgba(${p[0]},${p[1]},${p[2]},${refAlpha})`;
+      mctx.fillRect(x*SCALE,y*SCALE,SCALE,SCALE);
+    }
+  }
+  for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
+    const c=frames[currentFrame][idx(x,y)]; if(!c)continue;
+    mctx.fillStyle=c; mctx.fillRect(x*SCALE,y*SCALE,SCALE,SCALE);
+  }
+  mctx.strokeStyle=mirror?"rgba(255,122,89,.7)":"rgba(58,63,92,.5)";
+  mctx.lineWidth=1; mctx.beginPath();
+  for(let i=0;i<=GRID;i++){mctx.moveTo(i*SCALE+.5,0);mctx.lineTo(i*SCALE+.5,CANVAS_SIZE);mctx.moveTo(0,i*SCALE+.5);mctx.lineTo(CANVAS_SIZE,i*SCALE+.5);}
+  mctx.stroke();
+  mctx.strokeStyle="rgba(255,255,255,.15)"; mctx.beginPath();
+  mctx.moveTo(8*SCALE,0); mctx.lineTo(8*SCALE,CANVAS_SIZE); mctx.stroke();
+}
+function renderFrameCell(canvas,fIndex){
+  const c=canvas.getContext("2d"); c.clearRect(0,0,16,16);
+  for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
+    const col=frames[fIndex][idx(x,y)]; if(!col)continue;
+    c.fillStyle=col; c.fillRect(x,y,1,1);
+  }
+}
+/* ===== 繪製 ===== */
+function px(x,y){return Math.floor(x/SCALE);}
+function py(y){return Math.floor(y/SCALE);}
+function inGrid(x,y){return x>=0&&x<GRID&&y>=0&&y<GRID;}
+function applyPixel(x,y,color){
+  frames[currentFrame][idx(x,y)]=color;
+  if(mirror&&tool!=="picker"){const mx=GRID-1-x;frames[currentFrame][idx(mx,y)]=color;}
+}
+function floodFill(sx,sy,color){
+  const target=frames[currentFrame][idx(sx,sy)];
+  if(target===color)return;
+  const stack=[[sx,sy]];
+  while(stack.length){
+    const [x,y]=stack.pop();
+    if(!inGrid(x,y))continue;
+    if(frames[currentFrame][idx(x,y)]!==target)continue;
+    frames[currentFrame][idx(x,y)]=color;
+    if(mirror){const mx=GRID-1-x;frames[currentFrame][idx(mx,y)]=color;}
+    stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+  }
+}
+let drawing=false, lastX=0, lastY=0, strokeStart=false;
+function lineTo(x0,y0,x1,y1){
+  const dx=Math.abs(x1-x0),dy=Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;
+  let err=dx-dy;
+  while(true){
+    if(tool==="pencil")applyPixel(x0,y0,currentColor);
+    else if(tool==="eraser")applyPixel(x0,y0,null);
+    if(x0===x1&&y0===y1)break;
+    const e2=2*err;
+    if(e2>-dy){err-=dy;x0+=sx;}
+    if(e2<dx){err+=dx;y0+=sy;}
+  }
+}
+function onDown(x,y,isAlt){
+  const gx=px(x),gy=py(y);
+  if(!inGrid(gx,gy))return;
+  if(tool==="picker"){
+    const c=frames[currentFrame][idx(gx,gy)];
+    if(c){currentColor=c;updateColorUI();}
+    return;
+  }
+  if(isAlt&&tool==="pencil"){const c=frames[currentFrame][idx(gx,gy)];if(c){currentColor=c;updateColorUI();}return;}
+  pushUndo();
+  if(tool==="fill"){floodFill(gx,gy,currentColor);render();renderFramesGrid();return;}
+  drawing=true; strokeStart=true; lastX=gx; lastY=gy;
+  if(tool==="pencil")applyPixel(gx,gy,currentColor);
+  else if(tool==="eraser")applyPixel(gx,gy,null);
+  render();
+}
+function onMove(x,y){
+  if(!drawing)return;
+  const gx=px(x),gy=py(y);
+  if(!inGrid(gx,gy))return;
+  if(gx===lastX&&gy===lastY)return;
+  lineTo(lastX,lastY,gx,gy); lastX=gx; lastY=gy;
+  render();
+}
+function onUp(){drawing=false;}
+/* ===== 撤銷/重做 ===== */
+function pushUndo(){
+  undoStack.push({frame:currentFrame,data:frames[currentFrame].slice()});
+  if(undoStack.length>60)undoStack.shift();
+  redoStack=[];
+}
+function undo(){
+  if(!undoStack.length)return;
+  const item=undoStack.pop();
+  redoStack.push({frame:item.frame,data:frames[item.frame].slice()});
+  frames[item.frame]=item.data;
+  currentFrame=item.frame;
+  render();renderFramesGrid();syncChecks();
+}
+function redo(){
+  if(!redoStack.length)return;
+  const item=redoStack.pop();
+  undoStack.push({frame:item.frame,data:frames[item.frame].slice()});
+  frames[item.frame]=item.data;
+  currentFrame=item.frame;
+  render();renderFramesGrid();syncChecks();
+}
+/* ===== 顏色 UI ===== */
+function updateColorUI(){
+  currentBox.style.background=currentColor;
+  currentHex.textContent=currentColor;
+  document.querySelectorAll(".swatch").forEach(s=>s.classList.toggle("sel",s.dataset.c===currentColor));
+}
+function buildPalette(pal){
+  colorGrid.innerHTML="";
+  PALETTES[pal].forEach(c=>{
+    const d=document.createElement("div");
+    d.className="swatch"; d.dataset.c=c; d.style.background=c;
+    d.onclick=()=>{currentColor=c;updateColorUI();};
+    colorGrid.appendChild(d);
+  });
+  updateColorUI();
+}
+/* ===== 幀管理 ===== */
+function renderFramesGrid(){
+  const g=document.getElementById("framesGrid");
+  g.innerHTML="";
+  for(let i=0;i<FRAME_COUNT;i++){
+    const cell=document.createElement("div");
+    cell.className="frame-cell"+(i===currentFrame?" sel":"");
+    const cv=document.createElement("canvas"); cv.width=16; cv.height=16;
+    renderFrameCell(cv,i);
+    const fl=document.createElement("div"); fl.className="fl"; fl.textContent=FRAME_LABELS[i];
+    const fi=document.createElement("div"); fi.className="fi"; fi.textContent="#"+i;
+    cell.append(cv,fl,fi);
+    cell.onclick=()=>{currentFrame=i;render();renderFramesGrid();};
+    g.appendChild(cell);
+  }
+}
+function flipFrame(h){
+  const f=frames[currentFrame], nf=Array(GRID*GRID).fill(null);
+  for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
+    const nx=h?GRID-1-x:x, ny=h?y:GRID-1-y;
+    nf[idx(x,y)]=f[idx(nx,ny)];
+  }
+  pushUndo(); frames[currentFrame]=nf; render();renderFramesGrid();
+}
+/* ===== 動畫預覽 ===== */
+function syncChecks(){
+  document.querySelectorAll("#animChecks input").forEach(cb=>{
+    cb.checked=checkedFrames.has(+cb.value);
+  });
+}
+function buildAnimChecks(){
+  const box=document.getElementById("animChecks");
+  box.innerHTML="";
+  for(let i=0;i<FRAME_COUNT;i++){
+    const lb=document.createElement("label");
+    const cb=document.createElement("input"); cb.type="checkbox"; cb.value=i;
+    cb.checked=checkedFrames.has(i);
+    cb.onchange=()=>{cb.checked?checkedFrames.add(i):checkedFrames.delete(i);saveLocal();};
+    lb.append(cb,document.createTextNode("#"+i+" "+FRAME_LABELS[i]));
+    box.appendChild(lb);
+  }
+}
+function getAnimOrder(){return [...checkedFrames].sort((a,b)=>a-b);}
+function drawAnimFrame(){
+  actx.clearRect(0,0,96,96);
+  actx.fillStyle="#10111c"; actx.fillRect(0,0,96,96);
+  const order=getAnimOrder();
+  if(order.length){
+    const f=order[animIndex%order.length];
+    for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
+      const c=frames[f][idx(x,y)]; if(!c)continue;
+      actx.fillStyle=c; actx.fillRect(x*6,y*6,6,6);
+    }
+  }
+}
+function stopAnim(){animPlaying=false;clearInterval(animTimer);animIndex=0;drawAnimFrame();}
+function playAnim(){
+  if(animPlaying)return stopAnim();
+  if(!getAnimOrder().length){status("請先勾選要連播的幀");return;}
+  animPlaying=true; animIndex=0; drawAnimFrame();
+  animTimer=setInterval(()=>{animIndex++;drawAnimFrame();},animSpeed);
+}
+/* ===== 參考圖 ===== */
+function setRefImage(img){
+  const c=document.createElement("canvas"); c.width=GRID; c.height=GRID;
+  const x=c.getContext("2d");
+  const s=Math.min(GRID/img.width,GRID/img.height);
+  const dw=Math.max(1,Math.round(img.width*s)), dh=Math.max(1,Math.round(img.height*s));
+  const ox=Math.round((GRID-dw)/2), oy=Math.round((GRID-dh)/2);
+  x.drawImage(img,ox,oy,dw,dh);
+  const data=x.getImageData(0,0,GRID,GRID).data;
+  refPixels=Array(GRID*GRID).fill(null);
+  for(let i=0;i<GRID*GRID;i++)refPixels[i]=[data[i*4],data[i*4+1],data[i*4+2],data[i*4+3]];
+  showRef=true; document.getElementById("btnRefToggle").classList.add("active");
+  render();
+}
+function loadRefFile(file){
+  const r=new FileReader();
+  r.onload=e=>{const img=new Image();img.onload=()=>{setRefImage(img);status("參考圖已載入，可開始描邊");};img.src=e.target.result;};
+  r.readAsDataURL(file);
+}
+/* ===== 粘貼編碼 ===== */
+function buildLegendUI(){
+  const box=document.getElementById("codeLegend");
+  box.innerHTML="";
+  for(const [k,v] of Object.entries(CODE_LEGEND)){
+    const d=document.createElement("div"); d.className="lg";
+    const inp=document.createElement("input"); inp.type="color"; inp.value=v;
+    inp.oninput=e=>{CODE_LEGEND[k]=e.target.value;};
+    const span=document.createElement("span"); span.textContent=k;
+    d.append(inp,span);
+    box.appendChild(d);
+  }
+}
+function parseCode(){
+  const txt=document.getElementById("codeInput").value;
+  const grid=Array(GRID*GRID).fill(null);
+  const lines=txt.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length);
+  let rows=0;
+  for(const line of lines){
+    const body=line.replace(/^R\d+\s*/i,"").trim();
+    if(!body)continue;
+    const tokens=body.split(/[\s,]+/).filter(Boolean);
+    if(tokens.length<GRID){status("第 "+(rows+1)+" 行只有 "+tokens.length+" 個值（需 16 個）");return null;}
+    for(let x=0;x<GRID;x++){
+      const t=tokens[x]; let color=null;
+      if(t!=="."){
+        if(/^#([0-9a-f]{3})$/i.test(t)){color="#"+t[1]+t[1]+t[2]+t[2]+t[3]+t[3];}
+        else if(/^#([0-9a-f]{6})$/i.test(t)){color=t.toLowerCase();}
+        else if(CODE_LEGEND[t]){color=CODE_LEGEND[t];}
+        else{status("無法識別的色號：「"+t+"」");return null;}
+      }
+      grid[rows*GRID+x]=color;
+    }
+    rows++;
+    if(rows>=GRID)break;
+  }
+  if(rows<GRID){status("只有 "+rows+" 行（需 16 行）");return null;}
+  codeParsed=grid;
+  renderCodePreview();
+  status("解析成功 ✅ 可點「寫入」存入幀");
+  return grid;
+}
+function renderCodePreview(){
+  const cv=document.getElementById("codePreview");
+  const c=cv.getContext("2d");
+  c.clearRect(0,0,96,96);
+  c.fillStyle="#10111c"; c.fillRect(0,0,96,96);
+  if(!codeParsed)return;
+  for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
+    const col=codeParsed[idx(x,y)]; if(!col)continue;
+    c.fillStyle=col; c.fillRect(x*6,y*6,6,6);
+  }
+}
+function applyCode(){
+  if(!codeParsed){status("請先解析編碼");return;}
+  const target=+document.getElementById("codeTarget").value;
+  pushUndo(); frames[target]=codeParsed.slice(); currentFrame=target;
+  render(); renderFramesGrid(); saveLocal();
+  status("已寫入幀 #"+target+"（"+FRAME_LABELS[target]+"）");
+}
+/* ===== 導出 ===== */
+function exportPng(){
+  const c=document.createElement("canvas"); c.width=OUT_W; c.height=GRID;
+  const x=c.getContext("2d");
+  for(let f=0;f<FRAME_COUNT;f++){
+    for(let y=0;y<GRID;y++)for(let px=0;px<GRID;px++){
+      const col=frames[f][idx(px,y)]; if(!col)continue;
+      x.fillStyle=col; x.fillRect(f*PITCH+px,y,1,1);
+    }
+  }
+  const a=document.createElement("a");
+  a.download=document.getElementById("exportName").value+".png";
+  a.href=c.toDataURL("image/png");
+  a.click();
+  status("已導出 PNG："+a.download+"（"+OUT_W+"×"+GRID+"）");
+}
+function saveJson(){
+  const data={name:document.getElementById("exportName").value,frames,checked:[...checkedFrames]};
+  const a=document.createElement("a");
+  a.download=document.getElementById("exportName").value+".json";
+  a.href="data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(data));
+  a.click(); status("已存檔 JSON（可日後讀檔繼續編輯）");
+}
+function loadJson(file){
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(d.frames&&d.frames.length===FRAME_COUNT){
+        frames=d.frames; document.getElementById("exportName").value=d.name||"V11_00";
+        if(d.checked)checkedFrames=new Set(d.checked);
+        syncChecks(); render(); renderFramesGrid(); saveLocal();
+        status("已讀檔："+(d.name||""));
+      }else status("檔案格式不正確");
+    }catch(err){status("讀檔失敗："+err.message);}
+  };
+  r.readAsText(file);
+}
+/* ===== 事件綁定 ===== */
+mainCanvas.addEventListener("mousedown",e=>{const r=mainCanvas.getBoundingClientRect();onDown(e.clientX-r.left,e.clientY-r.top,e.button===2||e.shiftKey);});
+mainCanvas.addEventListener("mousemove",e=>{const r=mainCanvas.getBoundingClientRect();onMove(e.clientX-r.left,e.clientY-r.top);});
+window.addEventListener("mouseup",onUp);
+mainCanvas.addEventListener("contextmenu",e=>e.preventDefault());
+mainCanvas.addEventListener("touchstart",e=>{e.preventDefault();const r=mainCanvas.getBoundingClientRect();const t=e.touches[0];onDown(t.clientX-r.left,t.clientY-r.top,false);},{passive:false});
+mainCanvas.addEventListener("touchmove",e=>{e.preventDefault();const r=mainCanvas.getBoundingClientRect();const t=e.touches[0];onMove(t.clientX-r.left,t.clientY-r.top);},{passive:false});
+mainCanvas.addEventListener("touchend",onUp);
+mainCanvas.addEventListener("dragover",e=>{e.preventDefault();});
+mainCanvas.addEventListener("drop",e=>{e.preventDefault();if(e.dataTransfer.files[0])loadRefFile(e.dataTransfer.files[0]);});
+document.getElementById("toolPencil").onclick=()=>{tool="pencil";setToolActive();};
+document.getElementById("toolEraser").onclick=()=>{tool="eraser";setToolActive();};
+document.getElementById("toolFill").onclick=()=>{tool="fill";setToolActive();};
+document.getElementById("toolPicker").onclick=()=>{tool="picker";setToolActive();};
+function setToolActive(){
+  document.getElementById("toolPencil").classList.toggle("active",tool==="pencil");
+  document.getElementById("toolEraser").classList.toggle("active",tool==="eraser");
+  document.getElementById("toolFill").classList.toggle("active",tool==="fill");
+  document.getElementById("toolPicker").classList.toggle("active",tool==="picker");
+}
+document.getElementById("btnMirror").onclick=e=>{mirror=!mirror;e.target.classList.toggle("active",mirror);render();};
+document.getElementById("btnUndo").onclick=undo;
+document.getElementById("btnRedo").onclick=redo;
+document.getElementById("btnFlipH").onclick=()=>flipFrame(true);
+document.getElementById("btnFlipV").onclick=()=>flipFrame(false);
+document.getElementById("btnClearFrame").onclick=()=>{pushUndo();frames[currentFrame]=Array(GRID*GRID).fill(null);render();renderFramesGrid();};
+document.getElementById("btnClearAll").onclick=()=>{if(confirm("確定清空全部 12 幀？")){pushUndo();initFrames();render();renderFramesGrid();}};
+document.getElementById("btnCopyFrame").onclick=()=>{clipboard=frames[currentFrame].slice();status("已複製幀 #"+currentFrame);};
+document.getElementById("btnPasteFrame").onclick=()=>{if(clipboard){pushUndo();frames[currentFrame]=clipboard.slice();render();renderFramesGrid();status("已貼上到幀 #"+currentFrame);}};
+document.getElementById("btnDupFrame").onclick=()=>{pushUndo();frames[currentFrame]=frames[currentFrame].slice();const target=(currentFrame+1)%FRAME_COUNT;frames[target]=frames[currentFrame].slice();currentFrame=target;render();renderFramesGrid();status("已複製到幀 #"+target);};
+document.getElementById("btnPlay").onclick=playAnim;
+document.getElementById("btnStop").onclick=stopAnim;
+document.getElementById("btnCheckAll").onclick=()=>{checkedFrames=new Set([...Array(FRAME_COUNT).keys()]);syncChecks();saveLocal();};
+document.getElementById("btnCheckNone").onclick=()=>{checkedFrames=new Set();syncChecks();saveLocal();};
+document.getElementById("btnCheckMove").onclick=()=>{checkedFrames=new Set([0,1,2,3,4,5,11]);syncChecks();saveLocal();};
+document.getElementById("btnLoadRef").onclick=()=>document.getElementById("refFile").click();
+document.getElementById("refFile").onchange=e=>{if(e.target.files[0])loadRefFile(e.target.files[0]);};
+document.getElementById("refAlpha").oninput=e=>{refAlpha=e.target.value/100;document.getElementById("refAlphaVal").textContent=e.target.value+"%";render();};
+document.getElementById("btnRefToggle").onclick=e=>{showRef=!showRef;e.target.classList.toggle("active",showRef);render();};
+document.getElementById("btnRefClear").onclick=()=>{refPixels=null;render();status("已移除參考圖");};
+document.getElementById("btnCodeParse").onclick=parseCode;
+document.getElementById("btnCodeClear").onclick=()=>{document.getElementById("codeInput").value="";codeParsed=null;renderCodePreview();status("已清空編碼");};
+document.getElementById("btnCodeApply").onclick=applyCode;
+document.getElementById("btnExportPng").onclick=exportPng;
+document.getElementById("btnSaveJson").onclick=saveJson;
+document.getElementById("btnLoadJson").onclick=()=>document.getElementById("jsonFile").click();
+document.getElementById("jsonFile").onchange=e=>{if(e.target.files[0])loadJson(e.target.files[0]);};
+document.getElementById("btnNew").onclick=()=>{if(confirm("確定開新龍（清空當前全部內容）？")){initFrames();currentFrame=0;render();renderFramesGrid();saveLocal();}};
+document.getElementById("currentBox").onclick=()=>document.getElementById("customColor").click();
+document.getElementById("customColor").oninput=e=>{currentColor=e.target.value;updateColorUI();};
+document.querySelectorAll(".palette-btns button").forEach(b=>b.onclick=()=>buildPalette(b.dataset.pal));
+document.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==="z"){e.preventDefault();undo();}
+  if((e.ctrlKey||e.metaKey)&&e.key==="y"){e.preventDefault();redo();}
+  if(e.key==="["&&currentFrame>0){currentFrame--;render();renderFramesGrid();}
+  if(e.key==="]"&&currentFrame<FRAME_COUNT-1){currentFrame++;render();renderFramesGrid();}
+});
+function status(msg){statusEl.textContent=msg;}
+/* ===== 啟動 ===== */
+loadLocal();
+buildPalette("火");
+renderFramesGrid();
+buildAnimChecks();
+syncChecks();
+buildLegendUI();
+const codeTarget=document.getElementById("codeTarget");
+for(let i=0;i<FRAME_COUNT;i++){const o=document.createElement("option");o.value=i;o.textContent="#"+i+" "+FRAME_LABELS[i];codeTarget.appendChild(o);}
+renderCodePreview();
+drawAnimFrame();
+render();
+status("就緒。先用「載入參考圖」拖入龍圖，再對稱描邊。");
+
+</script>
+</body>
+</html>

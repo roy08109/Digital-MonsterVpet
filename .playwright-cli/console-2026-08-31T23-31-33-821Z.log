@@ -1,0 +1,4 @@
+[     180ms] [LOG] ✅ Service Worker 註冊成功 @ http://127.0.0.1:8899/index.html:14773
+[     183ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://127.0.0.1:8899/index.html:0
+[     404ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:8899/BG/Sandbag02.png:0
+[   86755ms] [LOG] 功能: 對戰 @ http://127.0.0.1:8899/index.html:9482
