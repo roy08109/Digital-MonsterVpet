@@ -11072,7 +11072,10 @@ function playerHasSkillById(skillId){
     if(skillId === "dodgeRecover") return !f.dodgeRecoverUsed;
     return false;
   }
-  if(skillId === "strikeFirst") return true;          // 1V1 先制每場獨立
+  if(skillId === "strikeFirst"){
+    if(window._peActive) return !skillUsed;  // 完美增強連戰：整場算一場，先制僅觸發一次（與 3V3 一致）
+    return true;                              // 1V1 先制每場獨立
+  }
   if(skillId === "critShield") return !battlePlayerCritShieldUsed;
   if(skillId === "undyingHeart") return !battlePlayerUndyingUsed;
   if(skillId === "infiniteBlade") return !battlePlayerInfiniteBladeUsed;
@@ -12927,9 +12930,9 @@ function showBattleResult(result){
           applyPerfectEnhanceWin();
           closePerfectEnhanceAfterBattle();
         } else {
-          // 勝利回血 40% 後進入下一場
+          // 勝利回血 40% 後進入下一場（敵人退場 → 新敵人進場動畫）
           window._peCarryHp = Math.min(battlePlayerMaxHp, battlePlayerHp + Math.floor(battlePlayerMaxHp * 0.4));
-          startPerfectEnhanceRound();
+          playPerfectEnhanceRoundTransition();
         }
       } else if(result === "lose"){
         applyPerfectEnhanceLose();
@@ -16568,6 +16571,35 @@ function startPerfectEnhanceRound(){
   showToast("第" + (window._peRound + 1) + "場：對手「" + e.name + "（Lv." + level + " " + e.stage + "）」登場！");
 }
 
+// 完美增強連戰換場過渡：敵人退場滑出 → 進入下一場（新敵人於 startBattlePVE 內進場滑入）
+function playPerfectEnhanceRoundTransition(){
+  battleShowHappy = false;
+  battleShowSad = false;
+  battleShowEnemySad = false;
+  battleShowEnemyHappy = false;
+  battlePlayerFrame = 0;
+  battleEnemyFrame = 0;
+  battleProjectileActive = false;
+  battleBoomActive = false;
+  battleProjectileX = 0;
+  battlePlayerDodge = false;
+  battleEnemyDodge = false;
+  battlePlayerOffsetX = 0;
+  battleEnemyOffsetX = 0;
+  renderBattleScene();
+
+  // 敵人退場（滑出左側）
+  const animateOut = setInterval(() => {
+    battleEnemyOffsetX -= 4;
+    if(battleEnemyOffsetX <= -28){
+      clearInterval(animateOut);
+      startPerfectEnhanceRound();  // 設置下一場新敵人，並於 startBattlePVE 內播放進場動畫
+      return;
+    }
+    renderBattleScene();
+  }, 90);
+}
+
 // 勝利：+10%，達 100% 升級；失敗：不減
 function applyPerfectEnhanceWin(){
   const pe = getPerfectEnhancement();
@@ -17323,19 +17355,25 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx, enemyLevel) {
   battleEnemyDodge = false;
   battleResult = "";
   battleMsg = "";
-  // 重置 1V1 每局一次的技能狀態（與 startBattle 一致，確保任務/連戰每場技能可用）
-  battlePlayerCritShieldUsed = false;
+  // 技能狀態重置：
+  // - 敵方：每局重置（完美增強連戰每局換新敵人、PVE 每場新敵人，換龍上場即重新可用）
+  // - 玩家：獨立 1V1 每場重置；完美增強連戰（1V3 車輪戰）整場算「一場」，
+  //         僅首場重置、後續局保留已用狀態（與 3V3「同一隻龍連勝僅首場生效」一致）
   battleEnemyCritShieldUsed = false;
-  battlePlayerUndyingUsed = false;
   battleEnemyUndyingUsed = false;
-  battlePlayerInfiniteBladeUsed = false;
   battleEnemyInfiniteBladeUsed = false;
-  battlePlayerDodgeFollowUpUsed = false;
   battleEnemyDodgeFollowUpUsed = false;
-  battlePlayerDodgeRecoverUsed = false;
   battleEnemyDodgeRecoverUsed = false;
-  battlePlayerSkillState = playerHasSkill() ? "ready" : "none";
   battleEnemySkillState = enemyHasSkill() ? "ready" : "none";
+  if(!(window._peActive && window._peRound > 0)){
+    skillUsed = false;
+    battlePlayerCritShieldUsed = false;
+    battlePlayerUndyingUsed = false;
+    battlePlayerInfiniteBladeUsed = false;
+    battlePlayerDodgeFollowUpUsed = false;
+    battlePlayerDodgeRecoverUsed = false;
+    battlePlayerSkillState = playerHasSkill() ? "ready" : "none";
+  }
   setBattleActive(true);
 
   // 重置逆境進化狀態
@@ -17383,6 +17421,24 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx, enemyLevel) {
   document.getElementById("returnBtn").style.display = "none"; // 任務對戰隱藏返回按鈕
   updateCssBackground("battle");
   updateBattleTeamSprites();
+
+  // 完美增強連戰換場（第 2、3 場）：新敵人進場滑入動畫（與 3V3 換龍一致）
+  if(window._peActive && window._peRound > 0){
+    battleEnemyOffsetX = -28;
+    battlePlayerOffsetX = 0;
+    renderBattleScene();
+    const animateIn = setInterval(() => {
+      battleEnemyOffsetX += 4;
+      if(battleEnemyOffsetX >= 0){
+        battleEnemyOffsetX = 0;
+        clearInterval(animateIn);
+        startBattleIntro();
+        return;
+      }
+      renderBattleScene();
+    }, 90);
+    return;
+  }
 
   startBattleIntro();
 }

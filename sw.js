@@ -1,6 +1,6 @@
 // 快取版本：只有當「快取策略/結構」變更時才需要 +1。
 // 一般圖片/音效更新「不需要」改這裡 —— SWR 策略會自動背景更新。
-const CACHE_NAME = "digimon-vpet-v22";
+const CACHE_NAME = "digimon-vpet-v24";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => {
