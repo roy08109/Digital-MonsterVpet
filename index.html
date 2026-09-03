@@ -17323,6 +17323,19 @@ function startBattlePVE(enemyVersion, enemyRow, bgIdx, enemyLevel) {
   battleEnemyDodge = false;
   battleResult = "";
   battleMsg = "";
+  // 重置 1V1 每局一次的技能狀態（與 startBattle 一致，確保任務/連戰每場技能可用）
+  battlePlayerCritShieldUsed = false;
+  battleEnemyCritShieldUsed = false;
+  battlePlayerUndyingUsed = false;
+  battleEnemyUndyingUsed = false;
+  battlePlayerInfiniteBladeUsed = false;
+  battleEnemyInfiniteBladeUsed = false;
+  battlePlayerDodgeFollowUpUsed = false;
+  battleEnemyDodgeFollowUpUsed = false;
+  battlePlayerDodgeRecoverUsed = false;
+  battleEnemyDodgeRecoverUsed = false;
+  battlePlayerSkillState = playerHasSkill() ? "ready" : "none";
+  battleEnemySkillState = enemyHasSkill() ? "ready" : "none";
   setBattleActive(true);
 
   // 重置逆境進化狀態
